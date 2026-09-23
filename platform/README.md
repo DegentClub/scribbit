@@ -5,7 +5,7 @@ Shared libraries any product may depend on. Each is a workspace package `@bsh/<n
 
 | Component | Package | What it does |
 |---|---|---|
-| [`inscription`](inscription) | `@bsh/inscription` | Ordinals envelope, commit/reveal construction with `SIGHASH_SINGLE\|ANYONECANPAY`, exact weight and fee maths |
+| [`inscription`](inscription) | `@bsh/inscription` | Ordinals envelope, commit/reveal construction with `SIGHASH_SINGLE\|ANYONECANPAY`, exact weight and fee maths, FIFO sat-assignment simulator (where an inscription lands, or whether it burns to fee) |
 | [`wallet-kit`](wallet-kit) | `@bsh/wallet-kit` | One browser wallet interface for UniSat, Xverse, Leather, OKX and Magic Eden |
 
 Authoritative list: `jq '.products.platform' catalog/catalog.json`.

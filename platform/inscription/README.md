@@ -94,6 +94,10 @@ out of scope for this library.
 | `buildRescueReveal(args)` | Finalize the half-signed PSBT as-is (hex, txid, weight, vsize*) |
 | `revealCommitSighash(args)` * | Independent BIP341 0x83 script-path digest of the commit input |
 | `sha256Hex`, `inscriptionIdFromReveal` | Utilities |
+| `assignSats(inputs, outputs)` * | ord's FIFO sat assignment: which output (or the fee) every inscription and sat range lands in |
+| `inscriptionDestination(tx, inputIndex, offset)` * | `{ vout, offset } \| 'fee'` for one inscription, from input/output values alone |
+| `assertNoInscriptionBurn(inputs, outputs)` * | `assignSats`, throwing `InscriptionBurnError` if anything lands in the fee |
+| `checkInscriptionCoverage(inputs, outputs)` * | The layout invariant that makes a burn impossible (see "Sat assignment") |
 | `NUMS_INTERNAL_KEY`*, `REVEAL_TX_VERSION`*, `REVEAL_LOCKTIME`*, `REVEAL_SEQUENCE`*, `SIGHASH_SINGLE_ANYONECANPAY`*, `TAPSCRIPT_LEAF_VERSION`*, `networkParams`* | Constants / helpers |
 
 `*` = addition beyond the original SPEC (listed in SPEC.md under "Additions").
@@ -134,6 +138,64 @@ const inscriptionId = ins.inscriptionIdFromReveal(txid);          // "<txid>i0"
 // Rescue (no parent)
 const rescue = ins.buildRescueReveal({ network: 'mainnet', halfSignedPsbtBase64: half.psbtBase64 });
 ```
+
+## Sat assignment
+
+ord assigns sats **FIFO**: concatenate the sats of every input, in input order, into one stream; outputs
+take contiguous chunks from it in output order; the tail is the fee. An inscription rides one sat, so
+where it goes is arithmetic over values only: `position = sum(values of the inputs before it) + offset`,
+then the first output whose cumulative end exceeds `position`, or the fee when `position >= sum(outputs)`.
+`sat-assignment.ts` implements exactly that rule (pure, `bigint`-safe, no I/O) so a transaction can be
+checked *before* it is signed:
+
+```ts
+import { assignSats, assertNoInscriptionBurn, inscriptionDestination } from '@bsh/inscription';
+
+// ADR-0002 reveal: [parent][commit] -> [parent return][child postage]
+inscriptionDestination({ inputs: [{ value: parentValue }, { value: commitValue }], outputs: [{ value: parentValue }, { value: postage }] }, 1, 0);
+// -> { vout: 1, offset: 0n }      (parent return of parentValue + 1 would give { vout: 0, offset: parentValue })
+
+const r = assertNoInscriptionBurn(
+  [{ value: 777, inscriptions: [{ id, offset: 0 }] }, { value: 30_000 }],     // shave: inscription input first
+  [{ value: 1 }, { value: 776 }, { value: 29_000 }],
+);
+r.outputs[0].inscriptions;   // [{ id, offset: 0n, sat, input: 0, inputOffset: 0n }]
+r.fee;                       // { value: 1000n, ranges: [{ unknown: 1000n }], inscriptions: [] }
+```
+
+Inputs may carry `sats: SatRange[]` (`{ start, end }` half-open sat numbers, or `{ unknown: n }` for a UTXO whose
+numbering is not known); ranges are sliced into each output and the fee, one range per input chunk, so `sat` is
+reported for every placed inscription whose input was numbered. Consequences the tests pin down:
+
+- Each output gets **one contiguous slice**, so two inscriptions separated by padding cannot share an output in a
+  single transaction: shave each to `[1 sat][rest]` first, then pack the 1-sat outputs (`N` one-sat inputs → one
+  `N`-sat output with the inscriptions at offsets `0..N-1`).
+- A funding input placed **ahead** of inscription inputs shifts every inscription behind it; whatever slides past
+  `sum(outputs)` is burned to the fee. The classic marketplace bug is the same rule: inscription input 0 with the
+  price at output 0 hands the inscription back to the seller; two dummy inputs ahead of it move it to output 1.
+- **Safety invariant** (`checkInscriptionCoverage`): every inscription input strictly ahead of every funding input
+  and `sum(outputs) >= total value of the inscription inputs` guarantees no burn whatever the output layout, even
+  with no change output. A property test checks it against random layouts.
+- The reveal layout's "parent return value is exact" rule above is this rule applied to `[parent][commit]`.
+
+### Shared vectors (`test/vectors/fifo.json`)
+
+`test/sat-assignment.test.ts` loads `test/vectors/fifo.json` when present and runs every case through both
+`assignSats` and `inscriptionDestination`. `DegentClub/blockspace-holdings` produces `tests/vectors/fifo.json` in
+the same shape so both implementations are checked against one set. The file is a JSON array of cases:
+
+```json
+{
+  "name": "shave: [insc 777] + funding -> [1][776][change]",
+  "inputs": [ { "value": 777, "inscriptions": [ { "id": "i", "offset": 0 } ] }, { "value": 30000 } ],
+  "outputs": [ { "value": 1 }, { "value": 776 }, { "value": 29000 } ],
+  "expect": { "i": { "vout": 0, "offset": 0 } }
+}
+```
+
+`inputs[].value`, `outputs[].value` and offsets are JSON integers (sats); `inputs[].inscriptions` is optional (absent
+= funding input); `expect` has one entry per inscription id, `{ "vout": <index>, "offset": <sats into that output> }`
+or `{ "vout": "fee", "offset": <sats into the fee tail> }` for a burn. Every inscription id must appear in `expect`.
 
 ## Sizes and lanes (real numbers)
 
@@ -191,6 +253,7 @@ the raw hex (`3 × stripped + total`), and btc-signer's `Transaction.fromRaw(hex
 | `verify.test.ts` | `verifyHalfSignedReveal` positive and negative cases: content, key, recipient, postage, outpoint, value, sighash type, forged signature, extra outputs |
 | `parent.test.ts` | attachParent layout, parent key-path signature against the tweaked key, finalization, error paths |
 | `quote.test.ts` | Fee maths incl. fractional rates (1.1 × 1000 = 1100, not 1101) and a quote funding a real reveal |
+| `sat-assignment.test.ts` | FIFO rule: offset-0 placement, marketplace bug vs fixed layout, shave, pack, funding-first burn, the coverage invariant (property test), the ADR-0002 reveal layout, sat ranges, bigint safety, error paths; plus every case in `test/vectors/fifo.json` |
 
 ## Envelope notes
 

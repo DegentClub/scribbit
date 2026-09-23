@@ -13,3 +13,21 @@ export type { VerifyResult } from './verify.js';
 export { verifyHalfSignedReveal } from './verify.js';
 export { revealCommitSighash } from './sighash.js';
 export { sha256Hex } from './bytes.js';
+export type {
+  Destination,
+  InscriptionRef,
+  PlacedInscription,
+  Placement,
+  SatAssignment,
+  SatInput,
+  SatOutput,
+  SatRange,
+  SatSlice,
+} from './sat-assignment.js';
+export {
+  assertNoInscriptionBurn,
+  assignSats,
+  checkInscriptionCoverage,
+  InscriptionBurnError,
+  inscriptionDestination,
+} from './sat-assignment.js';

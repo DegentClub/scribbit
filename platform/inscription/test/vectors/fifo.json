@@ -1,0 +1,556 @@
+[
+  {
+    "name": "inscription at offset 0 of input 0 lands at output 0 offset 0",
+    "inputs": [
+      {
+        "value": 546,
+        "inscriptions": [
+          {
+            "id": "a",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 10000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 546
+      },
+      {
+        "value": 9000
+      }
+    ],
+    "expect": {
+      "a": {
+        "vout": 0,
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "marketplace bug: inscription input 0 + price output 0 sends the inscription to the seller",
+    "inputs": [
+      {
+        "value": 546,
+        "inscriptions": [
+          {
+            "id": "nft",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 100000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 50000
+      },
+      {
+        "value": 546
+      },
+      {
+        "value": 49000
+      }
+    ],
+    "expect": {
+      "nft": {
+        "vout": 0,
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "marketplace fixed: two dummy inputs ahead put the inscription in output 1",
+    "inputs": [
+      {
+        "value": 600
+      },
+      {
+        "value": 600
+      },
+      {
+        "value": 546,
+        "inscriptions": [
+          {
+            "id": "nft",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 100000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 1200
+      },
+      {
+        "value": 546
+      },
+      {
+        "value": 50000
+      },
+      {
+        "value": 49000
+      }
+    ],
+    "expect": {
+      "nft": {
+        "vout": 1,
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "shave: [insc 777] + funding -> [1][776][change] puts the inscription alone in a 1-sat output",
+    "inputs": [
+      {
+        "value": 777,
+        "inscriptions": [
+          {
+            "id": "i",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 30000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 1
+      },
+      {
+        "value": 776
+      },
+      {
+        "value": 29000
+      }
+    ],
+    "expect": {
+      "i": {
+        "vout": 0,
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "pack: five 1-sat inputs -> one 5-sat output holding five inscriptions at offsets 0..4",
+    "inputs": [
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i0",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i1",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i2",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i3",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i4",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 30000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 5
+      },
+      {
+        "value": 29000
+      }
+    ],
+    "expect": {
+      "i0": {
+        "vout": 0,
+        "offset": 0
+      },
+      "i1": {
+        "vout": 0,
+        "offset": 1
+      },
+      "i2": {
+        "vout": 0,
+        "offset": 2
+      },
+      "i3": {
+        "vout": 0,
+        "offset": 3
+      },
+      "i4": {
+        "vout": 0,
+        "offset": 4
+      }
+    }
+  },
+  {
+    "name": "funding input first burns the last inscription to fee and scatters the rest into change",
+    "inputs": [
+      {
+        "value": 30000
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i0",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i1",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i2",
+            "offset": 0
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "value": 3
+      },
+      {
+        "value": 29999
+      }
+    ],
+    "expect": {
+      "i0": {
+        "vout": 1,
+        "offset": 29997
+      },
+      "i1": {
+        "vout": 1,
+        "offset": 29998
+      },
+      "i2": {
+        "vout": "fee",
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "all funding to fee with no change output burns nothing (coverage invariant holds)",
+    "inputs": [
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i0",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i1",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 5000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 2
+      }
+    ],
+    "expect": {
+      "i0": {
+        "vout": 0,
+        "offset": 0
+      },
+      "i1": {
+        "vout": 0,
+        "offset": 1
+      }
+    }
+  },
+  {
+    "name": "padding before the 1-sat output burns nothing but fails to shave (offset 0 of the big output)",
+    "inputs": [
+      {
+        "value": 777,
+        "inscriptions": [
+          {
+            "id": "i",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 30000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 776
+      },
+      {
+        "value": 1
+      },
+      {
+        "value": 29000
+      }
+    ],
+    "expect": {
+      "i": {
+        "vout": 0,
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "reveal layout (ADR-0002): [parent][commit] -> [parent return][child postage]",
+    "inputs": [
+      {
+        "value": 10000,
+        "inscriptions": [
+          {
+            "id": "parent",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 2546,
+        "inscriptions": [
+          {
+            "id": "child",
+            "offset": 0
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "value": 10000
+      },
+      {
+        "value": 546
+      }
+    ],
+    "expect": {
+      "parent": {
+        "vout": 0,
+        "offset": 0
+      },
+      "child": {
+        "vout": 1,
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "reveal layout with an over-paid parent return moves the child into output 0",
+    "inputs": [
+      {
+        "value": 10000,
+        "inscriptions": [
+          {
+            "id": "parent",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 2546,
+        "inscriptions": [
+          {
+            "id": "child",
+            "offset": 0
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "value": 10001
+      },
+      {
+        "value": 545
+      }
+    ],
+    "expect": {
+      "parent": {
+        "vout": 0,
+        "offset": 0
+      },
+      "child": {
+        "vout": 0,
+        "offset": 10000
+      }
+    }
+  },
+  {
+    "name": "zero-value output (OP_RETURN) last takes no sats and shifts nothing",
+    "inputs": [
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i0",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i1",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 2
+      },
+      {
+        "value": 900
+      },
+      {
+        "value": 0
+      }
+    ],
+    "expect": {
+      "i0": {
+        "vout": 0,
+        "offset": 0
+      },
+      "i1": {
+        "vout": 0,
+        "offset": 1
+      }
+    }
+  },
+  {
+    "name": "zero-value output first takes no sats: the first non-empty output gets the stream head",
+    "inputs": [
+      {
+        "value": 1,
+        "inscriptions": [
+          {
+            "id": "i0",
+            "offset": 0
+          }
+        ]
+      },
+      {
+        "value": 1000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 0
+      },
+      {
+        "value": 1
+      },
+      {
+        "value": 900
+      }
+    ],
+    "expect": {
+      "i0": {
+        "vout": 1,
+        "offset": 0
+      }
+    }
+  },
+  {
+    "name": "inscription at a non-zero offset in the middle of an input",
+    "inputs": [
+      {
+        "value": 1000,
+        "inscriptions": [
+          {
+            "id": "mid",
+            "offset": 600
+          }
+        ]
+      },
+      {
+        "value": 5000
+      }
+    ],
+    "outputs": [
+      {
+        "value": 500
+      },
+      {
+        "value": 300
+      },
+      {
+        "value": 5000
+      }
+    ],
+    "expect": {
+      "mid": {
+        "vout": 1,
+        "offset": 100
+      }
+    }
+  }
+]
