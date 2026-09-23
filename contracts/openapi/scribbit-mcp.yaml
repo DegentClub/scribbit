@@ -1,0 +1,353 @@
+openapi: 3.1.0
+info:
+  title: scribb.it MCP server
+  version: 1.0.0
+  summary: 'HTTP surface around the scribb.it MCP endpoint ("scribb.it: write to Bitcoin").'
+  description: |
+    Provided by `scribbit-mcp` (`@bsh/scribbit-mcp`, products/scribbit/services/mcp).
+
+    The MCP protocol itself (tools, resources, prompts) is carried by JSON-RPC 2.0 over the
+    [Model Context Protocol Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)
+    at `/mcp`; its message schemas are owned by the MCP specification, not by this file. This contract fixes what
+    surrounds it: authentication, rate limiting, discovery, health, key introspection and the error body.
+
+    **Authentication.** Every `/mcp` and `/v1/*` request carries an API key: `Authorization: Bearer bsh_live_…`
+    (or `X-API-Key`). Keys are minted by the operator (`pnpm --filter @bsh/scribbit-mcp mint-key`), stored only as
+    SHA-256 hashes, and need the `mcp` scope. Missing key: 401 `missing_api_key`; unknown / revoked / expired /
+    wrong-environment key: 401 `invalid_api_key` (indistinguishable on purpose); missing scope: 403
+    `insufficient_scope`; per-key quota exhausted: 429 `quota_exceeded`. OAuth 2.1 (resource-server mode with
+    `WWW-Authenticate: Bearer resource_metadata=…`) is planned as an alternative and is NOT implemented.
+
+    **Rate limits.** Token bucket per client IP on every route (`RateLimit-*` headers, 429 with `Retry-After`)
+    and a second bucket per API key on `/mcp`.
+
+    **Stateless MCP.** The server does not issue `Mcp-Session-Id`; each POST is self-contained and answered with a
+    JSON body (`application/json`), never a long-lived SSE stream. `GET /mcp` (server-initiated stream) is
+    therefore not offered and returns 405.
+
+    **Tools** (all read-only; nothing is signed, stored or broadcast): `get_fees`, `quote_inscription`,
+    `build_envelope`, `commit_address`, `explain_lanes`, `rescue_tx`. Tool errors are MCP results with
+    `isError: true` and `structuredContent: { error: { code, message, details? } }`; the codes are listed under
+    `components/schemas/ToolError`.
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:3050
+    description: Local (`pnpm --filter @bsh/scribbit-mcp dev`)
+tags:
+  - name: mcp
+  - name: keys
+  - name: ops
+paths:
+  /:
+    get:
+      tags: [mcp]
+      operationId: getIndex
+      summary: Discovery document
+      description: Where the MCP endpoint is, how to authenticate, and what it offers. Unauthenticated.
+      responses:
+        '200':
+          description: Discovery document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Index' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /healthz:
+    get:
+      tags: [ops]
+      operationId: getHealth
+      summary: Liveness
+      responses:
+        '200':
+          description: The process is up. Fee sources are not probed (tools degrade per call).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /v1/keys/me:
+    get:
+      tags: [keys]
+      operationId: getMyKey
+      summary: Introspect the presented API key
+      description: Returns the principal behind the key (id, environment, scopes, owner). Never the key or its hash.
+      security:
+        - apiKey: []
+        - bearerKey: []
+      responses:
+        '200':
+          description: The key's principal.
+          headers:
+            X-Quota-Limit: { schema: { type: string }, description: Present when the key has a quota. }
+            X-Quota-Remaining: { schema: { type: string } }
+            X-Quota-Reset: { schema: { type: string }, description: Seconds until the quota window resets. }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KeyPrincipal' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /mcp:
+    post:
+      tags: [mcp]
+      operationId: mcpPost
+      summary: MCP Streamable HTTP endpoint (JSON-RPC 2.0)
+      description: |
+        One JSON-RPC request (or a batch) per POST: `initialize`, `tools/list`, `tools/call`, `resources/list`,
+        `resources/read`, `prompts/list`, `prompts/get`, `ping`. Notifications (e.g. `notifications/initialized`)
+        are accepted with 202 and an empty body. The `Accept` header must include both `application/json` and
+        `text/event-stream` (transport requirement); responses are `application/json`.
+      security:
+        - apiKey: []
+        - bearerKey: []
+      parameters:
+        - in: header
+          name: Accept
+          required: true
+          schema: { type: string, example: 'application/json, text/event-stream' }
+        - in: header
+          name: Mcp-Protocol-Version
+          required: false
+          schema: { type: string, example: '2025-06-18' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JsonRpcRequestOrBatch' }
+            example: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'explain_lanes', arguments: {} } }
+      responses:
+        '200':
+          description: JSON-RPC response(s).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonRpcResponseOrBatch' }
+        '202':
+          description: Notification(s) accepted; no body.
+        '400':
+          description: Malformed JSON-RPC (transport-level), as a JSON-RPC error object.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonRpcError' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '406':
+          description: Missing `Accept` for `application/json` and `text/event-stream`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonRpcError' }
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '415':
+          description: Body is not `application/json`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonRpcError' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+    get:
+      tags: [mcp]
+      operationId: mcpGet
+      summary: Server-initiated SSE stream (not offered)
+      description: The server is stateless and never pushes; the transport answers 405 with a JSON-RPC error body.
+      security:
+        - apiKey: []
+        - bearerKey: []
+      responses:
+        '405':
+          description: Not offered.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonRpcError' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags: [mcp]
+      operationId: mcpDelete
+      summary: Session termination (no sessions)
+      security:
+        - apiKey: []
+        - bearerKey: []
+      responses:
+        '405':
+          description: There are no sessions to terminate.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JsonRpcError' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: '`bsh_live_…` or `bsh_test_…` (256-bit secret, base58). The server accepts one environment only.'
+    bearerKey:
+      type: http
+      scheme: bearer
+      description: 'The same API key as `Authorization: Bearer bsh_…`. Session JWTs are not accepted here.'
+  responses:
+    Unauthorized:
+      description: No key, or a key that is unknown / revoked / expired / of the wrong environment.
+      headers:
+        WWW-Authenticate: { schema: { type: string, example: 'Bearer realm="api", error="invalid_token"' } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: invalid_api_key, message: Invalid API key, requestId: 6f1c0f1e-3f6b-4d3e-9f1a-1a2b3c4d5e6f } }
+    Forbidden:
+      description: The key lacks the `mcp` scope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: IP or key bucket empty, or key quota exceeded.
+      headers:
+        Retry-After: { schema: { type: string } }
+        RateLimit-Limit: { schema: { type: string } }
+        RateLimit-Remaining: { schema: { type: string } }
+        RateLimit-Reset: { schema: { type: string } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooLarge:
+      description: Body over the configured limit (default 8 MiB; enough for one 4 MiB inscription in base64).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      description: The uniform @bsh/edge error body. 5xx messages are generic; details are logged server-side under `requestId`.
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              enum: [missing_api_key, invalid_api_key, insufficient_scope, quota_exceeded, rate_limited, payload_too_large, bad_request, not_found, method_not_allowed, internal]
+            message: { type: string }
+            requestId: { type: [string, 'null'] }
+    Health:
+      type: object
+      required: [status, service, version, networks]
+      properties:
+        status: { type: string, enum: [ok] }
+        service: { type: string, const: scribbit }
+        version: { type: string }
+        networks:
+          type: array
+          items: { $ref: '#/components/schemas/Network' }
+    Network:
+      type: string
+      enum: [mainnet, testnet, signet, regtest]
+    Index:
+      type: object
+      required: [name, title, version, mcp, networks, limits]
+      properties:
+        name: { type: string, const: scribbit }
+        title: { type: string }
+        version: { type: string }
+        mcp:
+          type: object
+          required: [endpoint, transport, protocolVersions, auth, tools, resources, prompts]
+          properties:
+            endpoint: { type: string, description: 'Absolute when MCP_PUBLIC_URL is set, else the path /mcp.' }
+            transport: { type: string, const: streamable-http }
+            protocolVersions: { type: array, items: { type: string } }
+            auth:
+              type: object
+              required: [scheme, keyPrefix, scope, header]
+              properties:
+                scheme: { type: string, const: bearer }
+                keyPrefix: { type: string, enum: [bsh_live_, bsh_test_] }
+                scope: { type: string, const: mcp }
+                header: { type: string, const: Authorization }
+            tools: { type: array, items: { type: string } }
+            resources: { type: array, items: { type: string, format: uri } }
+            prompts: { type: array, items: { type: string } }
+        networks:
+          type: array
+          items: { $ref: '#/components/schemas/Network' }
+        limits:
+          type: object
+          required: [maxBodyBytes, maxContentBytes]
+          properties:
+            maxBodyBytes: { type: integer, minimum: 1024 }
+            maxContentBytes: { type: integer, const: 4194304 }
+    KeyPrincipal:
+      type: object
+      description: Never contains the key or its hash.
+      required: [id, env, scopes]
+      additionalProperties: false
+      properties:
+        id: { type: string }
+        env: { type: string, enum: [live, test] }
+        scopes: { type: array, items: { type: string } }
+        ownerId: { type: string }
+    ToolError:
+      type: object
+      description: '`structuredContent` of a tool result with `isError: true`.'
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [invalid_input, content_too_large, content_hash_mismatch, too_large, invalid_psbt, fees_unavailable, fee_rate_required, unsupported_network, internal]
+            message: { type: string }
+            details: {}
+    JsonRpcRequest:
+      type: object
+      required: [jsonrpc, method]
+      properties:
+        jsonrpc: { type: string, const: '2.0' }
+        id: { type: [string, integer] }
+        method: { type: string }
+        params: { type: object }
+    JsonRpcRequestOrBatch:
+      oneOf:
+        - $ref: '#/components/schemas/JsonRpcRequest'
+        - type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/JsonRpcRequest' }
+    JsonRpcError:
+      type: object
+      required: [jsonrpc, error]
+      properties:
+        jsonrpc: { type: string, const: '2.0' }
+        id: { type: [string, integer, 'null'] }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: integer }
+            message: { type: string }
+            data: {}
+    JsonRpcResponse:
+      type: object
+      required: [jsonrpc, id]
+      properties:
+        jsonrpc: { type: string, const: '2.0' }
+        id: { type: [string, integer, 'null'] }
+        result: { type: object }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: integer }
+            message: { type: string }
+            data: {}
+    JsonRpcResponseOrBatch:
+      oneOf:
+        - $ref: '#/components/schemas/JsonRpcResponse'
+        - type: array
+          items: { $ref: '#/components/schemas/JsonRpcResponse' }
