@@ -29,7 +29,29 @@ export const REVEAL_LOCKTIME = 0;
 export const REVEAL_SEQUENCE = 0xfffffffd;
 /** BIP342 tapscript leaf version. */
 export const TAPSCRIPT_LEAF_VERSION = 0xc0;
-/** SIGHASH_SINGLE | SIGHASH_ANYONECANPAY. */
+/** SIGHASH_SINGLE | SIGHASH_ANYONECANPAY (legacy half-signed reveal mode, ADR-0002). */
 export const SIGHASH_SINGLE_ANYONECANPAY = 0x83;
+/** SIGHASH_ALL | SIGHASH_ANYONECANPAY (default half-signed reveal mode, ADR-0005). */
+export const SIGHASH_ALL_ANYONECANPAY = 0x81;
 /** BIP341 SIGHASH_DEFAULT (64-byte signature, no trailing hash-type byte). */
 export const SIGHASH_DEFAULT = 0x00;
+
+/**
+ * Sighash mode of the browser's commit-input signature.
+ *   'all_anyonecanpay'    0x81, default: commits to ALL outputs (parent return + child); the service
+ *                         may only add the parent input. Rescue = re-sign with K_e (buildResignedRescue).
+ *   'single_anyonecanpay' 0x83, legacy: commits only to the child output; the half-signed PSBT doubles
+ *                         as the rescue tx but lets any PSBT holder restructure the other outputs.
+ */
+export type RevealSighashMode = 'all_anyonecanpay' | 'single_anyonecanpay';
+export const DEFAULT_REVEAL_SIGHASH_MODE: RevealSighashMode = 'all_anyonecanpay';
+
+export type RevealSighashType = typeof SIGHASH_ALL_ANYONECANPAY | typeof SIGHASH_SINGLE_ANYONECANPAY;
+
+/** Hash-type byte for a sighash mode (accepts the byte itself for convenience). */
+export function revealSighashType(mode: RevealSighashMode | RevealSighashType | undefined): RevealSighashType {
+  if (mode === undefined) mode = DEFAULT_REVEAL_SIGHASH_MODE;
+  if (mode === 'all_anyonecanpay' || mode === SIGHASH_ALL_ANYONECANPAY) return SIGHASH_ALL_ANYONECANPAY;
+  if (mode === 'single_anyonecanpay' || mode === SIGHASH_SINGLE_ANYONECANPAY) return SIGHASH_SINGLE_ANYONECANPAY;
+  throw new Error(`unknown reveal sighash mode: ${String(mode)}`);
+}
