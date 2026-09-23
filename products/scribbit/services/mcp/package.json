@@ -1,0 +1,41 @@
+{
+  "name": "@bsh/scribbit-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "scribbit-mcp": "./bin/scribbit-mcp.mjs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "stdio": "tsx src/stdio.ts",
+    "mint-key": "tsx src/mint-key.ts"
+  },
+  "dependencies": {
+    "@bsh/edge": "workspace:*",
+    "@bsh/inscription": "workspace:*",
+    "@bsh/scribbit-fee-oracle": "workspace:*",
+    "@hono/node-server": "^2.1.1",
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "hono": "^4.13.8",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@noble/curves": "^2.4.0",
+    "@scure/btc-signer": "^2.4.1",
+    "@types/node": "^22",
+    "ajv": "^8.20.0",
+    "typescript": "^5",
+    "vitest": "^5.0.1",
+    "yaml": "^2.9.1"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

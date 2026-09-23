@@ -15,7 +15,10 @@ export const RESCUE_HELP = helpFor(
   'finalize a half-signed reveal into the self-rescue transaction (no parent)',
   'scribbit rescue --psbt <b64 | @file | -> [--network <net>] [--json]',
   RESCUE_FLAGS,
-  'The half-signed PSBT ([commit] -> [child], commit input signed SIGHASH_SINGLE|ANYONECANPAY) IS the rescue\n' +
+  'Legacy mode: a half-signed PSBT whose commit input was signed SIGHASH_SINGLE|ANYONECANPAY (0x83) IS the rescue\n' +
+    'transaction. Reveals built with the current default (SIGHASH_ALL|ANYONECANPAY, 0x81) are rescued by re-signing\n' +
+    'with your ephemeral key from the recovery bundle (`buildResignedRescue` in @bsh/inscription); a `rescue --key`\n' +
+    'mode for that is tracked in the CLI README.\n' +
     'transaction. Broadcast the printed hex with any node or `bitcoin-cli sendrawtransaction`. The inscription\n' +
     'lands without on-chain parent provenance. Nothing is broadcast by this command.',
 );

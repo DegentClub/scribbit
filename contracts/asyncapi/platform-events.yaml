@@ -114,6 +114,46 @@ channels:
         $ref: "#/components/messages/BatchStatusChanged"
     bindings:
       $ref: "#/components/channelBindings/eventsExchange"
+  ledgerOrderStatus:
+    address: ledger.order.{status}
+    title: ledger.order.{status}
+    description: An order in the shared ledger changed status. Amounts are integer satoshis.
+    parameters:
+      status:
+        description: The status the order moved to.
+        enum:
+          - created
+          - awaiting_payment
+          - paid
+          - expired
+          - cancelled
+          - refunded
+    messages:
+      LedgerOrderStatusChanged:
+        $ref: "#/components/messages/LedgerOrderStatusChanged"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
+  ledgerPaymentStatus:
+    address: ledger.payment.{status}
+    title: ledger.payment.{status}
+    description: A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, or card). Amounts are integer satoshis.
+    parameters:
+      status:
+        description: The status the payment moved to.
+        enum:
+          - created
+          - pending
+          - paid
+          - underpaid
+          - overpaid
+          - expired
+          - failed
+          - refunded
+    messages:
+      LedgerPaymentStatusChanged:
+        $ref: "#/components/messages/LedgerPaymentStatusChanged"
+    bindings:
+      $ref: "#/components/channelBindings/eventsExchange"
 operations:
   publishBlockIndexedNetwork:
     action: send
@@ -150,6 +190,20 @@ operations:
       $ref: "#/channels/batchStatus"
     messages:
       - $ref: "#/channels/batchStatus/messages/BatchStatusChanged"
+  publishLedgerOrderStatus:
+    action: send
+    title: ledger publishes ledger.order.{status}
+    channel:
+      $ref: "#/channels/ledgerOrderStatus"
+    messages:
+      - $ref: "#/channels/ledgerOrderStatus/messages/LedgerOrderStatusChanged"
+  publishLedgerPaymentStatus:
+    action: send
+    title: ledger publishes ledger.payment.{status}
+    channel:
+      $ref: "#/channels/ledgerPaymentStatus"
+    messages:
+      - $ref: "#/channels/ledgerPaymentStatus/messages/LedgerPaymentStatusChanged"
 components:
   schemas:
     CloudEvent:
@@ -407,6 +461,145 @@ components:
           items: *a1
         detail:
           type: string
+    LedgerOrderStatusChanged:
+      type: object
+      required:
+        - orderId
+        - product
+        - customerRef
+        - status
+        - previousStatus
+        - currency
+        - totalSats
+        - at
+      properties:
+        orderId:
+          type: string
+          minLength: 1
+        product:
+          type: string
+          enum:
+            - blockspace
+            - scribbit
+            - degent
+        customerRef:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Opaque reference owned by the product; never PII.
+        status:
+          type: string
+          enum:
+            - created
+            - awaiting_payment
+            - paid
+            - expired
+            - cancelled
+            - refunded
+        previousStatus:
+          type:
+            - string
+            - "null"
+          enum:
+            - created
+            - awaiting_payment
+            - paid
+            - expired
+            - cancelled
+            - refunded
+            - null
+        currency:
+          const: sat
+        totalSats:
+          type: integer
+          minimum: 0
+          maximum: 2100000000000000
+        at:
+          type: string
+          format: date-time
+        detail:
+          type: string
+    LedgerPaymentStatusChanged:
+      type: object
+      required:
+        - paymentId
+        - orderId
+        - product
+        - method
+        - provider
+        - status
+        - previousStatus
+        - amountSats
+        - amountPaidSats
+        - at
+      properties:
+        paymentId:
+          type: string
+          minLength: 1
+        orderId:
+          type: string
+          minLength: 1
+        product:
+          type: string
+          enum:
+            - blockspace
+            - scribbit
+            - degent
+        method:
+          type: string
+          enum:
+            - onchain
+            - lightning
+            - card
+        provider:
+          type: string
+          minLength: 1
+          description: Provider adapter name (onchain, btcpay, card, fake).
+        status:
+          type: string
+          enum:
+            - created
+            - pending
+            - paid
+            - underpaid
+            - overpaid
+            - expired
+            - failed
+            - refunded
+        previousStatus:
+          type:
+            - string
+            - "null"
+          enum:
+            - created
+            - pending
+            - paid
+            - underpaid
+            - overpaid
+            - expired
+            - failed
+            - refunded
+            - null
+        amountSats:
+          type: integer
+          minimum: 0
+          maximum: 2100000000000000
+        amountPaidSats:
+          type: integer
+          minimum: 0
+          maximum: 2100000000000000
+          description: Satoshis credited so far under the provider's confirmation policy.
+        at:
+          type: string
+          format: date-time
+        paidAt:
+          type: string
+          format: date-time
+        txid:
+          type: string
+          pattern: ^[0-9a-f]{64}$
+        detail:
+          type: string
   messages:
     BlockIndexed:
       name: BlockIndexed
@@ -480,6 +673,34 @@ components:
             properties:
               data:
                 $ref: "#/components/schemas/BatchStatusChanged"
+    LedgerOrderStatusChanged:
+      name: LedgerOrderStatusChanged
+      title: ledger.order.{status}
+      summary: An order in the shared ledger changed status. Amounts are integer satoshis.
+      contentType: application/cloudevents+json
+      x-topic-version: 1.0.0
+      x-producer: ledger
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/CloudEvent"
+          - type: object
+            properties:
+              data:
+                $ref: "#/components/schemas/LedgerOrderStatusChanged"
+    LedgerPaymentStatusChanged:
+      name: LedgerPaymentStatusChanged
+      title: ledger.payment.{status}
+      summary: A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, or card). Amounts are integer satoshis.
+      contentType: application/cloudevents+json
+      x-topic-version: 1.0.0
+      x-producer: ledger
+      payload:
+        allOf:
+          - $ref: "#/components/schemas/CloudEvent"
+          - type: object
+            properties:
+              data:
+                $ref: "#/components/schemas/LedgerPaymentStatusChanged"
   channelBindings:
     eventsExchange:
       amqp:

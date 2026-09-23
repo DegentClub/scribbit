@@ -96,6 +96,8 @@ describe('platform registry validation', () => {
       'collection.certified',
       'collection.minted',
       'degent.mint.order.{status}',
+      'ledger.order.{status}',
+      'ledger.payment.{status}',
     ]);
   });
 

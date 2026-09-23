@@ -1,7 +1,7 @@
 import { schnorr } from '@noble/curves/secp256k1.js';
 import { hex } from '@scure/base';
 import { p2tr } from '@scure/btc-signer';
-import type { InscriptionContent, Network } from '../src/index.js';
+import type { InscriptionContent, Network, RevealSighashMode } from '../src/index.js';
 
 export type Op = { opcode: number; data?: Uint8Array };
 
@@ -72,12 +72,17 @@ import {
   attachParent,
   buildHalfSignedReveal,
   buildRescueReveal,
+  buildResignedRescue,
   finalizeReveal,
   quoteReveal,
   signParentInput,
 } from '../src/index.js';
 
-export function buildAll(c: InscriptionContent, commitValue = 100_000n) {
+/**
+ * Full flow in either sighash mode. `rescue` is the replay rescue (buildRescueReveal) for 0x83 and
+ * the re-signed rescue (buildResignedRescue, K_e) for 0x81: the two self-rescue paths.
+ */
+export function buildAll(c: InscriptionContent, commitValue = 100_000n, sighash: RevealSighashMode = 'all_anyonecanpay') {
   const half = buildHalfSignedReveal({
     network: NETWORK,
     revealPrivkey: REVEAL_PRIV,
@@ -86,6 +91,10 @@ export function buildAll(c: InscriptionContent, commitValue = 100_000n) {
     commitValue,
     recipientAddress: RECIPIENT.address!,
     postage: POSTAGE,
+    sighash,
+    withParent: true,
+    parentReturnAddress: PARENT.address!,
+    parentValue: PARENT_VALUE,
   });
   const attached = attachParent({
     network: NETWORK,
@@ -97,7 +106,18 @@ export function buildAll(c: InscriptionContent, commitValue = 100_000n) {
   });
   const signed = signParentInput(attached.psbtBase64, PARENT_PRIV);
   const final = finalizeReveal(signed.psbtBase64);
-  const rescue = buildRescueReveal({ network: NETWORK, halfSignedPsbtBase64: half.psbtBase64 });
+  const rescue =
+    sighash === 'single_anyonecanpay'
+      ? buildRescueReveal({ network: NETWORK, halfSignedPsbtBase64: half.psbtBase64 })
+      : buildResignedRescue({
+          network: NETWORK,
+          revealPrivkey: REVEAL_PRIV,
+          content: c,
+          commitOutpoint: COMMIT_OUTPOINT,
+          commitValue,
+          recipientAddress: RECIPIENT.address!,
+          postage: POSTAGE,
+        });
   return { half, attached, signed, final, rescue };
 }
 export { quoteReveal };

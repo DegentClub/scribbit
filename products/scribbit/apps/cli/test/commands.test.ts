@@ -101,6 +101,7 @@ describe('scribbit rescue', () => {
     commitValue: 10_000n,
     recipientAddress: recipient,
     postage: 546n,
+    sighash: 'single_anyonecanpay', // the CLI `rescue` command replays legacy 0x83 PSBTs
   });
   const expected = buildRescueReveal({ network: 'regtest', halfSignedPsbtBase64: half.psbtBase64 });
 

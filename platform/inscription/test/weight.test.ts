@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hex } from '@scure/base';
 import { RawTx, Transaction } from '@scure/btc-signer';
-import { estimateRevealWeight, laneFor, LIMITS, vsizeFromWeight } from '../src/index.js';
+import { estimateResignedRescueWeight, estimateRevealWeight, laneFor, LIMITS, vsizeFromWeight, type RevealSighashMode } from '../src/index.js';
 import { buildAll, content, PARENT, RECIPIENT } from './helpers.js';
 
 /** Weight from raw bytes, independent of both src and btc-signer's weight getter. */
@@ -14,11 +14,12 @@ function weightOfHex(txHex: string): number {
 
 const SIZES = [1, 100, 520, 521, 10_000, 200_000, 390_000, 400_000, 1_000_000, 3_900_000];
 
+const MODES: RevealSighashMode[] = ['all_anyonecanpay', 'single_anyonecanpay'];
+
 describe('estimateRevealWeight is EXACT against real signed transactions', () => {
   for (const size of SIZES) {
-    it(`body ${size} bytes: parent layout and rescue layout`, () => {
+    it(`body ${size} bytes: parent layout (0x81 and 0x83), replay rescue (0x83) and re-signed rescue (0x81)`, () => {
       const c = content(size);
-      const { final, rescue } = buildAll(c);
       const withParent = estimateRevealWeight({
         content: c,
         withParent: true,
@@ -27,18 +28,30 @@ describe('estimateRevealWeight is EXACT against real signed transactions', () =>
         parentInputScript: PARENT.script,
       });
       const withoutParent = estimateRevealWeight({ content: c, withParent: false, recipientScript: RECIPIENT.script });
+      const resigned = estimateResignedRescueWeight({ content: c, recipientScript: RECIPIENT.script });
 
-      expect(final.weight).toBe(withParent);
-      expect(weightOfHex(final.hex)).toBe(withParent);
-      expect(Transaction.fromRaw(hex.decode(final.hex), { allowUnknownInputs: true }).weight).toBe(withParent);
-      expect(final.vsize).toBe(vsizeFromWeight(withParent));
+      const finals: Record<string, number> = {};
+      for (const mode of MODES) {
+        const { final, rescue } = buildAll(c, 100_000n, mode);
+        finals[mode] = final.weight;
+        expect(final.weight).toBe(withParent);
+        expect(weightOfHex(final.hex)).toBe(withParent);
+        expect(Transaction.fromRaw(hex.decode(final.hex), { allowUnknownInputs: true }).weight).toBe(withParent);
+        expect(final.vsize).toBe(vsizeFromWeight(withParent));
 
-      expect(rescue.weight).toBe(withoutParent);
-      expect(weightOfHex(rescue.hex)).toBe(withoutParent);
-      expect(rescue.vsize).toBe(vsizeFromWeight(withoutParent));
+        const expectedRescue = mode === 'single_anyonecanpay' ? withoutParent : resigned;
+        expect(rescue.weight).toBe(expectedRescue);
+        expect(weightOfHex(rescue.hex)).toBe(expectedRescue);
+        expect(Transaction.fromRaw(hex.decode(rescue.hex), { allowUnknownInputs: true }).weight).toBe(expectedRescue);
+        expect(rescue.vsize).toBe(vsizeFromWeight(expectedRescue));
+      }
+      // 0x81 and 0x83 reveals serialize to exactly the same weight (65-byte signature either way).
+      expect(finals['all_anyonecanpay']).toBe(finals['single_anyonecanpay']);
 
       // Parent adds exactly one 41-byte input, one 43-byte P2TR output and a 66-byte witness.
       expect(withParent - withoutParent).toBe(4 * (41 + 43) + 66);
+      // The re-signed rescue drops only the hash-type byte of the commit signature.
+      expect(withoutParent - resigned).toBe(1);
     });
   }
 

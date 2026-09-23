@@ -1,0 +1,23 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: ledger
+package: "@bsh/ledger"
+kind: service
+product: platform
+owner: team-platform
+summary: Shared order/payment ledger for every product - on-chain (xpub watch-only), Lightning + BTC via BTCPay, cards via a Stripe-shaped provider; receipts, refunds, events.
+lifecycle: beta
+depends_on: ["@bsh/edge", "@bsh/events"]
+provides: [contracts/openapi/ledger.yaml, contracts/asyncapi/ledger.yaml]
+stores: ["sqlite:ledger", "memory:ledger-api-keys", "memory:ledger-rate-limits"]
+secrets:
+  - services/ledger/api-keys
+  - services/ledger/xpub
+  - services/ledger/btcpay/api-key
+  - services/ledger/btcpay/webhook-secret
+  - services/ledger/card/secret-key
+  - services/ledger/card/webhook-secret
+env_schema: ./env.schema.json
+slo: { availability: "99.9", p95_ms: 250 }
+runbook: ./RUNBOOK.md
+docs: ./README.md
+commands: { dev: dev, test: test, typecheck: typecheck }

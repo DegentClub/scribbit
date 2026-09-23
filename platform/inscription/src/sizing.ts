@@ -7,7 +7,7 @@ export type Lane = 'standard' | 'block';
 const P2TR_SCRIPT_LEN = 34;
 /** outpoint (36) + scriptSig length (1, empty) + nSequence (4) */
 const INPUT_BASE = 41;
-const COMMIT_SIG = 65; // 64-byte Schnorr + 0x83
+const COMMIT_SIG = 65; // 64-byte Schnorr + hash-type byte (0x81 or 0x83: same size)
 const PARENT_SIG = 64; // SIGHASH_DEFAULT key-path
 const CONTROL_BLOCK = 33; // single leaf, no merkle path
 
@@ -51,6 +51,15 @@ export function estimateRevealWeight(args: {
   if (withParent) witness += compactSizeLen(1) + compactSizeLen(PARENT_SIG) + PARENT_SIG;
 
   return base * 4 + witness;
+}
+
+/**
+ * EXACT weight of the re-signed rescue `[commit] -> [child]` (buildResignedRescue). Same
+ * serialization as the rescue layout above except the SIGHASH_DEFAULT signature has no trailing
+ * hash-type byte: exactly 1 WU lighter.
+ */
+export function estimateResignedRescueWeight(args: { content: InscriptionContent; recipientScript: Uint8Array }): number {
+  return estimateRevealWeight({ content: args.content, withParent: false, recipientScript: args.recipientScript }) - (COMMIT_SIG - PARENT_SIG);
 }
 
 export function vsizeFromWeight(weight: number): number {

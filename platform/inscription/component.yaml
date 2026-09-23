@@ -3,7 +3,7 @@ package: "@bsh/inscription"
 kind: library
 product: platform
 owner: team-platform
-summary: Ordinals envelope, commit/reveal construction with SIGHASH_SINGLE|ANYONECANPAY, exact weight and fee maths.
+summary: Ordinals envelope, commit/reveal construction with SIGHASH_ALL|ANYONECANPAY (0x83 legacy), exact weight and fee maths.
 lifecycle: beta
 depends_on: []
 docs: ./README.md

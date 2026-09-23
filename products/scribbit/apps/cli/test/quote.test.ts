@@ -72,6 +72,7 @@ describe('scribbit quote: predictions equal real signed transactions', () => {
       commitValue: BigInt(q.fees.commitValue),
       recipientAddress: RECIPIENT,
       postage: 546n,
+      sighash: 'single_anyonecanpay', // the CLI `rescue` command replays legacy 0x83 PSBTs
     });
     // Rescue layout, built by the CLI itself.
     const rescue = await cli(['rescue', '--psbt', half.psbtBase64, '--network', 'regtest', '--json']);

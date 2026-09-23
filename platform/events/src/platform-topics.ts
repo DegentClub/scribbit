@@ -225,7 +225,104 @@ export const batchStatus = defineTopic<BatchStatusChanged>({
   },
 });
 
-export const PLATFORM_TOPICS = [blockIndexed, collectionMinted, collectionCertified, degentMintOrder, batchStatus] as const;
+// ------------------------------------------------------------------------------------ ledger.order.{status} / ledger.payment.{status}
+
+export const LEDGER_PRODUCTS = ['blockspace', 'scribbit', 'degent'] as const;
+export type LedgerProduct = (typeof LEDGER_PRODUCTS)[number];
+
+export const LEDGER_ORDER_STATUSES = ['created', 'awaiting_payment', 'paid', 'expired', 'cancelled', 'refunded'] as const;
+export type LedgerOrderStatus = (typeof LEDGER_ORDER_STATUSES)[number];
+
+export const LEDGER_PAYMENT_STATUSES = ['created', 'pending', 'paid', 'underpaid', 'overpaid', 'expired', 'failed', 'refunded'] as const;
+export type LedgerPaymentStatus = (typeof LEDGER_PAYMENT_STATUSES)[number];
+
+export const LEDGER_PAYMENT_METHODS = ['onchain', 'lightning', 'card'] as const;
+export type LedgerPaymentMethod = (typeof LEDGER_PAYMENT_METHODS)[number];
+
+const ledgerProduct = { type: 'string', enum: [...LEDGER_PRODUCTS] } satisfies JsonSchema;
+const sats = { type: 'integer', minimum: 0, maximum: 2100000000000000 } satisfies JsonSchema;
+
+export interface LedgerOrderStatusChanged {
+  orderId: string;
+  product: LedgerProduct;
+  customerRef: string;
+  status: LedgerOrderStatus;
+  previousStatus: LedgerOrderStatus | null;
+  currency: 'sat';
+  totalSats: number;
+  at: string;
+  detail?: string;
+}
+
+export const ledgerOrderStatus = defineTopic<LedgerOrderStatusChanged>({
+  name: 'ledger.order.{status}',
+  version: '1.0.0',
+  producer: 'ledger',
+  description: 'An order in the shared ledger changed status. Amounts are integer satoshis.',
+  params: { status: { description: 'The status the order moved to.', enum: LEDGER_ORDER_STATUSES } },
+  dataschema: `${SCHEMA_BASE}LedgerOrderStatusChanged`,
+  schema: {
+    type: 'object',
+    required: ['orderId', 'product', 'customerRef', 'status', 'previousStatus', 'currency', 'totalSats', 'at'],
+    properties: {
+      orderId: { type: 'string', minLength: 1 },
+      product: ledgerProduct,
+      customerRef: { type: 'string', minLength: 1, maxLength: 256, description: 'Opaque reference owned by the product; never PII.' },
+      status: { type: 'string', enum: [...LEDGER_ORDER_STATUSES] },
+      previousStatus: { type: ['string', 'null'], enum: [...LEDGER_ORDER_STATUSES, null] },
+      currency: { const: 'sat' },
+      totalSats: sats,
+      at: dateTime,
+      detail: { type: 'string' },
+    },
+  },
+});
+
+export interface LedgerPaymentStatusChanged {
+  paymentId: string;
+  orderId: string;
+  product: LedgerProduct;
+  method: LedgerPaymentMethod;
+  provider: string;
+  status: LedgerPaymentStatus;
+  previousStatus: LedgerPaymentStatus | null;
+  amountSats: number;
+  amountPaidSats: number;
+  at: string;
+  paidAt?: string;
+  txid?: string;
+  detail?: string;
+}
+
+export const ledgerPaymentStatus = defineTopic<LedgerPaymentStatusChanged>({
+  name: 'ledger.payment.{status}',
+  version: '1.0.0',
+  producer: 'ledger',
+  description: 'A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, or card). Amounts are integer satoshis.',
+  params: { status: { description: 'The status the payment moved to.', enum: LEDGER_PAYMENT_STATUSES } },
+  dataschema: `${SCHEMA_BASE}LedgerPaymentStatusChanged`,
+  schema: {
+    type: 'object',
+    required: ['paymentId', 'orderId', 'product', 'method', 'provider', 'status', 'previousStatus', 'amountSats', 'amountPaidSats', 'at'],
+    properties: {
+      paymentId: { type: 'string', minLength: 1 },
+      orderId: { type: 'string', minLength: 1 },
+      product: ledgerProduct,
+      method: { type: 'string', enum: [...LEDGER_PAYMENT_METHODS] },
+      provider: { type: 'string', minLength: 1, description: 'Provider adapter name (onchain, btcpay, card, fake).' },
+      status: { type: 'string', enum: [...LEDGER_PAYMENT_STATUSES] },
+      previousStatus: { type: ['string', 'null'], enum: [...LEDGER_PAYMENT_STATUSES, null] },
+      amountSats: sats,
+      amountPaidSats: { ...sats, description: 'Satoshis credited so far under the provider\'s confirmation policy.' },
+      at: dateTime,
+      paidAt: dateTime,
+      txid: hex64,
+      detail: { type: 'string' },
+    },
+  },
+});
+
+export const PLATFORM_TOPICS = [blockIndexed, collectionMinted, collectionCertified, degentMintOrder, batchStatus, ledgerOrderStatus, ledgerPaymentStatus] as const;
 
 /** Fresh registry pre-loaded with every platform topic. */
 export function platformRegistry(): TopicRegistry {

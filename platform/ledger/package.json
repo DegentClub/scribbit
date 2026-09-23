@@ -1,0 +1,36 @@
+{
+  "name": "@bsh/ledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@bsh/edge": "workspace:*",
+    "@bsh/events": "workspace:*",
+    "@hono/node-server": "^2.1.1",
+    "@noble/hashes": "^2.4.0",
+    "@scure/base": "^2.4.0",
+    "@scure/bip32": "^2.0.1",
+    "@scure/btc-signer": "^2.4.1",
+    "hono": "^4.13.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "ajv": "^8.20.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.1",
+    "yaml": "^2.9.1"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api.ts"
+  }
+}

@@ -1,0 +1,113 @@
+# Ledger events (AsyncAPI 3). Provided by ledger (@bsh/ledger, platform/ledger).
+# The channels below are ALSO registered in contracts/asyncapi/platform-events.yaml, which is canonical for the
+# shared bus (the @bsh/events registry mirrors it). This file is the ledger's own view for consumers of the
+# service; platform/ledger/test/asyncapi.test.ts fails when the two disagree.
+asyncapi: 3.0.0
+info:
+  title: Blockspace ledger events
+  version: 1.0.0
+  description: |-
+    Status changes of orders and payment intents in the shared ledger. CloudEvents 1.0 structured mode on the
+    `bsh.events` topic exchange; `subject` is the order id. Delivery is at least once - de-duplicate on (source, id).
+    Producer source: `urn:bsh:ledger`. Amounts are integer satoshis.
+defaultContentType: application/cloudevents+json
+servers:
+  rabbitmq:
+    host: rabbitmq.skrybit.pve:5672
+    protocol: amqp
+    protocolVersion: 0.9.1
+channels:
+  ledgerOrderStatus:
+    address: ledger.order.{status}
+    title: ledger.order.{status}
+    description: An order in the shared ledger changed status. Amounts are integer satoshis.
+    parameters:
+      status:
+        description: The status the order moved to.
+        enum: [created, awaiting_payment, paid, expired, cancelled, refunded]
+    messages:
+      LedgerOrderStatusChanged:
+        $ref: "#/components/messages/LedgerOrderStatusChanged"
+  ledgerPaymentStatus:
+    address: ledger.payment.{status}
+    title: ledger.payment.{status}
+    description: A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, or card). Amounts are integer satoshis.
+    parameters:
+      status:
+        description: The status the payment moved to.
+        enum: [created, pending, paid, underpaid, overpaid, expired, failed, refunded]
+    messages:
+      LedgerPaymentStatusChanged:
+        $ref: "#/components/messages/LedgerPaymentStatusChanged"
+operations:
+  publishLedgerOrderStatus:
+    action: send
+    channel:
+      $ref: "#/channels/ledgerOrderStatus"
+    messages:
+      - $ref: "#/channels/ledgerOrderStatus/messages/LedgerOrderStatusChanged"
+  publishLedgerPaymentStatus:
+    action: send
+    channel:
+      $ref: "#/channels/ledgerPaymentStatus"
+    messages:
+      - $ref: "#/channels/ledgerPaymentStatus/messages/LedgerPaymentStatusChanged"
+components:
+  schemas:
+    LedgerOrderStatusChanged:
+      type: object
+      required: [orderId, product, customerRef, status, previousStatus, currency, totalSats, at]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        product: { type: string, enum: [blockspace, scribbit, degent] }
+        customerRef: { type: string, minLength: 1, maxLength: 256, description: "Opaque reference owned by the product; never PII." }
+        status: { type: string, enum: [created, awaiting_payment, paid, expired, cancelled, refunded] }
+        previousStatus: { type: [string, "null"], enum: [created, awaiting_payment, paid, expired, cancelled, refunded, null] }
+        currency: { const: sat }
+        totalSats: { type: integer, minimum: 0, maximum: 2100000000000000 }
+        at: { type: string, format: date-time }
+        detail: { type: string }
+    LedgerPaymentStatusChanged:
+      type: object
+      required: [paymentId, orderId, product, method, provider, status, previousStatus, amountSats, amountPaidSats, at]
+      properties:
+        paymentId: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        product: { type: string, enum: [blockspace, scribbit, degent] }
+        method: { type: string, enum: [onchain, lightning, card] }
+        provider: { type: string, minLength: 1, description: "Provider adapter name (onchain, btcpay, card, fake)." }
+        status: { type: string, enum: [created, pending, paid, underpaid, overpaid, expired, failed, refunded] }
+        previousStatus: { type: [string, "null"], enum: [created, pending, paid, underpaid, overpaid, expired, failed, refunded, null] }
+        amountSats: { type: integer, minimum: 0, maximum: 2100000000000000 }
+        amountPaidSats: { type: integer, minimum: 0, maximum: 2100000000000000, description: "Satoshis credited so far under the provider's confirmation policy." }
+        at: { type: string, format: date-time }
+        paidAt: { type: string, format: date-time }
+        txid: { type: string, pattern: "^[0-9a-f]{64}$" }
+        detail: { type: string }
+  messages:
+    LedgerOrderStatusChanged:
+      name: LedgerOrderStatusChanged
+      title: ledger.order.{status}
+      contentType: application/cloudevents+json
+      x-topic-version: 1.0.0
+      x-producer: ledger
+      payload:
+        allOf:
+          - $ref: "contracts/asyncapi/platform-events.yaml#/components/schemas/CloudEvent"
+          - type: object
+            properties:
+              data:
+                $ref: "#/components/schemas/LedgerOrderStatusChanged"
+    LedgerPaymentStatusChanged:
+      name: LedgerPaymentStatusChanged
+      title: ledger.payment.{status}
+      contentType: application/cloudevents+json
+      x-topic-version: 1.0.0
+      x-producer: ledger
+      payload:
+        allOf:
+          - $ref: "contracts/asyncapi/platform-events.yaml#/components/schemas/CloudEvent"
+          - type: object
+            properties:
+              data:
+                $ref: "#/components/schemas/LedgerPaymentStatusChanged"
