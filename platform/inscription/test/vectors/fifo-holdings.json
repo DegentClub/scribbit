@@ -1,0 +1,1259 @@
+{
+ "version": 1,
+ "rule": "Concatenate the sats of every input in input order into one stream. Fill outputs in order; each output takes the next contiguous chunk of exactly its value. Whatever is left at the tail is the fee. An inscription at offset o of input k sits at stream position (sum of values of inputs before k) + o.",
+ "spec": "docs/FIFO-SIMULATOR.md",
+ "implementation": "tools/stacker/blockspace_stacker/ord_sim.py",
+ "conventions": {
+  "sat_ranges": "list of [start, end) half-open sat-number ranges, or {\"unknown\": n} for n sats of unknown numbering; may be omitted/null for a wholly opaque input",
+  "placements.output": "zero-based output index, or the string \"FEE\" when burned",
+  "placements.offset": "offset within that output; for \"FEE\", distance past the last output",
+  "placements.sat": "sat number, or null when the source range is unknown",
+  "out_ranges": "per output, the list of ranges (same encoding as sat_ranges) it receives"
+ },
+ "vectors": [
+  {
+   "name": "single_input_offset0_lands_output0",
+   "description": "One 777-sat input with the inscription at offset 0, shaved into [1][776]. The inscription is the first sat of the stream, so it is the first sat of output 0.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    }
+   ],
+   "outputs": [
+    1,
+    776
+   ],
+   "expect": {
+    "fee": 0,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     [
+      [
+       1000001,
+       1000777
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "shave_two_inputs_funding_last",
+   "description": "Stage A: two inscription inputs then the funding input. Each inscription lands at offset 0 of its own 1-sat output; the fee (100) comes off the tail, i.e. out of the funding sats only.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000002:0",
+     "value": 546,
+     "sat_ranges": [
+      [
+       2000000,
+       2000546
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 30000,
+     "sat_ranges": [
+      [
+       5000000,
+       5030000
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    1,
+    776,
+    1,
+    545,
+    29900
+   ],
+   "expect": {
+    "fee": 100,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+      "output": 2,
+      "offset": 0,
+      "sat": 2000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     [
+      [
+       1000001,
+       1000777
+      ]
+     ],
+     [
+      [
+       2000000,
+       2000001
+      ]
+     ],
+     [
+      [
+       2000001,
+       2000546
+      ]
+     ],
+     [
+      [
+       5000000,
+       5029900
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "funding_first_burns_last_inscription",
+   "description": "The mistake the safety invariant exists to catch: the funding input is placed FIRST. Its 1000 sats shift every inscription 1000 positions down the stream. Outputs cover positions 0..1553, so the first inscription (position 1000) is scattered into the padding output 3 at offset 222 and the second (position 1777) is past the last output: burned to fee.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       5000000,
+       5001000
+      ]
+     ],
+     "inscriptions": []
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000002:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       2000000,
+       2000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+       "offset": 0
+      }
+     ]
+    }
+   ],
+   "outputs": [
+    1,
+    776,
+    1,
+    776
+   ],
+   "expect": {
+    "fee": 1000,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 3,
+      "offset": 222,
+      "sat": 1000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+      "output": "FEE",
+      "offset": 223,
+      "sat": 2000000,
+      "burned": true
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       5000000,
+       5000001
+      ]
+     ],
+     [
+      [
+       5000001,
+       5000777
+      ]
+     ],
+     [
+      [
+       5000777,
+       5000778
+      ]
+     ],
+     [
+      [
+       5000778,
+       5001000
+      ],
+      [
+       1000000,
+       1000554
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "pack_five_one_sat_inputs",
+   "description": "Stage B/C: five shaved 1-sat inputs contribute one inscription sat each, adjacently, then the funding. Output 0 of exactly N=5 sats holds all five at offsets 0..4 -- gapless.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 1,
+     "sat_ranges": [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000002:0",
+     "value": 1,
+     "sat_ranges": [
+      [
+       2000000,
+       2000001
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000003:0",
+     "value": 1,
+     "sat_ranges": [
+      [
+       3000000,
+       3000001
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000003i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000004:0",
+     "value": 1,
+     "sat_ranges": [
+      [
+       4000000,
+       4000001
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000004i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000005:0",
+     "value": 1,
+     "sat_ranges": [
+      [
+       5000000,
+       5000001
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000005i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       5000000,
+       5001000
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    5,
+    900
+   ],
+   "expect": {
+    "fee": 100,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+      "output": 0,
+      "offset": 1,
+      "sat": 2000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000003i0",
+      "output": 0,
+      "offset": 2,
+      "sat": 3000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000004i0",
+      "output": 0,
+      "offset": 3,
+      "sat": 4000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000005i0",
+      "output": 0,
+      "offset": 4,
+      "sat": 5000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000001
+      ],
+      [
+       2000000,
+       2000001
+      ],
+      [
+       3000000,
+       3000001
+      ],
+      [
+       4000000,
+       4000001
+      ],
+      [
+       5000000,
+       5000001
+      ]
+     ],
+     [
+      [
+       5000000,
+       5000900
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "entire_funding_to_fee_burns_nothing",
+   "description": "No change output: the whole 500-sat funding input becomes fee. Nothing is burned because sum(outputs) = 1554 still covers every inscription-input sat, and the inscriptions are ahead of the funding. (The safety invariant holds with equality.)",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000002:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       2000000,
+       2000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 500,
+     "sat_ranges": [
+      [
+       5000000,
+       5000500
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    1,
+    776,
+    1,
+    776
+   ],
+   "expect": {
+    "fee": 500,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+      "output": 2,
+      "offset": 0,
+      "sat": 2000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     [
+      [
+       1000001,
+       1000777
+      ]
+     ],
+     [
+      [
+       2000000,
+       2000001
+      ]
+     ],
+     [
+      [
+       2000001,
+       2000777
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "padding_before_one_sat_output_fails_to_shave",
+   "description": "Outputs [776][1][change]: nothing is burned, but the inscription (stream position 0) lands at offset 0 of the 776-sat output. The 1-sat output holds a plain sat. The shave silently did nothing useful; a later pack of that 1-sat output would carry no inscription.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       5000000,
+       5001000
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    776,
+    1,
+    900
+   ],
+   "expect": {
+    "fee": 100,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000776
+      ]
+     ],
+     [
+      [
+       1000776,
+       1000777
+      ]
+     ],
+     [
+      [
+       5000000,
+       5000900
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "inscription_at_nonzero_offset",
+   "description": "Offsets are preserved through the stream: an inscription at offset 600 of a 1000-sat input, with outputs [500][500], lands in output 1 at offset 100 on sat 1_000_600.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       1000000,
+       1001000
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 600
+      }
+     ]
+    }
+   ],
+   "outputs": [
+    500,
+    500
+   ],
+   "expect": {
+    "fee": 0,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 1,
+      "offset": 100,
+      "sat": 1000600,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000500
+      ]
+     ],
+     [
+      [
+       1000500,
+       1001000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "merge_two_packs",
+   "description": "The merge tree composes: a 3-sat pack and a 2-sat pack (every sat an inscription) merge into one 5-sat output with offsets 0..4 in input order.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 3,
+     "sat_ranges": [
+      [
+       1000000,
+       1000003
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      },
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i1",
+       "offset": 1
+      },
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i2",
+       "offset": 2
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000002:0",
+     "value": 2,
+     "sat_ranges": [
+      [
+       2000000,
+       2000002
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+       "offset": 0
+      },
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000002i1",
+       "offset": 1
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       5000000,
+       5001000
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    5,
+    900
+   ],
+   "expect": {
+    "fee": 100,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i1",
+      "output": 0,
+      "offset": 1,
+      "sat": 1000001,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i2",
+      "output": 0,
+      "offset": 2,
+      "sat": 1000002,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+      "output": 0,
+      "offset": 3,
+      "sat": 2000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000002i1",
+      "output": 0,
+      "offset": 4,
+      "sat": 2000001,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000003
+      ],
+      [
+       2000000,
+       2000002
+      ]
+     ],
+     [
+      [
+       5000000,
+       5000900
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "unknown_sat_ranges_still_place_exactly",
+   "description": "A funding input whose sat numbers are unknown ({\"unknown\": n}) still occupies n stream positions, so placement is exact; only the sat numbers of the sats it contributes are null.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 546,
+     "sat_ranges": [
+      [
+       1000000,
+       1000546
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 10000,
+     "sat_ranges": [
+      {
+       "unknown": 10000
+      }
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    1,
+    545,
+    9900
+   ],
+   "expect": {
+    "fee": 100,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     [
+      [
+       1000001,
+       1000546
+      ]
+     ],
+     [
+      {
+       "unknown": 9900
+      }
+     ]
+    ]
+   }
+  },
+  {
+   "name": "multi_range_input",
+   "description": "An input made of two sat ranges [100,300) and [5000,5100). The inscription at offset 250 sits in the second range on sat 5050; with outputs [200][100] it lands in output 1 at offset 50.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 300,
+     "sat_ranges": [
+      [
+       100,
+       300
+      ],
+      [
+       5000,
+       5100
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 250
+      }
+     ]
+    }
+   ],
+   "outputs": [
+    200,
+    100
+   ],
+   "expect": {
+    "fee": 0,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 1,
+      "offset": 50,
+      "sat": 5050,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       100,
+       300
+      ]
+     ],
+     [
+      [
+       5000,
+       5100
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "zero_value_output_last_consumes_no_positions",
+   "description": "A 0-sat OP_RETURN (TESTBYTES mint) appended LAST takes no stream positions: the inscription still lands at offset 0 of output 0 and the mint output's range list is empty.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       5000000,
+       5001000
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    1,
+    776,
+    900,
+    0
+   ],
+   "expect": {
+    "fee": 100,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     [
+      [
+       1000001,
+       1000777
+      ]
+     ],
+     [
+      [
+       5000000,
+       5000900
+      ]
+     ],
+     []
+    ]
+   }
+  },
+  {
+   "name": "zero_value_output_first_shifts_nothing_either",
+   "description": "Sanity: a 0-sat output FIRST also takes no positions (it is an empty chunk), so it does not shift offsets -- ord assigns nothing to it. The mint goes last anyway so the remainder rule of the token protocol cannot pick an inscription output.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000009:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       5000000,
+       5001000
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    0,
+    1,
+    776,
+    900
+   ],
+   "expect": {
+    "fee": 100,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 1,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [],
+     [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     [
+      [
+       1000001,
+       1000777
+      ]
+     ],
+     [
+      [
+       5000000,
+       5000900
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "invariant_is_sufficient_not_necessary",
+   "description": "Outputs [1][776][1] with the second padding run paid to fee. Nothing is burned even though sum(outputs)=778 < 1554: the invariant sum(outputs) >= inscription-input value is a sufficient guarantee, not a necessary one. The planner enforces it anyway.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    },
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000002:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       2000000,
+       2000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+       "offset": 0
+      }
+     ]
+    }
+   ],
+   "outputs": [
+    1,
+    776,
+    1
+   ],
+   "expect": {
+    "fee": 776,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000002i0",
+      "output": 2,
+      "offset": 0,
+      "sat": 2000000,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000001
+      ]
+     ],
+     [
+      [
+       1000001,
+       1000777
+      ]
+     ],
+     [
+      [
+       2000000,
+       2000001
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "two_inscriptions_one_input",
+   "description": "Two inscriptions on one input (offsets 0 and 400) with outputs [300][700]: the first lands in output 0 offset 0, the second in output 1 offset 100.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 1000,
+     "sat_ranges": [
+      [
+       1000000,
+       1001000
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      },
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i1",
+       "offset": 400
+      }
+     ]
+    }
+   ],
+   "outputs": [
+    300,
+    700
+   ],
+   "expect": {
+    "fee": 0,
+    "placements": [
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+      "output": 0,
+      "offset": 0,
+      "sat": 1000000,
+      "burned": false
+     },
+     {
+      "id": "0000000000000000000000000000000000000000000000000000000000000001i1",
+      "output": 1,
+      "offset": 100,
+      "sat": 1000400,
+      "burned": false
+     }
+    ],
+    "out_ranges": [
+     [
+      [
+       1000000,
+       1000300
+      ]
+     ],
+     [
+      [
+       1000300,
+       1001000
+      ]
+     ]
+    ]
+   }
+  },
+  {
+   "name": "outputs_exceed_inputs_is_an_error",
+   "description": "Outputs summing to more than the inputs is not a transaction; the simulator raises.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       1000000,
+       1000777
+      ]
+     ],
+     "inscriptions": [
+      {
+       "id": "0000000000000000000000000000000000000000000000000000000000000001i0",
+       "offset": 0
+      }
+     ]
+    }
+   ],
+   "outputs": [
+    1,
+    777
+   ],
+   "expect": {
+    "error": "exceed inputs"
+   }
+  },
+  {
+   "name": "sat_ranges_must_sum_to_value",
+   "description": "An input whose sat_ranges do not add up to its value is malformed; the simulator raises.",
+   "inputs": [
+    {
+     "outpoint": "0000000000000000000000000000000000000000000000000000000000000001:0",
+     "value": 777,
+     "sat_ranges": [
+      [
+       0,
+       100
+      ]
+     ],
+     "inscriptions": []
+    }
+   ],
+   "outputs": [
+    777
+   ],
+   "expect": {
+    "error": "do not sum to value"
+   }
+  }
+ ]
+}
