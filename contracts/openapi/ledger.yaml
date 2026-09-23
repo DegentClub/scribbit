@@ -1,0 +1,612 @@
+openapi: 3.1.0
+info:
+  title: Blockspace ledger
+  version: 1.0.0
+  summary: One order / payment ledger for block.space, scribb.it and degent.club - on-chain, Lightning (BTCPay) and card.
+  description: |
+    Provided by `ledger` (`@bsh/ledger`, platform/ledger). Amounts are integer satoshis everywhere
+    (`currency: sat`); card payments are quoted to fiat at intent creation by the card provider adapter.
+
+    Authentication: every product calls with its own API key (`X-API-Key: bsh_live_…` or
+    `Authorization: Bearer bsh_…`, scope `ledger`). The key's owner is the product slug; orders are scoped to it -
+    another product's order is a 404. Keys with scope `ledger:admin` see every product and may settle refunds.
+
+    Idempotency: `POST` operations accept an `Idempotency-Key` header (`[A-Za-z0-9._:-]{1,128}`). Replaying the
+    same key with the same request returns the original resource with `200`; a different request under the same
+    key is `422 idempotency_conflict`.
+
+    Webhooks (`/v1/webhooks/*`) are authenticated by the provider's signature over the raw body
+    (`BTCPay-Sig` HMAC-SHA256, `Stripe-Signature` `t=…,v1=…` scheme) and de-duplicated per delivery id; they
+    never accept API keys. A verified webhook is acknowledged with `200` even when it changes nothing.
+
+    Errors use the platform edge body `{ "error": { "code", "message", "requestId" } }`.
+    Events: `ledger.order.{status}` and `ledger.payment.{status}` (contracts/asyncapi/ledger.yaml).
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:3050
+    description: Local (`pnpm --filter @bsh/ledger dev`)
+tags:
+  - name: orders
+  - name: payments
+  - name: refunds
+  - name: webhooks
+  - name: system
+security:
+  - apiKey: []
+  - bearer: []
+paths:
+  /v1/health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Liveness and configured providers
+      security: []
+      responses:
+        '200':
+          description: Process is up.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /v1/orders:
+    post:
+      tags: [orders]
+      operationId: createOrder
+      summary: Create an order
+      description: The total is the sum of `quantity * unitSats`. `product` may be omitted with a product-bound key.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrderRequest' }
+      responses:
+        '201':
+          description: Created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '200':
+          description: Idempotent replay - the order created by the first request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/IdempotencyConflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /v1/orders/{id}:
+    get:
+      tags: [orders]
+      operationId: getOrder
+      summary: Fetch an order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: The order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/orders/{id}/cancel:
+    post:
+      tags: [orders]
+      operationId: cancelOrder
+      summary: Cancel an unpaid order
+      description: Allowed from `created` and `awaiting_payment` when no payment is `pending`.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: The cancelled order.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/orders/{id}/payments:
+    post:
+      tags: [payments]
+      operationId: createPayment
+      summary: Open a payment intent for an order (choose the method)
+      description: |
+        Exactly one intent may be `created`/`pending` per order at a time (`409 payment_active`). The intent
+        amount is the order total. The response's `checkout` carries what the customer needs: an address,
+        a BOLT11 invoice, a hosted checkout URL, or a card `clientSecret` for the provider's browser SDK.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePaymentRequest' }
+      responses:
+        '201':
+          description: Intent created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentIntent' }
+        '200':
+          description: Idempotent replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentIntent' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/IdempotencyConflict' }
+    get:
+      tags: [payments]
+      operationId: listPayments
+      summary: Payment intents of an order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Intents, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [payments]
+                properties:
+                  payments:
+                    type: array
+                    items: { $ref: '#/components/schemas/PaymentIntent' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/orders/{id}/receipt:
+    get:
+      tags: [orders]
+      operationId: getReceipt
+      summary: Receipt for an order (JSON or plain text)
+      description: "Plain text when `Accept: text/plain` or `?format=text`. Receipts are pure projections of ledger state."
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - name: format
+          in: query
+          required: false
+          schema: { type: string, enum: [json, text] }
+      responses:
+        '200':
+          description: The receipt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Receipt' }
+            text/plain:
+              schema: { type: string }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/payments/{id}:
+    get:
+      tags: [payments]
+      operationId: getPayment
+      summary: Fetch a payment intent
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: The intent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentIntent' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/payments/{id}/refund:
+    post:
+      tags: [refunds]
+      operationId: refundPayment
+      summary: Refund a paid, overpaid or underpaid intent (fully or partially)
+      description: |
+        Default amount: the excess for `overpaid`, everything credited and not yet refunded otherwise. Card and
+        BTCPay refunds are pushed to the provider; on-chain refunds need a `destination` and an operator payout
+        (they stay `pending` until settled via `/v1/refunds/{id}/settle`). When every credited satoshi has gone
+        back, the intent becomes `refunded` and a `paid` order becomes `refunded`.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefundRequest' }
+      responses:
+        '201':
+          description: Refund recorded (see `status`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Refund' }
+        '200':
+          description: Idempotent replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Refund' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/IdempotencyConflict' }
+  /v1/refunds/{id}:
+    get:
+      tags: [refunds]
+      operationId: getRefund
+      summary: Fetch a refund
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+      responses:
+        '200':
+          description: The refund.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Refund' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/refunds/{id}/settle:
+    post:
+      tags: [refunds]
+      operationId: settleRefund
+      summary: Operator marks a pending refund completed or failed (scope ledger:admin)
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [completed, failed] }
+                detail: { type: string, maxLength: 512, description: Payout txid or reason. }
+      responses:
+        '200':
+          description: The settled refund.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Refund' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/webhooks/btcpay:
+    post:
+      tags: [webhooks]
+      operationId: btcpayWebhook
+      summary: BTCPay Server webhook receiver
+      description: >-
+        Verifies `BTCPay-Sig: sha256=<hex HMAC-SHA256(secret, raw body)>`, de-duplicates on `originalDeliveryId`/`deliveryId`, then re-fetches the invoice from BTCPay before applying it.
+      security: []
+      parameters:
+        - name: BTCPay-Sig
+          in: header
+          required: true
+          schema: { type: string, pattern: '^sha256=[0-9a-fA-F]{64}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, description: BTCPay Greenfield webhook payload. }
+      responses:
+        '200':
+          description: Acknowledged (also for replays and unknown invoices, so BTCPay stops retrying).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookAck' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Signature missing or wrong.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /v1/webhooks/card:
+    post:
+      tags: [webhooks]
+      operationId: cardWebhook
+      summary: Card provider webhook receiver
+      description: >-
+        Verifies the `Stripe-Signature`-style header (`t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>`, 300 s tolerance), de-duplicates on the event id.
+      security: []
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, description: "Provider event envelope (`id`, `type`, `data.object`)." }
+      responses:
+        '200':
+          description: Acknowledged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookAck' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Signature missing, wrong or outside the tolerance window.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/OrderId' }
+    PaymentId:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/PaymentId' }
+    RefundId:
+      name: id
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/RefundId' }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, pattern: '^[A-Za-z0-9._:-]{1,128}$' }
+  responses:
+    BadRequest:
+      description: Malformed request (`invalid_request`, `invalid_json`, `invalid_idempotency_key`, `method_unavailable`, `unsupported_media_type`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Key lacks the scope, is not bound to a product, or names another product (`product_mismatch`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Unknown id, or a resource that belongs to another product.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: State does not allow it (`illegal_transition`, `order_not_payable`, `payment_active`, `not_refundable`, `refund_exceeds_paid`, `nothing_to_refund`, `concurrent_update`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    IdempotencyConflict:
+      description: Idempotency-Key reused with a different request (`idempotency_conflict`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Rate limit or key quota exceeded; `Retry-After` set.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Sats:
+      type: integer
+      minimum: 0
+      maximum: 2100000000000000
+      description: Integer satoshis.
+    Product:
+      type: string
+      enum: [blockspace, scribbit, degent]
+    OrderId: { type: string, pattern: '^ord_[A-Za-z0-9-]+$' }
+    PaymentId: { type: string, pattern: '^pay_[A-Za-z0-9-]+$' }
+    RefundId: { type: string, pattern: '^ref_[A-Za-z0-9-]+$' }
+    OrderStatus:
+      type: string
+      enum: [created, awaiting_payment, paid, expired, cancelled, refunded]
+    PaymentMethod:
+      type: string
+      enum: [onchain, lightning, card]
+    PaymentStatus:
+      type: string
+      enum: [created, pending, paid, underpaid, overpaid, expired, failed, refunded]
+    RefundStatus:
+      type: string
+      enum: [pending, completed, failed]
+    LineItem:
+      type: object
+      required: [sku, description, quantity, unitSats]
+      additionalProperties: false
+      properties:
+        sku: { type: string, minLength: 1, maxLength: 128 }
+        description: { type: string, minLength: 1, maxLength: 512 }
+        quantity: { type: integer, minimum: 1, maximum: 1000000 }
+        unitSats: { $ref: '#/components/schemas/Sats' }
+    Metadata:
+      type: object
+      description: Up to 20 string values (64-char keys, 512-char values). Never PII, never secrets.
+      additionalProperties: { type: string, maxLength: 512 }
+      maxProperties: 20
+    CreateOrderRequest:
+      type: object
+      required: [customerRef, lineItems]
+      additionalProperties: false
+      properties:
+        product: { $ref: '#/components/schemas/Product' }
+        customerRef: { type: string, minLength: 1, maxLength: 256, description: Opaque reference owned by the product. }
+        lineItems:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: '#/components/schemas/LineItem' }
+        metadata: { $ref: '#/components/schemas/Metadata' }
+    Order:
+      type: object
+      required: [id, product, customerRef, lineItems, currency, totalSats, status, metadata, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/OrderId' }
+        product: { $ref: '#/components/schemas/Product' }
+        customerRef: { type: string }
+        lineItems:
+          type: array
+          items: { $ref: '#/components/schemas/LineItem' }
+        currency: { type: string, const: sat }
+        totalSats: { $ref: '#/components/schemas/Sats' }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        metadata: { $ref: '#/components/schemas/Metadata' }
+        version: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreatePaymentRequest:
+      type: object
+      required: [method]
+      additionalProperties: false
+      properties:
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        provider: { type: string, description: Provider adapter name when several serve the method (onchain, btcpay, card). }
+        expiresAt: { type: string, format: date-time, description: Override the provider's default expiry. }
+    CheckoutDetails:
+      type: object
+      description: What the customer needs to pay. Never contains card data.
+      properties:
+        address: { type: string, description: On-chain address, fresh per intent. }
+        bolt11: { type: string, description: Lightning invoice. }
+        checkoutUrl: { type: string, format: uri, description: Hosted checkout page. }
+        clientSecret: { type: string, description: Card provider client token for the browser SDK. }
+    PaymentIntent:
+      type: object
+      required: [id, orderId, product, method, provider, providerRef, amountSats, amountPaidSats, refundedSats, status, checkout, expiresAt, paidAt, providerData, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/PaymentId' }
+        orderId: { $ref: '#/components/schemas/OrderId' }
+        product: { $ref: '#/components/schemas/Product' }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        provider: { type: string }
+        providerRef: { type: string, description: BTCPay invoice id, card intent id or the on-chain address. }
+        amountSats: { $ref: '#/components/schemas/Sats' }
+        amountPaidSats: { $ref: '#/components/schemas/Sats' }
+        refundedSats: { $ref: '#/components/schemas/Sats' }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        checkout: { $ref: '#/components/schemas/CheckoutDetails' }
+        expiresAt: { type: [string, 'null'], format: date-time }
+        paidAt: { type: [string, 'null'], format: date-time }
+        txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+        preimage: { type: string, pattern: '^[0-9a-f]{64}$' }
+        providerData: { type: object }
+        version: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    RefundRequest:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        amountSats: { $ref: '#/components/schemas/Sats' }
+        reason: { type: string, minLength: 1, maxLength: 512 }
+        destination: { type: string, minLength: 1, maxLength: 512, description: Refund address / invoice when the provider cannot push funds back itself. }
+    Refund:
+      type: object
+      required: [id, paymentId, orderId, amountSats, status, reason, providerRef, destination, detail, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/RefundId' }
+        paymentId: { $ref: '#/components/schemas/PaymentId' }
+        orderId: { $ref: '#/components/schemas/OrderId' }
+        amountSats: { $ref: '#/components/schemas/Sats' }
+        status: { $ref: '#/components/schemas/RefundStatus' }
+        reason: { type: string }
+        providerRef: { type: [string, 'null'] }
+        destination: { type: [string, 'null'] }
+        detail: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Receipt:
+      type: object
+      required: [receiptId, issuedAt, order, payments, refunds, totals]
+      properties:
+        receiptId: { type: string, pattern: '^rcpt_[A-Za-z0-9-]+$' }
+        issuedAt: { type: string, format: date-time }
+        order:
+          type: object
+          required: [id, product, customerRef, status, currency, totalSats, lineItems, createdAt, metadata]
+          properties:
+            id: { $ref: '#/components/schemas/OrderId' }
+            product: { $ref: '#/components/schemas/Product' }
+            customerRef: { type: string }
+            status: { $ref: '#/components/schemas/OrderStatus' }
+            currency: { type: string, const: sat }
+            totalSats: { $ref: '#/components/schemas/Sats' }
+            lineItems:
+              type: array
+              items: { $ref: '#/components/schemas/LineItem' }
+            createdAt: { type: string, format: date-time }
+            metadata: { $ref: '#/components/schemas/Metadata' }
+        payments:
+          type: array
+          items:
+            type: object
+            required: [id, method, provider, status, amountSats, amountPaidSats, refundedSats, paidAt, reference]
+            properties:
+              id: { $ref: '#/components/schemas/PaymentId' }
+              method: { $ref: '#/components/schemas/PaymentMethod' }
+              provider: { type: string }
+              status: { $ref: '#/components/schemas/PaymentStatus' }
+              amountSats: { $ref: '#/components/schemas/Sats' }
+              amountPaidSats: { $ref: '#/components/schemas/Sats' }
+              refundedSats: { $ref: '#/components/schemas/Sats' }
+              paidAt: { type: [string, 'null'], format: date-time }
+              txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+              reference: { type: string }
+        refunds:
+          type: array
+          items:
+            type: object
+            required: [id, paymentId, amountSats, status, reason, createdAt]
+            properties:
+              id: { $ref: '#/components/schemas/RefundId' }
+              paymentId: { $ref: '#/components/schemas/PaymentId' }
+              amountSats: { $ref: '#/components/schemas/Sats' }
+              status: { $ref: '#/components/schemas/RefundStatus' }
+              reason: { type: string }
+              createdAt: { type: string, format: date-time }
+        totals:
+          type: object
+          required: [totalSats, paidSats, refundedSats, dueSats]
+          properties:
+            totalSats: { $ref: '#/components/schemas/Sats' }
+            paidSats: { $ref: '#/components/schemas/Sats' }
+            refundedSats: { $ref: '#/components/schemas/Sats' }
+            dueSats: { $ref: '#/components/schemas/Sats' }
+    WebhookAck:
+      type: object
+      required: [received, duplicate, applied, eventType]
+      properties:
+        received: { type: boolean, const: true }
+        duplicate: { type: boolean, description: Delivery id seen before; nothing was done. }
+        applied: { type: boolean, description: A state change resulted. }
+        eventType: { type: string }
+        reason: { type: string, description: Why nothing was applied (replay, unknown_reference, informational, illegal transition…). }
+    Health:
+      type: object
+      required: [status, version, providers, time]
+      properties:
+        status: { type: string, const: ok }
+        version: { type: string }
+        providers:
+          type: array
+          items: { type: string }
+        time: { type: string, format: date-time }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            requestId: { type: [string, 'null'] }
