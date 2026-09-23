@@ -4,7 +4,7 @@
  * the outer repo, but owned, linted and code-owned by their own repository.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkBoundaries } from "../src/boundaries.js";
@@ -57,6 +57,17 @@ describe("nested workspace roots", () => {
       expect(d.file).toBe("deps/plat/platform/core/component.yaml");
     }
     expect(errorsOf(broken.diagnostics, "contract-missing")[0]!.message).toContain("deps/plat/contracts/asyncapi/missing.yaml does not exist");
+  });
+
+  it("validate uses the nested root's own schema copy (same $id) for external packages", () => {
+    const root = fixture("external-workspace");
+    mkdirSync(path.join(root, "deps/plat/schemas"), { recursive: true });
+    const nested = JSON.parse(readFileSync(path.join(root, "schemas/component.schema.json"), "utf8")) as { properties: { lifecycle: { enum: string[] } } };
+    nested.properties.lifecycle.enum = ["experimental"]; // stricter than ours: core (beta) must now fail, degent-api (beta) must not
+    writeFileSync(path.join(root, "deps/plat/schemas/component.schema.json"), JSON.stringify(nested));
+    const res = validateWorkspace(loadWorkspace(root));
+    expect(res.diagnostics.map((d) => `${d.rule} ${d.file} ${d.group}`)).toEqual(["manifest-schema deps/plat/platform/core/component.yaml external"]);
+    expect(res.diagnostics[0]!.message).toContain("/lifecycle: must be one of");
   });
 
   it("validate still rejects an outer consumes path outside the schema pattern", () => {

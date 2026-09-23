@@ -68,10 +68,11 @@ function ajvKeyPath(err: ErrorObject): (string | number)[] {
 }
 
 export function validateWorkspace(ws: Workspace, schema: Record<string, unknown> = loadSchema(ws.root)): CheckResult {
-  const ajv = new Ajv2020({ allErrors: true, strict: false });
-  const validateOuter = ajv.compile(schema);
+  const compile = (s: Record<string, unknown>) => new Ajv2020({ allErrors: true, strict: false }).compile(s);
+  const validateOuter = compile(schema);
   // An external package is validated against the schema of the workspace root that owns it (that repository's
-  // rules), falling back to ours when the nested root ships none.
+  // rules), falling back to ours when the nested root ships none. Each schema gets its own Ajv instance: the
+  // copies share one `$id`, which a single instance would reject as a duplicate.
   const validators = new Map<string, typeof validateOuter>([["", validateOuter]]);
   const validatorFor = (root: string) => {
     let v = validators.get(root);
@@ -82,7 +83,7 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
       } catch {
         /* no schema in the nested root: use ours */
       }
-      validators.set(root, (v = ajv.compile(nested)));
+      validators.set(root, (v = compile(nested)));
     }
     return v;
   };
