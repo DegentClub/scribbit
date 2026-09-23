@@ -55,7 +55,7 @@ package that has its own `pnpm-workspace.yaml`, i.e. `deps/scribbit`) as **exter
 - `boundaries` checks the outer repository's `@bsh/*` imports against `depends_on` with external packages as valid
   targets, but never scans the external packages' own files — their repository lints them.
 - `catalog` lists external components with `external: { repo, commit, root }` (remote URL from `.gitmodules`,
-  commit from `git ls-tree HEAD deps/scribbit`) and rewrites their paths relative to the outer repository, so a
+  commit from the git index of `deps/scribbit`, i.e. HEAD or a staged pin bump) and rewrites their paths relative to the outer repository, so a
   machine can follow `repo@commit:catalog/catalog.json` to the platform catalog and join on component `name`.
 - `codeowners` skips external components and the contracts they provide.
 

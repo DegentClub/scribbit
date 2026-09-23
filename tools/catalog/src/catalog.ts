@@ -160,12 +160,18 @@ export function readGitmodules(root: string): Map<string, string> {
   return out;
 }
 
-/** The commit a submodule at `rel` is pinned to in HEAD, or null when not a gitlink / not a git repo. */
+/**
+ * The commit a submodule at `rel` is pinned to, or null when not a gitlink / not a git repo. Read from the index
+ * (`git ls-files -s`), which equals HEAD after a commit and already reflects a staged pin bump, so the catalog
+ * regenerated in the same commit as the bump is not stale; falls back to `git ls-tree HEAD`.
+ */
 export function submoduleCommit(root: string, rel: string): string | null {
+  const git = (args: string[]): string => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   try {
-    const out = execFileSync("git", ["ls-tree", "HEAD", "--", rel], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-    const m = /^160000 commit ([0-9a-f]{40})\t/.exec(out);
-    return m ? m[1]! : null;
+    const staged = /^160000 ([0-9a-f]{40}) \d\t/.exec(git(["ls-files", "-s", "--", rel]));
+    if (staged) return staged[1]!;
+    const head = /^160000 commit ([0-9a-f]{40})\t/.exec(git(["ls-tree", "HEAD", "--", rel]));
+    return head ? head[1]! : null;
   } catch {
     return null;
   }

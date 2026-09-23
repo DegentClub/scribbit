@@ -62,7 +62,7 @@ found there are **external** (ADR-0004): known workspace packages, but owned by 
 |---|---|
 | validate | Manifest-relative paths (`provides`/`consumes`, `env_schema`, `runbook`, `docs`) resolve against the NESTED root; findings carry `"group": "external"`; `stats.external` counts them. Outer manifests may `consumes: deps/<name>/contracts/...` |
 | boundaries | Outer imports of `@bsh/*` are checked against `depends_on` with external packages as valid targets; external sources are never scanned |
-| catalog | Listed with `external: { repo, commit, root }` (remote URL from `.gitmodules`, commit from `git ls-tree HEAD <root>`); their `path`, `files`, `provides`, `consumes` are rewritten relative to the outer repo (`deps/scribbit/contracts/...`) so the outer catalog joins with the platform catalog at `<repo>@<commit>:catalog/catalog.json` |
+| catalog | Listed with `external: { repo, commit, root }` (remote URL from `.gitmodules`, commit from the index, `git ls-files -s <root>`, i.e. HEAD or a staged pin bump); their `path`, `files`, `provides`, `consumes` are rewritten relative to the outer repo (`deps/scribbit/contracts/...`) so the outer catalog joins with the platform catalog at `<repo>@<commit>:catalog/catalog.json` |
 | codeowners | Skipped, together with the contracts they provide |
 
 ## Layout

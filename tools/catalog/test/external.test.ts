@@ -90,6 +90,11 @@ describe("nested workspace roots", () => {
     expect(readGitmodules(root)).toEqual(new Map([["deps/plat", "https://github.com/acme/plat.git"]]));
     expect(submoduleCommit(root, "deps/plat")).toBe(SHA);
     expect(submoduleCommit(root, "products")).toBeNull();
+    // a staged (not yet committed) pin bump is what the catalog regenerated in the same commit must record
+    const BUMP = "fedcba9876543210fedcba9876543210fedcba98";
+    execFileSync("git", ["update-index", "--cacheinfo", `160000,${BUMP},deps/plat`], { cwd: root });
+    expect(submoduleCommit(root, "deps/plat")).toBe(BUMP);
+    execFileSync("git", ["update-index", "--cacheinfo", `160000,${SHA},deps/plat`], { cwd: root });
 
     const c = buildCatalog(loadWorkspace(root), NOW);
     const core = c.components.find((x) => x.name === "core")!;
