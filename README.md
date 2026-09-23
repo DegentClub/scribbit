@@ -1,13 +1,14 @@
-# Blockspace Holdings monorepo
+# scribbit: the platform repo
 
-The shared platform and the three consumer products of Blockspace Holdings, in one pnpm workspace:
+The shared platform of Blockspace Holdings and the **scribb.it** product, in one pnpm workspace. The other two
+products live in their own repositories and consume this one as a pinned git submodule at `deps/scribbit`
+([ADR-0004](docs/adr/0004-repo-split.md)):
 
-| Product | Slug | Verb | What it is | Status |
-|---|---|---|---|---|
-| [block.space](products/blockspace/README.md) | `blockspace` | measure | Bitcoin block-space explorer, fee Meter, portfolio, data API, certification | planned |
-| [scribb.it](products/scribbit/README.md) | `scribbit` | write | Inscription engine, ledger, console, mint suite, API and MCP server | planned |
-| [degent.club](products/degent/README.md) | `degent` | own | The Decentralized Gentlemen Club collection and its automated, non-custodial mint | beta |
-| [platform](platform/README.md) | `platform` | - | Shared libraries: inscription maths, wallet adapters | beta |
+| Repository | Slug | Verb | What it is |
+|---|---|---|---|
+| **DegentClub/scribbit** (this repo) | `platform`, `scribbit`, `tooling` | write | Shared libraries (`@bsh/inscription`, `@bsh/wallet-kit`, `@bsh/events`, `@bsh/edge`, `@bsh/identity`, `@bsh/notify`), the catalog tool, and [scribb.it](products/scribbit/README.md): inscription engine, fee oracle, CLI |
+| [DegentClub/degent](https://github.com/DegentClub/degent) | `degent` | own | degent.club: the Decentralized Gentlemen Club collection and its automated, non-custodial mint |
+| [DegentClub/blockspace](https://github.com/DegentClub/blockspace) | `blockspace` | measure | block.space: block-space explorer, fee Meter, portfolio, data API, certification |
 
 Humans start here; agents start at [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAUDE.md). Infrastructure (the Nix
 fleet), chain nodes, data pipelines and forks live in separate repositories; see
@@ -19,8 +20,7 @@ fleet), chain nodes, data pipelines and forks live in separate repositories; see
 corepack enable                 # pnpm version comes from package.json "packageManager"
 pnpm install
 pnpm check                      # validate manifests + boundaries + typecheck + tests (what CI runs)
-pnpm --filter @bsh/degent-web dev      # degent.club mint front end
-pnpm --filter @bsh/degent-mint dev     # mint service with in-memory adapters (regtest-safe)
+pnpm --filter @bsh/scribbit-cli dev    # the scribbit developer CLI
 ```
 
 Every package answers to the same verbs: `pnpm --filter <pkg> test | typecheck | build | dev`.
@@ -29,17 +29,33 @@ New component: copy a skeleton from [`templates/`](templates/README.md).
 ## Layout
 
 ```
-platform/<name>/                   shared libraries (@bsh/<name>)
-products/<product>/apps/<name>/    deployable front ends
-products/<product>/services/<name>/ deployable back ends
-products/<product>/packages/<name>/ product-private libraries
-contracts/{openapi,asyncapi,schemas}/  the only coupling between products
-tools/catalog/                     manifest validator, boundary linter, catalog generator
+platform/<name>/                   shared libraries (@bsh/<name>), used by every product repo
+products/scribbit/apps/<name>/     scribb.it front ends and CLIs
+products/scribbit/services/<name>/ scribb.it back ends
+products/scribbit/packages/<name>/ scribb.it-private libraries
+contracts/{openapi,asyncapi,schemas}/  platform- and scribbit-owned contracts (shared topics live here)
+tools/catalog/                     manifest validator, boundary linter, catalog generator (also used by product repos)
 catalog/                           GENERATED catalog.json + CATALOG.md
 templates/                         copyable component skeletons (not workspace packages)
-docs/adr/                          architecture decision records
-schemas/component.schema.json      the component manifest schema
+docs/adr/                          architecture decision records (global numbering across the three repos)
+schemas/component.schema.json      the component manifest schema (canonical copy; product repos carry a copy)
 ```
+
+## How the product repos use this one
+
+`DegentClub/degent` and `DegentClub/blockspace` add this repository as a submodule at `deps/scribbit` and list
+`deps/scribbit/platform/*` and `deps/scribbit/tools/*` in their `pnpm-workspace.yaml`, so `workspace:*` dependencies
+on `@bsh/*` platform packages and the catalog tool resolve from the pinned commit. The catalog tool treats those
+packages as **external** components (`external: { repo, commit, root }` in their `catalog.json`), so a machine can
+follow the link back to this repository's catalog. To bump a product to a newer platform commit:
+
+```bash
+git -C deps/scribbit fetch && git -C deps/scribbit checkout <commit> && pnpm install && pnpm check
+```
+
+**Contract ownership:** a contract lives with the component that provides it. Shared event topics
+(`contracts/asyncapi/platform-events.yaml`, mirrored by `platform/events/src/platform-topics.ts`) are owned by the
+platform; a product's own contract for a shared topic must stay compatible and asserts that in the product repo.
 
 ## The machine-readability model
 
@@ -60,6 +76,7 @@ Four layers, each checked in CI:
 4. **Contracts.** Products talk to each other only through versioned OpenAPI / AsyncAPI / JSON Schema files in
    [`contracts/`](contracts/README.md). Contract first, then code; breaking changes are gated by `oasdiff`.
 
-Design and rationale: [ADR-0001](docs/adr/0001-monorepo-structure.md) (structure) and
-[ADR-0003](docs/adr/0003-machine-readable-catalog.md) (manifests, catalog, and the join with the infra Fleet API).
+Design and rationale: [ADR-0001](docs/adr/0001-monorepo-structure.md) (structure),
+[ADR-0003](docs/adr/0003-machine-readable-catalog.md) (manifests, catalog, and the join with the infra Fleet API)
+and [ADR-0004](docs/adr/0004-repo-split.md) (the three-repository split and external components).
 All decisions: [`docs/adr/`](docs/adr/README.md).

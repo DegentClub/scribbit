@@ -1,4 +1,4 @@
-# CI for the Blockspace Holdings monorepo.
+# CI for DegentClub/scribbit (the platform repo; ADR-0004).
 # Structure gates (manifests, boundaries, catalog, CODEOWNERS) always run on the whole repo: they are
 # cheap and a change anywhere can break them. Typecheck/test run on affected packages only for PRs
 # (changed packages + their dependents, via pnpm's "...[origin/main]" filter) and on everything on main.
@@ -75,6 +75,3 @@ jobs:
       - name: Test (all)
         if: github.event_name != 'pull_request'
         run: pnpm test
-
-      - name: Build web app
-        run: pnpm --filter @bsh/degent-web build

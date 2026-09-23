@@ -6,7 +6,7 @@ describe("validate", () => {
   it("passes a valid repo", () => {
     const res = validateWorkspace(workspace("valid"));
     expect(res.diagnostics).toEqual([]);
-    expect(res.stats).toEqual({ packages: 4, valid: 4 });
+    expect(res.stats).toEqual({ packages: 4, valid: 4, external: 0 });
   });
 
   it("requires a component.yaml beside every package.json", () => {

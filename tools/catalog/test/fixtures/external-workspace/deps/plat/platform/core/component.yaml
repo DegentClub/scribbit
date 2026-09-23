@@ -1,0 +1,11 @@
+name: core
+package: "@bsh/core"
+kind: library
+product: platform
+owner: team-platform
+summary: Fixture platform component living in a nested workspace root.
+lifecycle: beta
+depends_on: []
+provides: ["contracts/asyncapi/platform-events.yaml"]
+docs: ./README.md
+commands: { test: test }

@@ -12,6 +12,8 @@ export interface Diagnostic {
   line?: number;
   /** Component name (or package name when the manifest is unusable). */
   component?: string;
+  /** `external` when the finding concerns a package under a nested workspace root (another repository). */
+  group?: "external";
   message: string;
 }
 

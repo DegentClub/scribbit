@@ -10,9 +10,9 @@ so they are never installed, tested or validated in place.
 | `app/` | app | `products/<product>/apps/<name>/` |
 
 ```bash
-cp -r templates/service products/degent/services/rewards
-cd products/degent/services/rewards
-grep -rl '__component__\|__product__' . | xargs sed -i 's/__component__/degent-rewards/g; s/__product__/degent/g'
+cp -r templates/service products/scribbit/services/ledger
+cd products/scribbit/services/ledger
+grep -rl '__component__\|__product__' . | xargs sed -i 's/__component__/scribbit-ledger/g; s/__product__/scribbit/g'
 # platform/<name>: change tsconfig "extends" to ../../tsconfig.base.json
 cd - && pnpm install && pnpm validate && pnpm catalog
 ```

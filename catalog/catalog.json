@@ -1,82 +1,8 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-23T20:54:35.196Z",
+  "generatedAt": "2026-09-23T21:04:30.467Z",
   "schema": "schemas/component.schema.json",
   "components": [
-    {
-      "name": "blockspace-certify",
-      "package": "@bsh/blockspace-certify",
-      "kind": "service",
-      "product": "blockspace",
-      "owner": "team-blockspace",
-      "summary": "\"Verified by block.space\" collection certification - parent/child + inscribed-manifest membership, reproducible stats, BIP340-signed attestations.",
-      "lifecycle": "experimental",
-      "depends_on": [
-        "@bsh/edge"
-      ],
-      "provides": [
-        "contracts/openapi/blockspace-collections.yaml"
-      ],
-      "stores": [
-        "memory:blockspace_certify_snapshots"
-      ],
-      "secrets": [
-        "services/blockspace-certify/attestation-key",
-        "services/blockspace-certify/admin-token"
-      ],
-      "env_schema": "./env.schema.json",
-      "slo": {
-        "availability": "99.9",
-        "p95_ms": 200
-      },
-      "runbook": "./RUNBOOK.md",
-      "docs": "./README.md",
-      "commands": {
-        "dev": "dev",
-        "test": "test",
-        "typecheck": "typecheck"
-      },
-      "path": "products/blockspace/services/certify",
-      "version": "0.1.0",
-      "scripts": {
-        "dev": "tsx watch src/main.ts",
-        "manifest:from-collection-json": "tsx src/cli/manifest-from-collection-json.ts",
-        "start": "tsx src/main.ts",
-        "test": "vitest run",
-        "typecheck": "tsc --noEmit -p ."
-      },
-      "files": {
-        "env_schema": "products/blockspace/services/certify/env.schema.json",
-        "runbook": "products/blockspace/services/certify/RUNBOOK.md",
-        "docs": "products/blockspace/services/certify/README.md"
-      },
-      "dependents": []
-    },
-    {
-      "name": "blockspace-meter-client",
-      "package": "@bsh/meter-client",
-      "kind": "library",
-      "product": "blockspace",
-      "owner": "team-blockspace",
-      "summary": "Typed, zero-dependency client for the live block.space Meter API with retries, timeouts, abort and contract-drift guards.",
-      "lifecycle": "experimental",
-      "depends_on": [],
-      "docs": "./README.md",
-      "commands": {
-        "test": "test",
-        "typecheck": "typecheck"
-      },
-      "path": "products/blockspace/packages/meter-client",
-      "version": "0.1.0",
-      "scripts": {
-        "test": "vitest run",
-        "typecheck": "tsc --noEmit -p ."
-      },
-      "files": {
-        "docs": "products/blockspace/packages/meter-client/README.md"
-      },
-      "dependents": []
-    },
     {
       "name": "catalog-tool",
       "package": "@bsh/catalog-tool",
@@ -107,131 +33,6 @@
       "dependents": []
     },
     {
-      "name": "degent-mint",
-      "package": "@bsh/degent-mint",
-      "kind": "service",
-      "product": "degent",
-      "owner": "team-degent",
-      "summary": "Automated degent.club mint service - order state machine, art review, parent co-signing policy signer, lane broadcaster.",
-      "lifecycle": "beta",
-      "depends_on": [
-        "@bsh/inscription",
-        "@bsh/degent-mint-sdk",
-        "@bsh/events"
-      ],
-      "provides": [
-        "contracts/openapi/degent-mint.yaml",
-        "contracts/asyncapi/degent-mint.yaml"
-      ],
-      "consumes": [
-        "events:block.indexed.{network}"
-      ],
-      "stores": [
-        "sqlite:degent_mint"
-      ],
-      "secrets": [
-        "services/degent-mint/parent-key",
-        "services/degent-mint/art-review-api-key",
-        "services/degent-mint/reveal-encryption-key",
-        "services/degent-mint/libre-rpc-pass",
-        "services/degent-mint/slipstream-api-key"
-      ],
-      "env_schema": "./env.schema.json",
-      "slo": {
-        "availability": "99.9",
-        "p95_ms": 300
-      },
-      "runbook": "./RUNBOOK.md",
-      "docs": "./README.md",
-      "commands": {
-        "dev": "dev",
-        "test": "test",
-        "typecheck": "typecheck"
-      },
-      "path": "products/degent/services/mint",
-      "version": "0.1.0",
-      "scripts": {
-        "dev": "NETWORK=${NETWORK:-regtest} tsx watch src/main.ts",
-        "start": "tsx src/main.ts",
-        "test": "vitest run",
-        "typecheck": "tsc --noEmit -p ."
-      },
-      "files": {
-        "env_schema": "products/degent/services/mint/env.schema.json",
-        "runbook": "products/degent/services/mint/RUNBOOK.md",
-        "docs": "products/degent/services/mint/README.md"
-      },
-      "dependents": []
-    },
-    {
-      "name": "degent-mint-sdk",
-      "package": "@bsh/degent-mint-sdk",
-      "kind": "library",
-      "product": "degent",
-      "owner": "team-degent",
-      "summary": "Shared degent.club mint rules (tiers, content validation), domain types and typed API client.",
-      "lifecycle": "beta",
-      "depends_on": [],
-      "provides": [
-        "contracts/openapi/degent-mint.yaml"
-      ],
-      "docs": "./README.md",
-      "commands": {
-        "test": "test",
-        "typecheck": "typecheck"
-      },
-      "path": "products/degent/packages/mint-sdk",
-      "version": "0.1.0",
-      "scripts": {
-        "test": "vitest run",
-        "typecheck": "tsc --noEmit -p ."
-      },
-      "files": {
-        "docs": "products/degent/packages/mint-sdk/README.md"
-      },
-      "dependents": [
-        "degent-mint",
-        "degent-web"
-      ]
-    },
-    {
-      "name": "degent-web",
-      "package": "@bsh/degent-web",
-      "kind": "app",
-      "product": "degent",
-      "owner": "team-degent",
-      "summary": "degent.club automated mint front end - connect any wallet, create, validate, preview, quote, pay, track, rescue.",
-      "lifecycle": "beta",
-      "depends_on": [
-        "@bsh/inscription",
-        "@bsh/wallet-kit",
-        "@bsh/degent-mint-sdk"
-      ],
-      "consumes": [
-        "contracts/openapi/degent-mint.yaml"
-      ],
-      "docs": "./README.md",
-      "commands": {
-        "build": "build",
-        "dev": "dev",
-        "test": "test",
-        "typecheck": "typecheck"
-      },
-      "path": "products/degent/apps/web",
-      "version": "0.1.0",
-      "scripts": {
-        "build": "vite build",
-        "dev": "vite",
-        "preview": "vite preview",
-        "test": "vitest run",
-        "typecheck": "tsc --noEmit -p ."
-      },
-      "files": {
-        "docs": "products/degent/apps/web/README.md"
-      },
-      "dependents": []
-    },
-    {
       "name": "edge",
       "package": "@bsh/edge",
       "kind": "library",
@@ -258,9 +59,7 @@
       "files": {
         "docs": "platform/edge/README.md"
       },
-      "dependents": [
-        "blockspace-certify"
-      ]
+      "dependents": []
     },
     {
       "name": "events",
@@ -289,7 +88,6 @@
         "docs": "platform/events/README.md"
       },
       "dependents": [
-        "degent-mint",
         "notify"
       ]
     },
@@ -345,8 +143,6 @@
         "docs": "platform/inscription/README.md"
       },
       "dependents": [
-        "degent-mint",
-        "degent-web",
         "scribbit-cli"
       ]
     },
@@ -480,41 +276,21 @@
       "files": {
         "docs": "platform/wallet-kit/README.md"
       },
-      "dependents": [
-        "degent-web"
-      ]
+      "dependents": []
     }
   ],
   "products": {
     "blockspace": {
       "path": "products/blockspace",
-      "components": [
-        "blockspace-certify",
-        "blockspace-meter-client"
-      ],
-      "owners": [
-        "team-blockspace"
-      ],
-      "kinds": {
-        "library": 1,
-        "service": 1
-      }
+      "components": [],
+      "owners": [],
+      "kinds": {}
     },
     "degent": {
       "path": "products/degent",
-      "components": [
-        "degent-mint",
-        "degent-mint-sdk",
-        "degent-web"
-      ],
-      "owners": [
-        "team-degent"
-      ],
-      "kinds": {
-        "app": 1,
-        "library": 1,
-        "service": 1
-      }
+      "components": [],
+      "owners": [],
+      "kinds": {}
     },
     "platform": {
       "path": "platform",
@@ -562,15 +338,6 @@
   },
   "contracts": [
     {
-      "path": "contracts/asyncapi/degent-mint.yaml",
-      "kind": "asyncapi",
-      "exists": true,
-      "providers": [
-        "degent-mint"
-      ],
-      "consumers": []
-    },
-    {
       "path": "contracts/asyncapi/platform-events.yaml",
       "kind": "asyncapi",
       "exists": true,
@@ -578,27 +345,6 @@
         "events"
       ],
       "consumers": []
-    },
-    {
-      "path": "contracts/openapi/blockspace-collections.yaml",
-      "kind": "openapi",
-      "exists": true,
-      "providers": [
-        "blockspace-certify"
-      ],
-      "consumers": []
-    },
-    {
-      "path": "contracts/openapi/degent-mint.yaml",
-      "kind": "openapi",
-      "exists": true,
-      "providers": [
-        "degent-mint",
-        "degent-mint-sdk"
-      ],
-      "consumers": [
-        "degent-web"
-      ]
     },
     {
       "path": "contracts/openapi/scribbit-fees.yaml",
@@ -610,67 +356,13 @@
       "consumers": [
         "scribbit-cli"
       ]
-    },
-    {
-      "path": "events:block.indexed.{network}",
-      "kind": "event",
-      "exists": true,
-      "providers": [],
-      "consumers": [
-        "degent-mint"
-      ]
     }
   ],
   "edges": [
     {
-      "from": "degent-mint",
-      "to": "events:block.indexed.{network}",
-      "type": "consumes"
-    },
-    {
-      "from": "degent-web",
-      "to": "contracts/openapi/degent-mint.yaml",
-      "type": "consumes"
-    },
-    {
       "from": "scribbit-cli",
       "to": "contracts/openapi/scribbit-fees.yaml",
       "type": "consumes"
-    },
-    {
-      "from": "blockspace-certify",
-      "to": "edge",
-      "type": "depends_on"
-    },
-    {
-      "from": "degent-mint",
-      "to": "degent-mint-sdk",
-      "type": "depends_on"
-    },
-    {
-      "from": "degent-mint",
-      "to": "events",
-      "type": "depends_on"
-    },
-    {
-      "from": "degent-mint",
-      "to": "inscription",
-      "type": "depends_on"
-    },
-    {
-      "from": "degent-web",
-      "to": "degent-mint-sdk",
-      "type": "depends_on"
-    },
-    {
-      "from": "degent-web",
-      "to": "inscription",
-      "type": "depends_on"
-    },
-    {
-      "from": "degent-web",
-      "to": "wallet-kit",
-      "type": "depends_on"
     },
     {
       "from": "notify",
@@ -686,26 +378,6 @@
       "from": "scribbit-cli",
       "to": "scribbit-fee-oracle",
       "type": "depends_on"
-    },
-    {
-      "from": "blockspace-certify",
-      "to": "contracts/openapi/blockspace-collections.yaml",
-      "type": "provides"
-    },
-    {
-      "from": "degent-mint",
-      "to": "contracts/asyncapi/degent-mint.yaml",
-      "type": "provides"
-    },
-    {
-      "from": "degent-mint",
-      "to": "contracts/openapi/degent-mint.yaml",
-      "type": "provides"
-    },
-    {
-      "from": "degent-mint-sdk",
-      "to": "contracts/openapi/degent-mint.yaml",
-      "type": "provides"
     },
     {
       "from": "events",

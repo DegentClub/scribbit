@@ -52,8 +52,21 @@ Stable; CI annotations and agents match on them.
 Imports are parsed with the TypeScript compiler API, so comments, strings and JSX text never produce
 false positives. `node_modules`, `dist`, `build`, `coverage` and dot-directories are skipped.
 
+## External packages (nested workspace roots)
+
+A workspace glob may reach into a directory that has its own `pnpm-workspace.yaml` (the platform vendored as a
+git submodule at `deps/scribbit`, with `deps/scribbit/platform/*` in the outer `pnpm-workspace.yaml`). Packages
+found there are **external** (ADR-0004): known workspace packages, but owned by another repository.
+
+| Command | Behaviour for external packages |
+|---|---|
+| validate | Manifest-relative paths (`provides`/`consumes`, `env_schema`, `runbook`, `docs`) resolve against the NESTED root; findings carry `"group": "external"`; `stats.external` counts them. Outer manifests may `consumes: deps/<name>/contracts/...` |
+| boundaries | Outer imports of `@bsh/*` are checked against `depends_on` with external packages as valid targets; external sources are never scanned |
+| catalog | Listed with `external: { repo, commit, root }` (remote URL from `.gitmodules`, commit from `git ls-tree HEAD <root>`); their `path`, `files`, `provides`, `consumes` are rewritten relative to the outer repo (`deps/scribbit/contracts/...`) so the outer catalog joins with the platform catalog at `<repo>@<commit>:catalog/catalog.json` |
+| codeowners | Skipped, together with the contracts they provide |
+
 ## Layout
 
-`src/workspace.ts` (glob expansion, loading) · `validate.ts` · `boundaries.ts` · `catalog.ts` ·
+`src/workspace.ts` (glob expansion, loading, nested-root detection) · `validate.ts` · `boundaries.ts` · `catalog.ts` ·
 `codeowners.ts` · `cli.ts`. Tests use fixture mini-repos in `test/fixtures/<case>/`, copied to a temp
 dir with the real schema by `test/helpers.ts`; add a fixture per new rule.

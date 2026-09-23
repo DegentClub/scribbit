@@ -8,6 +8,9 @@
  *  - platform-imports-product   platform/* imports products/*
  *  - relative-escape            a relative/absolute import resolves outside the package root
  *  - depends-on-cross-product / depends-on-platform-to-product   the same policies, at manifest level
+ *
+ * Packages under a nested workspace root (another repository vendored at e.g. `deps/scribbit`) are known
+ * targets for imports and depends_on, but their own files are not scanned here: their repository lints them.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -95,7 +98,7 @@ export function packageOfSpecifier(spec: string): string {
 function productOf(pkg: WorkspacePackage): string | undefined {
   const m = pkg.manifest;
   if (isRecord(m) && typeof m.product === "string") return m.product;
-  const segs = pkg.dir.split("/");
+  const segs = pkg.dirInWorkspace.split("/");
   if (segs[0] === "platform") return "platform";
   if (segs[0] === "products") return segs[1];
   if (segs[0] === "tools") return "tooling";
@@ -115,8 +118,13 @@ export function checkBoundaries(ws: Workspace, scope = "@bsh/"): CheckResult {
   const roots = new Map(ws.packages.map((p) => [p.absDir, p] as const));
   let files = 0;
   let imports = 0;
+  let external = 0;
 
   for (const pkg of ws.packages) {
+    if (pkg.external) {
+      external++;
+      continue;
+    }
     const m = isRecord(pkg.manifest) ? pkg.manifest : {};
     const component = typeof m.name === "string" ? m.name : pkg.packageJson.name ?? pkg.dir;
     const ownName = pkg.packageJson.name;
@@ -187,5 +195,5 @@ export function checkBoundaries(ws: Workspace, scope = "@bsh/"): CheckResult {
     }
   }
 
-  return { command: "boundaries", diagnostics: sortDiagnostics(diagnostics), stats: { packages: ws.packages.length, files, imports } };
+  return { command: "boundaries", diagnostics: sortDiagnostics(diagnostics), stats: { packages: ws.packages.length, external, files, imports } };
 }

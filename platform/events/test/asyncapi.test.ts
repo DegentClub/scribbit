@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
-import { CONTRACT_PATH, degentMintOrder, PLATFORM_TOPICS, platformRegistry, validate, type JsonSchema } from '../src/index.js';
+import { CONTRACT_PATH, PLATFORM_TOPICS, platformRegistry, validate, type JsonSchema } from '../src/index.js';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 type Any = any;
@@ -74,28 +74,5 @@ describe(`${CONTRACT_PATH} ↔ code registry`, () => {
       data: { network: 'mainnet', height: 1, hash: 'a'.repeat(64), previousHash: 'b'.repeat(64), time: '2026-09-23T12:00:00Z' },
     });
     expect(validate(doc.components.schemas.CloudEvent as JsonSchema, JSON.parse(JSON.stringify(e)))).toEqual({ valid: true, errors: [] });
-  });
-});
-
-describe('degent.mint.order.{status} mirrors contracts/asyncapi/degent-mint.yaml', () => {
-  const canonical: Any = parse(readFileSync(`${repoRoot}contracts/asyncapi/degent-mint.yaml`, 'utf8'));
-  const cDeref = (n: Any): Any =>
-    n?.$ref ? cDeref(n.$ref.replace(/^#\//, '').split('/').reduce((x: Any, k: string) => x?.[k], canonical)) : n;
-  const channel = Object.values<Any>(canonical.channels).find((c) => c.address === degentMintOrder.name);
-  const msg = cDeref(Object.values<Any>(channel.messages)[0]);
-  const payload = cDeref(msg.payload);
-
-  it('same address, status enum, required fields and property set', () => {
-    expect(channel).toBeDefined();
-    expect(channel.parameters.status.enum).toEqual([...degentMintOrder.params.status!.enum!]);
-    expect([...payload.required].sort()).toEqual([...degentMintOrder.schema.required!].sort());
-    expect(Object.keys(payload.properties).sort()).toEqual(Object.keys(degentMintOrder.schema.properties!).sort());
-    expect(cDeref(payload.properties.network).enum).toEqual(degentMintOrder.schema.properties!.network!.enum);
-    expect(cDeref(payload.properties.status).enum).toEqual(degentMintOrder.schema.properties!.status!.enum);
-  });
-
-  it('canonical examples validate against the platform schema', () => {
-    expect(msg.examples?.length).toBeGreaterThan(0);
-    for (const ex of msg.examples) expect(degentMintOrder.validate(ex.payload)).toEqual({ valid: true, errors: [] });
   });
 });

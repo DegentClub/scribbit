@@ -25,6 +25,16 @@ export function loadSchema(root: string): Record<string, unknown> {
 /** Strip a `#fragment` from a contract reference. */
 export const contractFile = (ref: string): string => ref.split("#")[0]!;
 
+/**
+ * Repo-relative path of a contract referenced by a package. Manifest paths are relative to the workspace root
+ * that owns the package, so `contracts/x.yaml` in an external package under `deps/plat` is `deps/plat/contracts/x.yaml`
+ * here; a `deps/<name>/contracts/...` reference is already repo-relative.
+ */
+export function contractPathFor(pkg: WorkspacePackage, ref: string): string {
+  const rel = contractFile(ref);
+  return pkg.workspaceRoot && !rel.startsWith("deps/") ? `${pkg.workspaceRoot}/${rel}` : rel;
+}
+
 /** Product implied by a package's location, or undefined for locations with no convention. */
 export function productForPath(dir: string): string | undefined {
   const segs = dir.split("/");
@@ -59,19 +69,38 @@ function ajvKeyPath(err: ErrorObject): (string | number)[] {
 
 export function validateWorkspace(ws: Workspace, schema: Record<string, unknown> = loadSchema(ws.root)): CheckResult {
   const ajv = new Ajv2020({ allErrors: true, strict: false });
-  const validateManifest = ajv.compile(schema);
+  const validateOuter = ajv.compile(schema);
+  // An external package is validated against the schema of the workspace root that owns it (that repository's
+  // rules), falling back to ours when the nested root ships none.
+  const validators = new Map<string, typeof validateOuter>([["", validateOuter]]);
+  const validatorFor = (root: string) => {
+    let v = validators.get(root);
+    if (!v) {
+      let nested = schema;
+      try {
+        nested = loadSchema(path.join(ws.root, root));
+      } catch {
+        /* no schema in the nested root: use ours */
+      }
+      validators.set(root, (v = ajv.compile(nested)));
+    }
+    return v;
+  };
   const diagnostics: Diagnostic[] = [];
   const names = new Map<string, WorkspacePackage[]>();
   const packageNames = new Map<string, WorkspacePackage[]>();
   let valid = 0;
+  let external = 0;
 
   for (const pkg of ws.packages) {
-    diagnostics.push(...pkg.loadErrors);
+    if (pkg.external) external++;
+    const group = pkg.external ? ({ group: "external" } as const) : {};
+    diagnostics.push(...pkg.loadErrors.map((d) => ({ ...d, ...group })));
     const pj = pkg.packageJson;
     const pkgName = pj.name;
     if (pkgName) packageNames.set(pkgName, [...(packageNames.get(pkgName) ?? []), pkg]);
     else if (pkg.loadErrors.length === 0) {
-      diagnostics.push({ severity: "error", rule: "package-json-no-name", file: `${pkg.dir}/package.json`, message: "package.json has no \"name\"" });
+      diagnostics.push({ severity: "error", rule: "package-json-no-name", file: `${pkg.dir}/package.json`, ...group, message: "package.json has no \"name\"" });
     }
 
     if (!pkg.manifestPath) {
@@ -80,6 +109,7 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
         rule: "manifest-missing",
         file: `${pkg.dir}/${MANIFEST_FILE}`,
         component: pkgName,
+        ...group,
         message: `Workspace package ${pkgName ?? pkg.dir} has no ${MANIFEST_FILE} (copy one from templates/)`,
       });
       continue;
@@ -88,6 +118,7 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
     const file = pkg.manifestPath;
     const before = diagnostics.length;
 
+    const validateManifest = validatorFor(pkg.workspaceRoot);
     if (!validateManifest(pkg.manifest)) {
       for (const err of validateManifest.errors ?? []) {
         diagnostics.push({
@@ -96,6 +127,7 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
           file,
           line: manifestLine(pkg, ajvKeyPath(err)),
           component: pkgName,
+          ...group,
           message: formatAjvError(err),
         });
       }
@@ -104,7 +136,7 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
     const m = pkg.manifest;
     const component = typeof m.name === "string" ? m.name : pkgName;
     const err = (rule: string, keyPath: (string | number)[], message: string): void => {
-      diagnostics.push({ severity: "error", rule, file, line: manifestLine(pkg, keyPath), component, message });
+      diagnostics.push({ severity: "error", rule, file, line: manifestLine(pkg, keyPath), component, ...group, message });
     };
 
     if (typeof m.name === "string") names.set(m.name, [...(names.get(m.name) ?? []), pkg]);
@@ -113,7 +145,7 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
       err("package-name-mismatch", ["package"], `package "${m.package}" does not match package.json name "${pkgName}"`);
     }
 
-    const expectedProduct = productForPath(pkg.dir);
+    const expectedProduct = productForPath(pkg.dirInWorkspace);
     if (expectedProduct && typeof m.product === "string" && m.product !== expectedProduct) {
       err("product-path-mismatch", ["product"], `product "${m.product}" but the component lives under ${pkg.dir} (expected "${expectedProduct}")`);
     }
@@ -135,11 +167,11 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
       }
     }
 
-    // Contract paths are repo-relative and must exist (contract first, then code).
+    // Contract paths are relative to the owning workspace root and must exist (contract first, then code).
     for (const field of ["provides", "consumes"] as const) {
       stringArray(m[field]).forEach((ref, i) => {
         if (ref.startsWith("events:")) return;
-        const rel = contractFile(ref);
+        const rel = contractPathFor(pkg, ref);
         if (!existsSync(path.join(ws.root, rel))) err("contract-missing", [field, i], `${field} "${ref}": file ${rel} does not exist`);
       });
     }
@@ -192,7 +224,7 @@ export function validateWorkspace(ws: Workspace, schema: Record<string, unknown>
     }
   }
 
-  return { command: "validate", diagnostics: sortDiagnostics(diagnostics), stats: { packages: ws.packages.length, valid } };
+  return { command: "validate", diagnostics: sortDiagnostics(diagnostics), stats: { packages: ws.packages.length, valid, external } };
 }
 
 export function sortDiagnostics(ds: Diagnostic[]): Diagnostic[] {

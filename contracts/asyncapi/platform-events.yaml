@@ -64,9 +64,9 @@ channels:
   degentMintOrderStatus:
     address: degent.mint.order.{status}
     title: degent.mint.order.{status}
-    description: A degent.club mint order changed status. Payload mirrors OrderStatusEvent in
-      contracts/asyncapi/degent-mint.yaml (canonical, owned by degent-mint); on this bus it travels as CloudEvents
-      `data`.
+    description: "A degent.club mint order changed status. This schema is canonical for the shared topic; the
+      producer's own OrderStatusEvent (contracts/asyncapi/degent-mint.yaml in DegentClub/degent) must stay compatible
+      with it. On this bus it travels as CloudEvents `data`."
     parameters:
       status:
         description: The status the order moved to.
@@ -444,9 +444,9 @@ components:
     MintOrderStatusChanged:
       name: MintOrderStatusChanged
       title: degent.mint.order.{status}
-      summary: A degent.club mint order changed status. Payload mirrors OrderStatusEvent in
-        contracts/asyncapi/degent-mint.yaml (canonical, owned by degent-mint); on this bus it travels as CloudEvents
-        `data`.
+      summary: "A degent.club mint order changed status. This schema is canonical for the shared topic; the
+        producer's own OrderStatusEvent (contracts/asyncapi/degent-mint.yaml in DegentClub/degent) must stay compatible
+        with it. On this bus it travels as CloudEvents `data`."
       contentType: application/cloudevents+json
       x-topic-version: 1.0.0
       x-producer: degent-mint

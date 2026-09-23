@@ -5,10 +5,11 @@
  * only volatile field. `--check` compares everything except `generatedAt`. When nothing but the
  * timestamp would change, the existing timestamp is kept so regenerating never produces a diff.
  */
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { CheckResult, Diagnostic } from "./types.js";
-import { contractFile, loadSchema } from "./validate.js";
+import { contractPathFor, loadSchema } from "./validate.js";
 import { isRecord, stringArray, type Workspace, type WorkspacePackage } from "./workspace.js";
 
 export const CATALOG_JSON = "catalog/catalog.json";
@@ -38,6 +39,19 @@ const MANIFEST_KEY_ORDER = [
 
 export type ContractKind = "openapi" | "asyncapi" | "json-schema" | "event" | "unknown";
 
+/**
+ * Where an external component (one under a nested workspace root, e.g. a git submodule) really lives, so a
+ * machine can follow the link to that repository's own catalog at `<repo>@<commit>:catalog/catalog.json`.
+ */
+export interface ExternalOrigin {
+  /** Git remote URL from `.gitmodules` when `root` is a submodule, else null. */
+  repo: string | null;
+  /** Commit the submodule is pinned to (`git ls-tree HEAD <root>`), else null. */
+  commit: string | null;
+  /** Repo-relative path of the nested workspace root, e.g. `deps/scribbit`. */
+  root: string;
+}
+
 export interface CatalogComponent {
   name: string;
   package: string;
@@ -52,6 +66,11 @@ export interface CatalogComponent {
   files: Record<string, string>;
   /** Names of components whose depends_on lists this one. */
   dependents: string[];
+  /**
+   * Present only for external components. Their `path`, `files`, `provides` and `consumes` are rewritten to be
+   * relative to THIS repository (prefixed with `external.root`); everything else is the manifest as written.
+   */
+  external?: ExternalOrigin;
 }
 
 export interface CatalogContract {
@@ -87,7 +106,8 @@ function sortKeys<T>(obj: Record<string, T>): Record<string, T> {
 
 export function contractKind(ref: string): ContractKind {
   if (ref.startsWith("events:")) return "event";
-  const seg = ref.split("/")[1];
+  const segs = ref.split("/");
+  const seg = segs[segs.indexOf("contracts") + 1];
   if (seg === "openapi") return "openapi";
   if (seg === "asyncapi") return "asyncapi";
   if (seg === "schemas") return "json-schema";
@@ -119,6 +139,44 @@ function listContractFiles(root: string): string[] {
 
 type Usable = { pkg: WorkspacePackage; m: Record<string, unknown> & { name: string } };
 
+/** `[submodule "x"]` sections of .gitmodules: path -> url. */
+export function readGitmodules(root: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const file = path.join(root, ".gitmodules");
+  if (!existsSync(file)) return out;
+  let p: string | undefined;
+  let u: string | undefined;
+  const flush = () => {
+    if (p && u) out.set(p.replace(/\/+$/, ""), u);
+    p = u = undefined;
+  };
+  for (const raw of readFileSync(file, "utf8").split("\n")) {
+    const line = raw.trim();
+    if (line.startsWith("[")) flush();
+    else if (/^path\s*=/.test(line)) p = line.split("=").slice(1).join("=").trim();
+    else if (/^url\s*=/.test(line)) u = line.split("=").slice(1).join("=").trim();
+  }
+  flush();
+  return out;
+}
+
+/** The commit a submodule at `rel` is pinned to in HEAD, or null when not a gitlink / not a git repo. */
+export function submoduleCommit(root: string, rel: string): string | null {
+  try {
+    const out = execFileSync("git", ["ls-tree", "HEAD", "--", rel], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    const m = /^160000 commit ([0-9a-f]{40})\t/.exec(out);
+    return m ? m[1]! : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Origin of every nested workspace root that holds packages. */
+export function externalOrigins(ws: Workspace): Map<string, ExternalOrigin> {
+  const gitmodules = ws.externalRoots.length > 0 ? readGitmodules(ws.root) : new Map<string, string>();
+  return new Map(ws.externalRoots.map((root) => [root, { repo: gitmodules.get(root) ?? null, commit: submoduleCommit(ws.root, root), root }]));
+}
+
 export function buildCatalog(ws: Workspace, generatedAt: string = new Date().toISOString()): Catalog {
   const usable: Usable[] = ws.packages
     .filter((p) => isRecord(p.manifest) && typeof p.manifest.name === "string")
@@ -137,36 +195,50 @@ export function buildCatalog(ws: Workspace, generatedAt: string = new Date().toI
     return c;
   };
 
-  for (const { m } of usable) {
+  // Contract references are relative to the workspace root that owns the package; the catalog is relative to
+  // this repository, so external packages' `contracts/x` become `<root>/contracts/x` (events: stay as-is).
+  const repoRelative = (pkg: WorkspacePackage, ref: string): string => {
+    if (ref.startsWith("events:")) return ref;
+    const [, fragment] = ref.split("#");
+    const file = contractPathFor(pkg, ref);
+    return fragment === undefined ? file : `${file}#${fragment}`;
+  };
+  const fileOf = (ref: string): string => ref.split("#")[0]!;
+
+  for (const { pkg, m } of usable) {
     for (const dep of stringArray(m.depends_on)) {
       const target = nameByPackage.get(dep) ?? dep;
       dependents.set(target, [...(dependents.get(target) ?? []), m.name]);
       edges.push({ from: m.name, to: target, type: "depends_on" });
     }
     for (const ref of stringArray(m.provides)) {
-      const p = contractFile(ref);
+      const p = fileOf(repoRelative(pkg, ref));
       touch(p).providers.add(m.name);
       edges.push({ from: m.name, to: p, type: "provides" });
     }
     for (const ref of stringArray(m.consumes)) {
-      const p = contractFile(ref);
+      const p = fileOf(repoRelative(pkg, ref));
       touch(p).consumers.add(m.name);
       edges.push({ from: m.name, to: p, type: "consumes" });
     }
   }
   for (const f of listContractFiles(ws.root)) touch(f);
+  const origins = externalOrigins(ws);
 
   const components: CatalogComponent[] = usable.map(({ pkg, m }) => {
     const ordered: Record<string, unknown> = {};
     for (const k of MANIFEST_KEY_ORDER) if (k in m) ordered[k] = m[k];
     for (const k of Object.keys(m).sort(byString)) if (!(k in ordered)) ordered[k] = m[k];
     if (isRecord(ordered.commands)) ordered.commands = sortKeys(ordered.commands);
+    if (pkg.external) {
+      for (const k of ["provides", "consumes"] as const) if (k in ordered) ordered[k] = stringArray(m[k]).map((r) => repoRelative(pkg, r));
+    }
     const files: Record<string, string> = {};
     for (const k of ["env_schema", "runbook", "docs"]) {
       const v = m[k];
       if (typeof v === "string") files[k] = path.posix.normalize(`${pkg.dir}/${v}`);
     }
-    return {
+    const component: CatalogComponent = {
       ...(ordered as CatalogComponent),
       path: pkg.dir,
       version: pkg.packageJson.version ?? null,
@@ -174,6 +246,8 @@ export function buildCatalog(ws: Workspace, generatedAt: string = new Date().toI
       files,
       dependents: uniqSorted(dependents.get(m.name) ?? []),
     };
+    if (pkg.external) component.external = origins.get(pkg.workspaceRoot) ?? { repo: null, commit: null, root: pkg.workspaceRoot };
+    return component;
   });
 
   let slugs: string[] = ["platform", "blockspace", "scribbit", "degent", "tooling"];
@@ -240,8 +314,9 @@ export function renderMarkdown(c: Catalog): string {
   lines.push("", "## Components", "", "| Name | Package | Kind | Product | Owner | Lifecycle | Path | Depends on | Summary |", "|---|---|---|---|---|---|---|---|---|");
   for (const x of c.components) {
     const deps = stringArray(x.depends_on).map((d) => `\`${d}\``).join(", ");
+    const where = x.external ? `\`${cell(x.path)}\` (external: ${cell(x.external.repo ?? x.external.root)}@${cell(x.external.commit?.slice(0, 12) ?? "?")})` : `\`${cell(x.path)}\``;
     lines.push(
-      `| ${cell(x.name)} | \`${cell(x.package)}\` | ${cell(x.kind)} | ${cell(x.product)} | ${cell(x.owner)} | ${cell(x.lifecycle)} | \`${cell(x.path)}\` | ${deps} | ${cell(x.summary)} |`,
+      `| ${cell(x.name)} | \`${cell(x.package)}\` | ${cell(x.kind)} | ${cell(x.product)} | ${cell(x.owner)} | ${cell(x.lifecycle)} | ${where} | ${deps} | ${cell(x.summary)} |`,
     );
   }
   lines.push("", "## Contracts", "", "| Contract | Kind | Exists | Providers | Consumers |", "|---|---|---|---|---|");

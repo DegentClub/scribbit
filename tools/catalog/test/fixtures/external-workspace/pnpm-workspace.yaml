@@ -1,0 +1,5 @@
+packages:
+  - products/*/apps/*
+  - products/*/services/*
+  - products/*/packages/*
+  - deps/plat/platform/*

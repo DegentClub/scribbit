@@ -1,0 +1,11 @@
+name: degent-api
+package: "@bsh/degent-api"
+kind: service
+product: degent
+owner: team-degent
+summary: Fixture outer component depending on an external platform package.
+lifecycle: beta
+depends_on: ["@bsh/core"]
+provides: ["contracts/openapi/api.yaml"]
+consumes: ["deps/plat/contracts/asyncapi/platform-events.yaml#/channels/orders"]
+commands: { test: test }

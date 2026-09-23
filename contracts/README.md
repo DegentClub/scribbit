@@ -9,7 +9,9 @@ contracts/asyncapi/<name>.yaml    events and channels (AsyncAPI 3)
 contracts/schemas/<name>.json     shared JSON Schemas referenced by the above
 ```
 
-File names are kebab-case and usually equal the providing component's name (`degent-mint.yaml`).
+File names are kebab-case and usually equal the providing component's name (`scribbit-fees.yaml`). A contract lives
+in the repository of the component that provides it; product repositories reference platform contracts as
+`deps/scribbit/contracts/...` (ADR-0004).
 
 ## Rules
 

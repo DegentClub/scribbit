@@ -1,6 +1,8 @@
 /**
  * `codeowners`: generate .github/CODEOWNERS from component owners, so review routing can never drift
  * from the manifests. GitHub applies the LAST matching rule, so fallbacks come first.
+ * External components (under a nested workspace root such as a submodule) are owned in their own repository
+ * and are skipped, as are the contracts they provide.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -18,17 +20,19 @@ const SHARED_PATHS = ["/.github/", "/schemas/", "/templates/", "/docs/", "/catal
 export function renderCodeowners(ws: Workspace, org: string = DEFAULT_ORG): string {
   const catalog = buildCatalog(ws, "");
   const handle = (team: string): string => `@${org}/${team}`;
-  const ownersOf = new Map(catalog.components.map((c) => [c.name, String(c.owner)]));
+  const components = catalog.components.filter((c) => !c.external);
+  const isExternalPath = (p: string): boolean => ws.externalRoots.some((r) => p === r || p.startsWith(`${r}/`));
+  const ownersOf = new Map(components.map((c) => [c.name, String(c.owner)]));
   const rows: [string, string][] = [["*", handle(FALLBACK_OWNER)]];
   for (const p of SHARED_PATHS) rows.push([p, handle(FALLBACK_OWNER)]);
 
   // A contract is owned by the teams that provide it (changing it changes their promise).
   for (const c of catalog.contracts) {
-    if (c.kind === "event" || !c.exists) continue;
+    if (c.kind === "event" || !c.exists || isExternalPath(c.path)) continue;
     const teams = [...new Set(c.providers.map((n) => ownersOf.get(n)).filter((t): t is string => !!t))].sort();
     if (teams.length > 0) rows.push([`/${c.path}`, teams.map(handle).join(" ")]);
   }
-  for (const c of [...catalog.components].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))) {
+  for (const c of [...components].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))) {
     rows.push([`/${c.path}/`, handle(String(c.owner))]);
   }
   const width = Math.max(...rows.map(([p]) => p.length)) + 2;

@@ -25,7 +25,8 @@
     },
     "consumes": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^(contracts/(openapi|asyncapi|schemas)/[a-z0-9.-]+\\.(ya?ml|json)(#.+)?|events:[a-z0-9.*{}-]+)$" }
+      "items": { "type": "string", "pattern": "^((deps/[a-z0-9-]+/)?contracts/(openapi|asyncapi|schemas)/[a-z0-9.-]+\\.(ya?ml|json)(#.+)?|events:[a-z0-9.*{}-]+)$" },
+      "description": "Contracts this component reads. A `deps/<repo>/contracts/...` path points at a contract owned by an external workspace root (a git submodule such as deps/scribbit); `contracts/...` is this repository's own."
     },
     "stores": { "type": "array", "items": { "type": "string", "pattern": "^(postgres|sqlite|s3|redis|memory):[a-z0-9_-]+$" } },
     "secrets": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9_/*.-]+$" }, "description": "Secret PATHS only (SOPS / Infisical). Never values." },

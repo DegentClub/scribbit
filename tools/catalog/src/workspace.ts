@@ -27,6 +27,18 @@ export interface WorkspacePackage {
   /** Repo-relative POSIX directory, e.g. `products/degent/services/mint`. */
   dir: string;
   absDir: string;
+  /**
+   * True when the package lives under a NESTED workspace root: a directory strictly between the repo root and
+   * the package that has its own `pnpm-workspace.yaml` (e.g. a git submodule at `deps/scribbit`). External
+   * packages are known workspace packages (they can be imported and listed in `depends_on`) but belong to
+   * another repository: their manifest-relative paths resolve against `workspaceRoot`, their sources are not
+   * linted here and they do not appear in CODEOWNERS.
+   */
+  external: boolean;
+  /** Repo-relative POSIX path of the workspace root that owns the package: `""` for the repo itself. */
+  workspaceRoot: string;
+  /** Directory of the package relative to `workspaceRoot`, e.g. `platform/inscription` for `deps/scribbit/platform/inscription`. */
+  dirInWorkspace: string;
   packageJson: PackageJson;
   /** Repo-relative path of component.yaml, or null when missing. */
   manifestPath: string | null;
@@ -42,6 +54,8 @@ export interface Workspace {
   root: string;
   patterns: string[];
   packages: WorkspacePackage[];
+  /** Repo-relative POSIX paths of nested workspace roots that hold at least one package, sorted. */
+  externalRoots: string[];
   /** package name -> package, for names that are unique. */
   byName: Map<string, WorkspacePackage>;
 }
@@ -129,9 +143,24 @@ export function expandWorkspaceGlobs(root: string, patterns: string[]): string[]
   return [...found].filter((d) => !excludes.some((ex) => matchGlob(ex, d))).sort();
 }
 
+/**
+ * The nearest directory strictly between `root` and `root/dir` that contains its own pnpm-workspace.yaml,
+ * as a repo-relative POSIX path, or `""` when the package belongs to the repo root's workspace.
+ */
+export function nestedWorkspaceRoot(root: string, dir: string): string {
+  const segs = dir.split("/").filter(Boolean);
+  for (let n = segs.length - 1; n >= 1; n--) {
+    const candidate = segs.slice(0, n).join("/");
+    if (existsSync(path.join(root, candidate, "pnpm-workspace.yaml"))) return candidate;
+  }
+  return "";
+}
+
 function loadPackage(root: string, dir: string): WorkspacePackage {
   const absDir = path.join(root, dir);
   const loadErrors: Diagnostic[] = [];
+  const workspaceRoot = nestedWorkspaceRoot(root, dir);
+  const dirInWorkspace = workspaceRoot ? dir.slice(workspaceRoot.length + 1) : dir;
   let packageJson: PackageJson = {};
   try {
     packageJson = JSON.parse(readFileSync(path.join(absDir, "package.json"), "utf8")) as PackageJson;
@@ -143,7 +172,17 @@ function loadPackage(root: string, dir: string): WorkspacePackage {
       message: `Cannot parse package.json: ${(e as Error).message}`,
     });
   }
-  const pkg: WorkspacePackage = { dir, absDir, packageJson, manifestPath: null, manifest: undefined, loadErrors };
+  const pkg: WorkspacePackage = {
+    dir,
+    absDir,
+    external: workspaceRoot !== "",
+    workspaceRoot,
+    dirInWorkspace,
+    packageJson,
+    manifestPath: null,
+    manifest: undefined,
+    loadErrors,
+  };
   const manifestAbs = path.join(absDir, MANIFEST_FILE);
   if (!existsSync(manifestAbs)) return pkg;
   pkg.manifestPath = `${dir}/${MANIFEST_FILE}`;
@@ -176,7 +215,8 @@ export function loadWorkspace(root: string): Workspace {
   const packages = expandWorkspaceGlobs(root, patterns).map((d) => loadPackage(root, d));
   const byName = new Map<string, WorkspacePackage>();
   for (const p of packages) if (p.packageJson.name && !byName.has(p.packageJson.name)) byName.set(p.packageJson.name, p);
-  return { root, patterns, packages, byName };
+  const externalRoots = [...new Set(packages.filter((p) => p.external).map((p) => p.workspaceRoot))].sort();
+  return { root, patterns, packages, byName, externalRoots };
 }
 
 /** 1-based line of a manifest node addressed by a key path (falls back to line 1). */

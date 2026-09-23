@@ -1,0 +1,2 @@
+asyncapi: 3.0.0
+info: { title: platform events, version: 1.0.0 }

@@ -41,7 +41,7 @@ await bus.publish(blockIndexed.create({
 | `block.indexed.{network}` | `bitcoin-indexer` | network: mainnet, testnet, signet, regtest |
 | `collection.minted` | `degent-mint` | |
 | `collection.certified` | `blockspace-certify` | |
-| `degent.mint.order.{status}` | `degent-mint` (canonical in `contracts/asyncapi/degent-mint.yaml`) | status: order state machine states |
+| `degent.mint.order.{status}` | `degent-mint` (DegentClub/degent; its `contracts/asyncapi/degent-mint.yaml` must stay compatible with this canonical schema) | status: order state machine states |
 | `batch.{status}` | `scribbit-ledger` | status: created, funded, committed, revealed, confirmed, failed, cancelled |
 
 - A topic has a SemVer `version`. Additive changes (new optional or required fields, new enum values) bump

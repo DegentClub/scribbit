@@ -162,7 +162,7 @@ export const degentMintOrder = defineTopic<MintOrderStatusChanged>({
   version: '1.0.0',
   producer: 'degent-mint',
   description:
-    'A degent.club mint order changed status. Payload mirrors OrderStatusEvent in contracts/asyncapi/degent-mint.yaml (canonical, owned by degent-mint); on this bus it travels as CloudEvents `data`.',
+    'A degent.club mint order changed status. This schema is canonical for the shared topic; the producer\'s own OrderStatusEvent (contracts/asyncapi/degent-mint.yaml in DegentClub/degent) must stay compatible with it. On this bus it travels as CloudEvents `data`.',
   params: { status: { description: 'The status the order moved to.', enum: MINT_ORDER_STATUSES } },
   dataschema: `${SCHEMA_BASE}MintOrderStatusChanged`,
   schema: {

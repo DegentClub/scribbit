@@ -1,0 +1,4 @@
+[submodule "deps/plat"]
+	path = deps/plat
+	url = https://github.com/acme/plat.git
+	branch = main
