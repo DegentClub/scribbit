@@ -6,6 +6,7 @@ import {
   defineTopic,
   degentMintOrder,
   detectBreakingChanges,
+  MINT_ORDER_STATUSES,
   platformRegistry,
   TopicError,
   TopicRegistry,
@@ -64,8 +65,30 @@ describe('platform registry validation', () => {
     expect(() => reg.assertValid(ev('degent.mint.order.teleported', {}))).toThrow(TopicError);
   });
 
+  it('accepts the member-approval statuses (confirming, member_review, declined) after paid', () => {
+    const order = (status: string, previousStatus: string) =>
+      ev(`degent.mint.order.${status}`, {
+        type: `degent.mint.order.${status}`,
+        eventId: 'o2:6',
+        orderId: 'o2',
+        network: 'mainnet',
+        status,
+        previousStatus,
+        at: '2026-09-23T12:00:00.000Z',
+        lane: 'block',
+        txid: HASH,
+      });
+    expect(reg.validate(order('confirming', 'paid'))).toEqual({ valid: true, errors: [] });
+    expect(reg.validate(order('member_review', 'confirming'))).toEqual({ valid: true, errors: [] });
+    expect(reg.validate(order('declined', 'member_review'))).toEqual({ valid: true, errors: [] });
+    expect(reg.validate(order('rescue_available', 'declined'))).toEqual({ valid: true, errors: [] });
+    const paid = MINT_ORDER_STATUSES.indexOf('paid');
+    expect(MINT_ORDER_STATUSES.slice(paid, paid + 5)).toEqual(['paid', 'confirming', 'member_review', 'declined', 'queued']);
+  });
+
   it('resolves concrete names to templates and params', () => {
     expect(reg.resolve('degent.mint.order.rescue_available')).toMatchObject({ topic: degentMintOrder, params: { status: 'rescue_available' } });
+    expect(reg.resolve('degent.mint.order.member_review')).toMatchObject({ topic: degentMintOrder, params: { status: 'member_review' } });
     expect(reg.resolve('collection.certified')?.params).toEqual({});
     expect(reg.list().map((t) => t.name)).toEqual([
       'batch.{status}',

@@ -41,7 +41,7 @@ await bus.publish(blockIndexed.create({
 | `block.indexed.{network}` | `bitcoin-indexer` | network: mainnet, testnet, signet, regtest |
 | `collection.minted` | `degent-mint` | |
 | `collection.certified` | `blockspace-certify` | |
-| `degent.mint.order.{status}` | `degent-mint` (DegentClub/degent; its `contracts/asyncapi/degent-mint.yaml` must stay compatible with this canonical schema) | status: order state machine states |
+| `degent.mint.order.{status}` | `degent-mint` (DegentClub/degent; its `contracts/asyncapi/degent-mint.yaml` must stay compatible with this canonical schema) | status: order state machine states (`awaiting_content` … `paid`, `confirming`, `member_review`, `declined`, `queued` … `failed`) |
 | `batch.{status}` | `scribbit-ledger` | status: created, funded, committed, revealed, confirmed, failed, cancelled |
 
 - A topic has a SemVer `version`. Additive changes (new optional or required fields, new enum values) bump
@@ -110,3 +110,12 @@ conn.on('close', () => process.exit(1));             // let the supervisor resta
 pnpm --filter @bsh/events test
 pnpm --filter @bsh/events typecheck
 ```
+
+## Changelog
+
+Topic versions follow `x-topic-version` in the contract; the contract's own `info.version` moves with them.
+
+| Contract | Topic | Change |
+|---|---|---|
+| 1.1.0 | `degent.mint.order.{status}` 1.1.0 | Additive: statuses `confirming` (commit tx seen, unconfirmed), `member_review` (commit confirmed; existing club members vote) and `declined` (reject quorum; self-rescue offered) inserted after `paid`, for member approval of the mint (degent ADR-0005). Non-breaking; consumers already tolerate new enum values |
+| 1.0.0 | all | Initial contract |

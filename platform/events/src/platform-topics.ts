@@ -22,6 +22,9 @@ export const MINT_ORDER_STATUSES = [
   'rejected',
   'awaiting_payment',
   'paid',
+  'confirming',
+  'member_review',
+  'declined',
   'queued',
   'revealing',
   'revealed',
@@ -159,7 +162,7 @@ export interface MintOrderStatusChanged {
 
 export const degentMintOrder = defineTopic<MintOrderStatusChanged>({
   name: 'degent.mint.order.{status}',
-  version: '1.0.0',
+  version: '1.1.0',
   producer: 'degent-mint',
   description:
     'A degent.club mint order changed status. This schema is canonical for the shared topic; the producer\'s own OrderStatusEvent (contracts/asyncapi/degent-mint.yaml in DegentClub/degent) must stay compatible with it. On this bus it travels as CloudEvents `data`.',

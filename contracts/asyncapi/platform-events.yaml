@@ -3,7 +3,7 @@
 asyncapi: 3.0.0
 info:
   title: Blockspace platform events
-  version: 1.0.0
+  version: 1.1.0
   description: |-
     Events shared across block.space, scribb.it and degent.club. The code registry in @bsh/events
     (platform/events/src/platform-topics.ts) mirrors this file; a test fails when they disagree.
@@ -77,6 +77,9 @@ channels:
           - rejected
           - awaiting_payment
           - paid
+          - confirming
+          - member_review
+          - declined
           - queued
           - revealing
           - revealed
@@ -309,6 +312,9 @@ components:
             - rejected
             - awaiting_payment
             - paid
+            - confirming
+            - member_review
+            - declined
             - queued
             - revealing
             - revealed
@@ -329,6 +335,9 @@ components:
             - rejected
             - awaiting_payment
             - paid
+            - confirming
+            - member_review
+            - declined
             - queued
             - revealing
             - revealed
@@ -448,7 +457,7 @@ components:
         producer's own OrderStatusEvent (contracts/asyncapi/degent-mint.yaml in DegentClub/degent) must stay compatible
         with it. On this bus it travels as CloudEvents `data`."
       contentType: application/cloudevents+json
-      x-topic-version: 1.0.0
+      x-topic-version: 1.1.0
       x-producer: degent-mint
       payload:
         allOf:
