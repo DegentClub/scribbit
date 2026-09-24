@@ -1,0 +1,17 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: scribbit-mint-api
+package: "@bsh/scribbit-mint-api"
+kind: service
+product: scribbit
+owner: team-scribbit
+summary: Edge for the scribb.it retail mint - fee snapshot, Esplora UTXO/tx/broadcast proxy and an allowlisted Counterparty v2 proxy behind @bsh/edge. Stateless, no keys, no storage.
+lifecycle: experimental
+depends_on: ["@bsh/edge", "@bsh/scribbit-fee-oracle"]
+provides: [contracts/openapi/scribbit-mint-api.yaml]
+consumes: [contracts/openapi/scribbit-fees.yaml]
+stores: ["memory:rate_limits", "memory:fee_cache"]
+env_schema: ./env.schema.json
+runbook: ./RUNBOOK.md
+docs: ./README.md
+slo: { availability: "99.9", p95_ms: 500 }
+commands: { dev: dev, test: test, typecheck: typecheck }

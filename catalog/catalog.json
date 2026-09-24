@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-23T21:04:30.467Z",
+  "generatedAt": "2026-09-24T00:43:42.332Z",
   "schema": "schemas/component.schema.json",
   "components": [
     {
@@ -59,7 +59,12 @@
       "files": {
         "docs": "platform/edge/README.md"
       },
-      "dependents": []
+      "dependents": [
+        "ledger",
+        "scribbit-mcp",
+        "scribbit-mint-api",
+        "signer"
+      ]
     },
     {
       "name": "events",
@@ -88,6 +93,7 @@
         "docs": "platform/events/README.md"
       },
       "dependents": [
+        "ledger",
         "notify"
       ]
     },
@@ -125,7 +131,7 @@
       "kind": "library",
       "product": "platform",
       "owner": "team-platform",
-      "summary": "Ordinals envelope, commit/reveal construction with SIGHASH_SINGLE|ANYONECANPAY, exact weight and fee maths.",
+      "summary": "Ordinals envelope, commit/reveal construction with SIGHASH_ALL|ANYONECANPAY (0x83 legacy), exact weight and fee maths.",
       "lifecycle": "beta",
       "depends_on": [],
       "docs": "./README.md",
@@ -143,8 +149,66 @@
         "docs": "platform/inscription/README.md"
       },
       "dependents": [
-        "scribbit-cli"
+        "scribbit-cli",
+        "scribbit-mcp",
+        "scribbit-mint"
       ]
+    },
+    {
+      "name": "ledger",
+      "package": "@bsh/ledger",
+      "kind": "service",
+      "product": "platform",
+      "owner": "team-platform",
+      "summary": "Shared order/payment ledger for every product - on-chain (xpub watch-only), Lightning + BTC via BTCPay, cards via a Stripe-shaped provider; receipts, refunds, events.",
+      "lifecycle": "beta",
+      "depends_on": [
+        "@bsh/edge",
+        "@bsh/events"
+      ],
+      "provides": [
+        "contracts/openapi/ledger.yaml",
+        "contracts/asyncapi/ledger.yaml"
+      ],
+      "stores": [
+        "sqlite:ledger",
+        "memory:ledger-api-keys",
+        "memory:ledger-rate-limits"
+      ],
+      "secrets": [
+        "services/ledger/api-keys",
+        "services/ledger/xpub",
+        "services/ledger/btcpay/api-key",
+        "services/ledger/btcpay/webhook-secret",
+        "services/ledger/card/secret-key",
+        "services/ledger/card/webhook-secret"
+      ],
+      "env_schema": "./env.schema.json",
+      "slo": {
+        "availability": "99.9",
+        "p95_ms": 250
+      },
+      "runbook": "./RUNBOOK.md",
+      "docs": "./README.md",
+      "commands": {
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "platform/ledger",
+      "version": "0.1.0",
+      "scripts": {
+        "dev": "tsx watch src/main.ts",
+        "start": "tsx src/main.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "env_schema": "platform/ledger/env.schema.json",
+        "runbook": "platform/ledger/RUNBOOK.md",
+        "docs": "platform/ledger/README.md"
+      },
+      "dependents": []
     },
     {
       "name": "notify",
@@ -208,6 +272,33 @@
       "dependents": []
     },
     {
+      "name": "scribbit-counters",
+      "package": "@bsh/scribbit-counters",
+      "kind": "library",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Bitcoin Counters mint engine - Counterparty taproot commit/reveal with a re-keyed envelope, exact fee maths, fairminter presets, resumable pending mints and a Slipstream route.",
+      "lifecycle": "experimental",
+      "depends_on": [],
+      "docs": "./README.md",
+      "commands": {
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/packages/counters-mint",
+      "version": "0.1.0",
+      "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "docs": "products/scribbit/packages/counters-mint/README.md"
+      },
+      "dependents": [
+        "scribbit-mint"
+      ]
+    },
+    {
       "name": "scribbit-fee-oracle",
       "package": "@bsh/scribbit-fee-oracle",
       "kind": "library",
@@ -250,8 +341,200 @@
         "docs": "products/scribbit/packages/scribbit-fee-oracle/README.md"
       },
       "dependents": [
-        "scribbit-cli"
+        "scribbit-cli",
+        "scribbit-mcp",
+        "scribbit-mint-api"
       ]
+    },
+    {
+      "name": "scribbit-mcp",
+      "package": "@bsh/scribbit-mcp",
+      "kind": "service",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "MCP server \"scribb.it - write to Bitcoin\" for AI agents - exact inscription quotes, commit addresses, envelope/lane facts, fees and 0x83 self-rescue over Streamable HTTP (API keys) or stdio.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/inscription",
+        "@bsh/scribbit-fee-oracle",
+        "@bsh/edge"
+      ],
+      "provides": [
+        "contracts/openapi/scribbit-mcp.yaml"
+      ],
+      "consumes": [
+        "contracts/openapi/scribbit-fees.yaml"
+      ],
+      "stores": [
+        "memory:api_keys",
+        "memory:rate_limits"
+      ],
+      "secrets": [
+        "services/scribbit-mcp/api-key-hashes"
+      ],
+      "env_schema": "./env.schema.json",
+      "slo": {
+        "availability": "99.9",
+        "p95_ms": 300
+      },
+      "runbook": "./RUNBOOK.md",
+      "docs": "./README.md",
+      "commands": {
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/services/mcp",
+      "version": "0.1.0",
+      "scripts": {
+        "dev": "tsx watch src/main.ts",
+        "mint-key": "tsx src/mint-key.ts",
+        "start": "tsx src/main.ts",
+        "stdio": "tsx src/stdio.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "env_schema": "products/scribbit/services/mcp/env.schema.json",
+        "runbook": "products/scribbit/services/mcp/RUNBOOK.md",
+        "docs": "products/scribbit/services/mcp/README.md"
+      },
+      "dependents": []
+    },
+    {
+      "name": "scribbit-mint",
+      "package": "@bsh/scribbit-mint",
+      "kind": "app",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "scribb.it retail mint - /ordinals inscribes any file, /counters mints a Bitcoin Counter; PSBTs only, the wallet signs every transaction, the site never holds a key.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/inscription",
+        "@bsh/wallet-kit",
+        "@bsh/scribbit-counters"
+      ],
+      "consumes": [
+        "contracts/openapi/scribbit-mint-api.yaml"
+      ],
+      "docs": "./README.md",
+      "commands": {
+        "build": "build",
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/apps/mint",
+      "version": "0.1.0",
+      "scripts": {
+        "build": "vite build",
+        "dev": "vite",
+        "preview": "vite preview",
+        "screenshots": "node e2e/screenshots.mjs",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "docs": "products/scribbit/apps/mint/README.md"
+      },
+      "dependents": []
+    },
+    {
+      "name": "scribbit-mint-api",
+      "package": "@bsh/scribbit-mint-api",
+      "kind": "service",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Edge for the scribb.it retail mint - fee snapshot, Esplora UTXO/tx/broadcast proxy and an allowlisted Counterparty v2 proxy behind @bsh/edge. Stateless, no keys, no storage.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/edge",
+        "@bsh/scribbit-fee-oracle"
+      ],
+      "provides": [
+        "contracts/openapi/scribbit-mint-api.yaml"
+      ],
+      "consumes": [
+        "contracts/openapi/scribbit-fees.yaml"
+      ],
+      "stores": [
+        "memory:rate_limits",
+        "memory:fee_cache"
+      ],
+      "env_schema": "./env.schema.json",
+      "slo": {
+        "availability": "99.9",
+        "p95_ms": 500
+      },
+      "runbook": "./RUNBOOK.md",
+      "docs": "./README.md",
+      "commands": {
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/services/mint-api",
+      "version": "0.1.0",
+      "scripts": {
+        "dev": "tsx watch src/main.ts",
+        "start": "tsx src/main.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "env_schema": "products/scribbit/services/mint-api/env.schema.json",
+        "runbook": "products/scribbit/services/mint-api/RUNBOOK.md",
+        "docs": "products/scribbit/services/mint-api/README.md"
+      },
+      "dependents": []
+    },
+    {
+      "name": "signer",
+      "package": "@bsh/signer",
+      "kind": "service",
+      "product": "platform",
+      "owner": "team-platform",
+      "summary": "Remote, policy-constrained BIP340 signing service (taproot key-path PSBT inputs, purpose-gated attestations) so product services never hold keys.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/edge"
+      ],
+      "provides": [
+        "contracts/openapi/signer.yaml"
+      ],
+      "stores": [
+        "memory:signer-audit"
+      ],
+      "secrets": [
+        "services/signer/keys/*",
+        "services/signer/api-key-hashes"
+      ],
+      "env_schema": "./env.schema.json",
+      "slo": {
+        "availability": "99.9",
+        "p95_ms": 100
+      },
+      "runbook": "./RUNBOOK.md",
+      "docs": "./README.md",
+      "commands": {
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "platform/signer",
+      "version": "0.1.0",
+      "scripts": {
+        "dev": "tsx watch src/main.ts",
+        "start": "tsx src/main.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "env_schema": "platform/signer/env.schema.json",
+        "runbook": "platform/signer/RUNBOOK.md",
+        "docs": "platform/signer/README.md"
+      },
+      "dependents": []
     },
     {
       "name": "wallet-kit",
@@ -270,13 +553,18 @@
       "path": "platform/wallet-kit",
       "version": "0.1.0",
       "scripts": {
+        "conformance": "tsx conformance/build.ts && vitest run --config conformance/vitest.config.ts",
+        "conformance:build": "tsx conformance/build.ts",
+        "conformance:serve": "tsx conformance/build.ts && tsx conformance/serve.ts",
         "test": "vitest run",
         "typecheck": "tsc --noEmit -p ."
       },
       "files": {
         "docs": "platform/wallet-kit/README.md"
       },
-      "dependents": []
+      "dependents": [
+        "scribbit-mint"
+      ]
     }
   ],
   "products": {
@@ -299,27 +587,36 @@
         "events",
         "identity",
         "inscription",
+        "ledger",
         "notify",
+        "signer",
         "wallet-kit"
       ],
       "owners": [
         "team-platform"
       ],
       "kinds": {
-        "library": 6
+        "library": 6,
+        "service": 2
       }
     },
     "scribbit": {
       "path": "products/scribbit",
       "components": [
         "scribbit-cli",
-        "scribbit-fee-oracle"
+        "scribbit-counters",
+        "scribbit-fee-oracle",
+        "scribbit-mcp",
+        "scribbit-mint",
+        "scribbit-mint-api"
       ],
       "owners": [
         "team-scribbit"
       ],
       "kinds": {
-        "library": 1,
+        "app": 1,
+        "library": 2,
+        "service": 2,
         "tool": 1
       }
     },
@@ -338,11 +635,29 @@
   },
   "contracts": [
     {
+      "path": "contracts/asyncapi/ledger.yaml",
+      "kind": "asyncapi",
+      "exists": true,
+      "providers": [
+        "ledger"
+      ],
+      "consumers": []
+    },
+    {
       "path": "contracts/asyncapi/platform-events.yaml",
       "kind": "asyncapi",
       "exists": true,
       "providers": [
         "events"
+      ],
+      "consumers": []
+    },
+    {
+      "path": "contracts/openapi/ledger.yaml",
+      "kind": "openapi",
+      "exists": true,
+      "providers": [
+        "ledger"
       ],
       "consumers": []
     },
@@ -354,8 +669,39 @@
         "scribbit-fee-oracle"
       ],
       "consumers": [
-        "scribbit-cli"
+        "scribbit-cli",
+        "scribbit-mcp",
+        "scribbit-mint-api"
       ]
+    },
+    {
+      "path": "contracts/openapi/scribbit-mcp.yaml",
+      "kind": "openapi",
+      "exists": true,
+      "providers": [
+        "scribbit-mcp"
+      ],
+      "consumers": []
+    },
+    {
+      "path": "contracts/openapi/scribbit-mint-api.yaml",
+      "kind": "openapi",
+      "exists": true,
+      "providers": [
+        "scribbit-mint-api"
+      ],
+      "consumers": [
+        "scribbit-mint"
+      ]
+    },
+    {
+      "path": "contracts/openapi/signer.yaml",
+      "kind": "openapi",
+      "exists": true,
+      "providers": [
+        "signer"
+      ],
+      "consumers": []
     }
   ],
   "edges": [
@@ -363,6 +709,31 @@
       "from": "scribbit-cli",
       "to": "contracts/openapi/scribbit-fees.yaml",
       "type": "consumes"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "contracts/openapi/scribbit-fees.yaml",
+      "type": "consumes"
+    },
+    {
+      "from": "scribbit-mint",
+      "to": "contracts/openapi/scribbit-mint-api.yaml",
+      "type": "consumes"
+    },
+    {
+      "from": "scribbit-mint-api",
+      "to": "contracts/openapi/scribbit-fees.yaml",
+      "type": "consumes"
+    },
+    {
+      "from": "ledger",
+      "to": "edge",
+      "type": "depends_on"
+    },
+    {
+      "from": "ledger",
+      "to": "events",
+      "type": "depends_on"
     },
     {
       "from": "notify",
@@ -380,13 +751,83 @@
       "type": "depends_on"
     },
     {
+      "from": "scribbit-mcp",
+      "to": "edge",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "inscription",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "scribbit-fee-oracle",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mint",
+      "to": "inscription",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mint",
+      "to": "scribbit-counters",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mint",
+      "to": "wallet-kit",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mint-api",
+      "to": "edge",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mint-api",
+      "to": "scribbit-fee-oracle",
+      "type": "depends_on"
+    },
+    {
+      "from": "signer",
+      "to": "edge",
+      "type": "depends_on"
+    },
+    {
       "from": "events",
       "to": "contracts/asyncapi/platform-events.yaml",
       "type": "provides"
     },
     {
+      "from": "ledger",
+      "to": "contracts/asyncapi/ledger.yaml",
+      "type": "provides"
+    },
+    {
+      "from": "ledger",
+      "to": "contracts/openapi/ledger.yaml",
+      "type": "provides"
+    },
+    {
       "from": "scribbit-fee-oracle",
       "to": "contracts/openapi/scribbit-fees.yaml",
+      "type": "provides"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "contracts/openapi/scribbit-mcp.yaml",
+      "type": "provides"
+    },
+    {
+      "from": "scribbit-mint-api",
+      "to": "contracts/openapi/scribbit-mint-api.yaml",
+      "type": "provides"
+    },
+    {
+      "from": "signer",
+      "to": "contracts/openapi/signer.yaml",
       "type": "provides"
     }
   ]

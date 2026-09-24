@@ -19,6 +19,8 @@ with exact costs up front and no custody of user keys. It is the engine that deg
 | `scribbit-fee-oracle` | `@bsh/scribbit-fee-oracle` | library (+ optional server) | `packages/fee-oracle` | Multi-source fee aggregation (mempool.space, Esplora, bitcoind, Libre Relay block lane): median, outlier rejection, min-relay floor, TTL cache, source health. Provides `contracts/openapi/scribbit-fees.yaml` |
 | `scribbit-cli` | `@bsh/scribbit-cli` | tool | `apps/cli` | Developer CLI `scribbit`: exact `quote`, `envelope` dump, `commit-address`, self-`rescue`; `--json` everywhere |
 | `scribbit-mcp` | `@bsh/scribbit-mcp` | service | `services/mcp` | MCP server "scribb.it: write to Bitcoin" for AI agents: `get_fees`, `quote_inscription`, `build_envelope`, `commit_address`, `explain_lanes`, `rescue_tx` + docs resources and an `inscribe_this` prompt. Streamable HTTP at `/mcp` behind `@bsh/edge` API keys, or stdio for Claude Desktop / Claude Code. Provides `contracts/openapi/scribbit-mcp.yaml` |
+| `scribbit-mint` | `@bsh/scribbit-mint` | app | `apps/mint` | The retail mint "scribb.it: write to Bitcoin": `/ordinals` (any file/text as an inscription, batches) and `/counters` (counter, reinscription, fairminter/XCP-69). PSBTs only: the wallet signs every transaction; exact quotes, commit-txid check, resumable pending mints, rescue; `?demo=1` |
+| `scribbit-mint-api` | `@bsh/scribbit-mint-api` | service | `services/mint-api` | Keyless, stateless edge for the mint: `/api/fees`, Esplora UTXO/tx/broadcast proxy, allowlisted Counterparty v2 proxy, behind `@bsh/edge`. Provides `contracts/openapi/scribbit-mint-api.yaml` |
 
 ## Components to come
 

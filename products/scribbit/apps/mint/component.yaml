@@ -1,0 +1,12 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: scribbit-mint
+package: "@bsh/scribbit-mint"
+kind: app
+product: scribbit
+owner: team-scribbit
+summary: scribb.it retail mint - /ordinals inscribes any file, /counters mints a Bitcoin Counter; PSBTs only, the wallet signs every transaction, the site never holds a key.
+lifecycle: experimental
+depends_on: ["@bsh/inscription", "@bsh/wallet-kit", "@bsh/scribbit-counters"]
+consumes: [contracts/openapi/scribbit-mint-api.yaml]
+docs: ./README.md
+commands: { dev: dev, test: test, typecheck: typecheck, build: build }

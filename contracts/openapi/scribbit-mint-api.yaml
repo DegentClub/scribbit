@@ -1,0 +1,371 @@
+openapi: 3.1.0
+info:
+  title: scribb.it mint API
+  version: 1.0.0
+  summary: 'Edge for the scribb.it retail mint: fees, Esplora proxy, allowlisted Counterparty proxy.'
+  description: |
+    Provided by `scribbit-mint-api` (`@bsh/scribbit-mint-api`, products/scribbit/services/mint-api) and consumed by
+    the mint front end (`@bsh/scribbit-mint`). One process serves one network.
+
+    The service is **stateless and keyless**: it never sees a private key or an unsigned transaction it could
+    alter (composes come back from Counterparty unsigned and are signed in the wallet; broadcasts carry a signed
+    transaction, which cannot be altered in transit). Its only state is an in-memory fee cache and per-IP rate
+    limit buckets.
+
+    **Fees.** `GET /api/fees` returns the `FeesResponse` of `contracts/openapi/scribbit-fees.yaml` (aggregated by
+    `@bsh/scribbit-fee-oracle` from configurable sources). 503 `fees_unavailable` when no source answers.
+
+    **Esplora.** Three calls proxied to a configured Esplora/mempool backend: payment UTXOs, one transaction, and
+    broadcast. Malformed addresses/txids/hex are 400 before any upstream call.
+
+    **Counterparty.** `ANY /api/cp/{path}` proxies Counterparty Core v2 for an allowlist only (modelled on
+    counters.fun): `GET assets/{name}`, `addresses/{addr}/balances[/{asset}]`, `addresses/{addr}/assets[/owned]`,
+    `blocks/last`, `bitcoin/transactions/{txid}`; `POST addresses/{addr}/compose/issuance|fairminter`
+    (form-encoded, size-limited); `POST bitcoin/transactions` (relay of a signed hex). Everything else is 403
+    `cp_not_allowed` without touching the node. Upstream status and JSON body pass through unchanged (a
+    Counterparty 404 is an answer the page relies on).
+
+    **Edge.** Every response carries `X-Request-Id`; errors are `{ error: { code, message, requestId } }`; CORS is a
+    default-deny allowlist; per-IP token buckets on every route (`RateLimit-*` headers, 429 with `Retry-After`) and a
+    second, tighter one on POST routes.
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:3060
+    description: Local (`pnpm --filter @bsh/scribbit-mint-api dev`)
+tags:
+  - name: fees
+  - name: esplora
+  - name: counterparty
+  - name: ops
+paths:
+  /:
+    get:
+      tags: [ops]
+      operationId: getIndex
+      summary: Discovery document
+      responses:
+        '200':
+          description: What this instance serves.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Index' }
+  /healthz:
+    get:
+      tags: [ops]
+      operationId: getHealth
+      summary: Liveness
+      responses:
+        '200':
+          description: The process is up (upstreams are not probed).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /api/fees:
+    get:
+      tags: [fees]
+      operationId: getFees
+      summary: Current fee snapshot for this instance's network
+      responses:
+        '200':
+          description: 'Aggregated fee rates. `Cache-Control: public, max-age=10`, or `no-store` when `stale`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FeesResponse' }
+        '503':
+          description: No source answered (or none is configured).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/esplora/address/{addr}/utxo:
+    get:
+      tags: [esplora]
+      operationId: getAddressUtxos
+      summary: Unspent outputs of an address
+      parameters:
+        - { name: addr, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9]{20,90}$' } }
+      responses:
+        '200':
+          description: UTXO list (Esplora shape, normalised `status`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UtxoList' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '502': { $ref: '#/components/responses/Upstream' }
+        '504': { $ref: '#/components/responses/Upstream' }
+  /api/esplora/tx/{txid}:
+    get:
+      tags: [esplora]
+      operationId: getTransaction
+      summary: One transaction, as Esplora reports it
+      parameters:
+        - { name: txid, in: path, required: true, schema: { type: string, pattern: '^[0-9a-fA-F]{64}$' } }
+      responses:
+        '200':
+          description: The transaction (Esplora `GET /tx/:txid` shape; at least `txid` and `status`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Transaction' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404':
+          description: Not known to this Esplora (not in its mempool or chain).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502': { $ref: '#/components/responses/Upstream' }
+  /api/esplora/tx:
+    post:
+      tags: [esplora]
+      operationId: broadcastTransaction
+      summary: Broadcast a signed raw transaction
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema: { type: string, pattern: '^[0-9a-fA-F]+$', description: Raw transaction hex. }
+      responses:
+        '200':
+          description: Accepted by the backend's node.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BroadcastResult' }
+        '400':
+          description: Malformed hex (`bad_request`) or refused by the node (`broadcast_rejected`, message carries the node's reason).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '502': { $ref: '#/components/responses/Upstream' }
+  /api/cp/{path}:
+    parameters:
+      - { name: path, in: path, required: true, schema: { type: string }, description: 'Counterparty v2 path (see the allowlist in the description).' }
+    get:
+      tags: [counterparty]
+      operationId: cpRead
+      summary: Allowlisted Counterparty read
+      responses:
+        '200':
+          description: Counterparty's own `{ result }` body, passed through.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CpEnvelope' }
+        '403': { $ref: '#/components/responses/NotAllowed' }
+        '404':
+          description: Counterparty's own 404 (`{ error }`), passed through.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CpEnvelope' }
+        '503': { $ref: '#/components/responses/CpUnavailable' }
+    post:
+      tags: [counterparty]
+      operationId: cpWrite
+      summary: Allowlisted compose (issuance, fairminter) or relay (bitcoin/transactions)
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              description: Compose parameters (`description` may be a whole file) or `signedhex` for a relay.
+              additionalProperties: { type: string }
+      responses:
+        '200':
+          description: Counterparty's own `{ result }` body (an unsigned compose, or the relayed txid), passed through.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CpEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/NotAllowed' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415':
+          description: Body is not form-encoded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '503': { $ref: '#/components/responses/CpUnavailable' }
+components:
+  responses:
+    BadRequest:
+      description: Malformed input; nothing was sent upstream.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotAllowed:
+      description: Path/method not on the allowlist; nothing was sent upstream.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    CpUnavailable:
+      description: No Counterparty node configured for this instance.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooLarge:
+      description: Body over the configured limit.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Token bucket empty; `Retry-After` says when to try again.
+      headers:
+        Retry-After: { schema: { type: string } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Upstream:
+      description: The upstream failed (502 `upstream_error`) or timed out (504 `upstream_timeout`).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Network:
+      type: string
+      enum: [mainnet, testnet, signet, regtest]
+    FeeRate:
+      type: number
+      minimum: 0
+      description: sat/vB, may be fractional.
+    Index:
+      type: object
+      additionalProperties: false
+      required: [name, title, version, network, endpoints, limits]
+      properties:
+        name: { type: string, const: scribbit-mint-api }
+        title: { type: string }
+        version: { type: string }
+        network: { $ref: '#/components/schemas/Network' }
+        publicUrl: { type: string }
+        endpoints:
+          type: object
+          additionalProperties: false
+          required: [fees, esplora, cp]
+          properties:
+            fees: { type: string }
+            esplora: { type: array, items: { type: string } }
+            cp:
+              oneOf:
+                - type: 'null'
+                - type: object
+                  additionalProperties: false
+                  required: [reads, composes, posts]
+                  properties:
+                    reads: { type: array, items: { type: string } }
+                    composes: { type: array, items: { type: string } }
+                    posts: { type: array, items: { type: string } }
+        limits:
+          type: object
+          additionalProperties: false
+          required: [maxComposeBytes, maxBroadcastBytes]
+          properties:
+            maxComposeBytes: { type: integer }
+            maxBroadcastBytes: { type: integer }
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, service, version, network, counterparty, fees]
+      properties:
+        status: { type: string, const: ok }
+        service: { type: string, const: scribbit-mint-api }
+        version: { type: string }
+        network: { $ref: '#/components/schemas/Network' }
+        counterparty: { type: boolean, description: A Counterparty node is configured. }
+        fees: { type: boolean, description: A fee source is configured. }
+    FeesResponse:
+      description: Mirrors `FeesResponse` in contracts/openapi/scribbit-fees.yaml.
+      type: object
+      additionalProperties: false
+      required: [network, minFeeRate, standard, block, fetchedAt, stale, sources]
+      properties:
+        network: { $ref: '#/components/schemas/Network' }
+        minFeeRate: { $ref: '#/components/schemas/FeeRate' }
+        standard:
+          type: object
+          additionalProperties: false
+          required: [slow, normal, fast]
+          properties:
+            slow: { $ref: '#/components/schemas/FeeRate' }
+            normal: { $ref: '#/components/schemas/FeeRate' }
+            fast: { $ref: '#/components/schemas/FeeRate' }
+        block:
+          type: object
+          additionalProperties: false
+          required: [min, recommended]
+          properties:
+            min: { $ref: '#/components/schemas/FeeRate' }
+            recommended: { $ref: '#/components/schemas/FeeRate' }
+        fetchedAt: { type: string, format: date-time }
+        stale: { type: boolean }
+        sources: { type: array, items: { type: string } }
+    Utxo:
+      type: object
+      additionalProperties: false
+      required: [txid, vout, value, status]
+      properties:
+        txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+        vout: { type: integer, minimum: 0 }
+        value: { type: integer, minimum: 0, description: sats }
+        status:
+          type: object
+          additionalProperties: false
+          required: [confirmed]
+          properties:
+            confirmed: { type: boolean }
+            block_height: { type: integer }
+    UtxoList:
+      type: array
+      items: { $ref: '#/components/schemas/Utxo' }
+    Transaction:
+      type: object
+      required: [txid, status]
+      properties:
+        txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+        status:
+          type: object
+          required: [confirmed]
+          properties:
+            confirmed: { type: boolean }
+            block_height: { type: integer }
+            block_time: { type: integer }
+    BroadcastResult:
+      type: object
+      additionalProperties: false
+      required: [txid]
+      properties:
+        txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+    CpEnvelope:
+      description: Counterparty v2 answers `{ result }` on success and `{ error }` on failure; both pass through.
+      type: object
+      properties:
+        result: {}
+        error: { type: string }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - bad_request
+                - not_found
+                - cp_not_allowed
+                - cp_unavailable
+                - fees_unavailable
+                - broadcast_rejected
+                - upstream_error
+                - upstream_timeout
+                - unsupported_media_type
+                - payload_too_large
+                - rate_limited
+                - forbidden
+                - method_not_allowed
+                - internal_error
+            message: { type: string }
+            requestId: { type: string }
