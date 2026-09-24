@@ -131,13 +131,13 @@ describe('loadServerConfig', () => {
     const cfg = loadServerConfig(
       {
         FEE_NETWORK: 'testnet',
-        MEMPOOL_URLS: 'http://10.40.0.103:8989, https://mempool.space/testnet4',
+        MEMPOOL_URLS: 'http://192.0.2.103:8989, https://mempool.space/testnet4',
         MEMPOOL_BLOCKS_URLS: 'https://mempool.space/testnet4',
         ESPLORA_URLS: 'https://blockstream.info/testnet/api',
-        BITCOIND_RPC_URL: 'http://10.40.0.201:48332',
+        BITCOIND_RPC_URL: 'http://192.0.2.201:48332',
         BITCOIND_RPC_USER: 'fees',
         BITCOIND_RPC_PASSWORD: 'pw',
-        LIBRE_RELAY_RPC_URL: 'http://10.40.0.227:8332',
+        LIBRE_RELAY_RPC_URL: 'http://192.0.2.227:8332',
         BLOCK_LANE_PREMIUM: '1.1',
         FEE_TARGET_NORMAL: '6',
         PORT: '9000',
@@ -149,12 +149,12 @@ describe('loadServerConfig', () => {
     expect(cfg.port).toBe(9000);
     expect(cfg.corsOrigins).toEqual(['https://scribb.it', 'https://degent.club']);
     expect(cfg.oracle.sources.map((s) => `${s.kind}:${s.id}`)).toEqual([
-      'mempool-recommended:mempool:10.40.0.103:8989',
+      'mempool-recommended:mempool:192.0.2.103:8989',
       'mempool-recommended:mempool:mempool.space/testnet4',
       'mempool-blocks:mempool-blocks:mempool.space/testnet4',
       'esplora:esplora:blockstream.info/testnet/api',
-      'bitcoind:bitcoind:10.40.0.201:48332',
-      'block-lane:block-lane:10.40.0.227:8332',
+      'bitcoind:bitcoind:192.0.2.201:48332',
+      'block-lane:block-lane:192.0.2.227:8332',
     ]);
     expect(cfg.oracle.config).toMatchObject({ minRelayFeeRate: 1, lane: { premium: 1.1 }, tiers: { normal: 6 } });
     expect(cfg.oracle.ttlMs).toBe(30_000);

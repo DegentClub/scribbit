@@ -45,7 +45,7 @@ app.use(requestId());                                    // first: everything el
 app.use(jsonErrors());                                   // uniform {error:{code,message,requestId}}
 app.use(securityHeaders());
 app.use(corsAllowlist(['https://app.example.com'], { credentials: true }));
-app.use(trustProxy({ trusted: ['10.40.0.0/16'] }));      // ONLY if a proxy we run sits in front
+app.use(trustProxy({ trusted: ['10.0.0.0/8'] }));      // ONLY if a proxy we run sits in front
 app.use(rateLimit({ windowMs: 60_000, max: 300 }));      // per client IP
 app.use(bodyLimit(64 * 1024));
 app.use('/v1/*', apiKeys({ store, scopes: ['read'], environment: 'live' }));

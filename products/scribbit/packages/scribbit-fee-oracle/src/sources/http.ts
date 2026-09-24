@@ -42,7 +42,7 @@ export function btcPerKvbToSatPerVb(v: unknown): number | undefined {
 }
 
 export interface RpcOptions {
-  /** JSON-RPC endpoint, e.g. http://10.40.0.227:8332 (credentials may be given here or via `auth`). */
+  /** JSON-RPC endpoint, e.g. http://192.0.2.227:8332 (credentials may be given here or via `auth`). */
   url: string;
   auth?: { user: string; password: string };
   fetch?: FetchLike;

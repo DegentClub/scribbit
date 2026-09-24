@@ -21,7 +21,7 @@ info:
 defaultContentType: application/cloudevents+json
 servers:
   rabbitmq:
-    host: rabbitmq.skrybit.pve:5672
+    host: rabbitmq.internal.example:5672
     protocol: amqp
     protocolVersion: 0.9.1
     description: Legacy platform bus (RabbitMQ). Topic exchange bsh.events; dead letters on bsh.events.dlx.

@@ -48,14 +48,14 @@ describe('loadServerConfig', () => {
       MCP_FEE_URL_MAINNET: 'http://fees.internal/v1/fees',
       MCP_FEE_URL_SIGNET: 'OFF',
       MCP_FEE_URL_REGTEST: 'http://ignored',
-      MCP_TRUSTED_PROXIES: '10.40.0.0/16',
+      MCP_TRUSTED_PROXIES: '10.0.0.0/8',
       MCP_CORS_ORIGINS: 'https://app.scribb.it',
       MCP_RATE_LIMIT_KEY_PER_MIN: '10',
       MCP_MAX_BODY_BYTES: '65536',
       PORT: '4000',
       MCP_PUBLIC_URL: 'https://mcp.scribb.it',
     });
-    expect(cfg).toMatchObject({ port: 4000, networks: ['mainnet', 'signet'], feeUrls: { mainnet: 'http://fees.internal/v1/fees', signet: 'off' }, trustedProxies: ['10.40.0.0/16'], corsOrigins: ['https://app.scribb.it'], rateLimit: { keyPerMinute: 10 }, maxBodyBytes: 65536, publicUrl: 'https://mcp.scribb.it' });
+    expect(cfg).toMatchObject({ port: 4000, networks: ['mainnet', 'signet'], feeUrls: { mainnet: 'http://fees.internal/v1/fees', signet: 'off' }, trustedProxies: ['10.0.0.0/8'], corsOrigins: ['https://app.scribb.it'], rateLimit: { keyPerMinute: 10 }, maxBodyBytes: 65536, publicUrl: 'https://mcp.scribb.it' });
     expect(cfg.feeUrls).not.toHaveProperty('regtest');
     expect(() => loadServerConfig({ MCP_REQUIRE_API_KEY: 'no', MCP_NETWORKS: 'litecoin' })).toThrow(/unknown network/);
     expect(() => loadServerConfig({ MCP_REQUIRE_API_KEY: 'no', PORT: 'abc' })).toThrow(/PORT/);

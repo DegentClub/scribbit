@@ -49,12 +49,12 @@ import { createFeeOracle, mempoolRecommendedSource, mempoolBlocksSource, esplora
 const oracle = createFeeOracle({
   network: 'mainnet',
   sources: [
-    mempoolRecommendedSource({ baseUrl: 'http://10.40.0.103:8999' }),       // self-hosted mempool backend
+    mempoolRecommendedSource({ baseUrl: 'http://192.0.2.103:8999' }),       // self-hosted mempool backend
     mempoolRecommendedSource({ baseUrl: 'https://mempool.space' }),
     mempoolBlocksSource({ baseUrl: 'https://mempool.space' }),
     esploraSource({ baseUrl: 'https://blockstream.info/api' }),
-    bitcoindSource({ url: 'http://10.40.0.200:8332', auth: { user, password } }),
-    blockLaneSource({ url: 'http://10.40.0.227:8332', auth: { user, password } }), // Libre Relay node
+    bitcoindSource({ url: 'http://192.0.2.200:8332', auth: { user, password } }),
+    blockLaneSource({ url: 'http://192.0.2.227:8332', auth: { user, password } }), // Libre Relay node
   ],
   config: { minRelayFeeRate: 1, lane: { premium: 1.1, maxFeeRate: 500 } },
 });

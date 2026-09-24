@@ -181,7 +181,7 @@ MCP_API_KEYS_FILE=/run/secrets/scribbit-mcp-keys.json     # secret path services
 MCP_NETWORKS=mainnet,signet
 MCP_FEE_URL_MAINNET=http://fee-oracle.internal:8080/v1/fees   # scribbit-fee-oracle; default is public mempool.space
 MCP_PUBLIC_URL=https://mcp.scribb.it
-MCP_TRUSTED_PROXIES=10.40.0.0/16
+MCP_TRUSTED_PROXIES=10.0.0.0/8
 ```
 
 Operations: [`RUNBOOK.md`](./RUNBOOK.md).
