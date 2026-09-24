@@ -1,0 +1,11 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: scribbit-counters
+package: "@bsh/scribbit-counters"
+kind: library
+product: scribbit
+owner: team-scribbit
+summary: Bitcoin Counters mint engine - Counterparty taproot commit/reveal with a re-keyed envelope, exact fee maths, fairminter presets, resumable pending mints and a Slipstream route.
+lifecycle: experimental
+depends_on: []
+docs: ./README.md
+commands: { test: test, typecheck: typecheck }

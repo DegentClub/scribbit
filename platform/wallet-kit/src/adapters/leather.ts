@@ -11,6 +11,7 @@
  * - Leather has no network switch in its RPC; the network is whatever the user
  *   selected, so it is validated from the returned addresses.
  */
+import { CAPABILITIES } from '../capabilities.js';
 import { UnsupportedNetworkError, WalletError, WalletNotInstalledError } from '../errors.js';
 import {
   type RpcProvider,
@@ -23,6 +24,7 @@ import {
   isObject,
   rpcRequest,
   validateInputsToSign,
+  withTaprootOutputKey,
 } from '../internal.js';
 import { detectAddressType } from '../address.js';
 import { psbtBase64ToHex, psbtHexToBase64 } from '../psbt.js';
@@ -68,6 +70,8 @@ function leatherWallet(network: Network, ordinals: ReturnType<typeof account>, p
     network,
     ordinals,
     payment,
+    capabilities: CAPABILITIES.leather,
+    ...withTaprootOutputKey(ordinals),
 
     async signPsbt(psbtBase64: string, opts: SignPsbtOptions) {
       validateInputsToSign('leather', opts, owned);

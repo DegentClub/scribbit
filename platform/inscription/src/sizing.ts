@@ -7,7 +7,19 @@ export type Lane = 'standard' | 'block';
 const P2TR_SCRIPT_LEN = 34;
 /** outpoint (36) + scriptSig length (1, empty) + nSequence (4) */
 const INPUT_BASE = 41;
-const COMMIT_SIG = 65; // 64-byte Schnorr + hash-type byte (0x81 or 0x83: same size)
+const COMMIT_SIG = 65; // 64-byte Schnorr + hash-type byte (0x81, 0x83 or 0x01: same size)
+const COMMIT_SIG_DEFAULT = 64; // SIGHASH_DEFAULT: no hash-type byte
+
+/**
+ * Sighash of the commit-input signature, for sizing. Anything but SIGHASH_DEFAULT (`'default'` / 0x00)
+ * costs one extra witness byte. Accepts the mode names of buildHalfSignedReveal /
+ * buildUnsignedRevealPsbt or the hash-type byte itself.
+ */
+export type CommitSighashForSizing = 'default' | 'all' | 'all_anyonecanpay' | 'single_anyonecanpay' | number;
+
+export function commitSignatureSize(sighash: CommitSighashForSizing | undefined): number {
+  return sighash === 'default' || sighash === 0 ? COMMIT_SIG_DEFAULT : COMMIT_SIG;
+}
 const PARENT_SIG = 64; // SIGHASH_DEFAULT key-path
 const CONTROL_BLOCK = 33; // single leaf, no merkle path
 
@@ -22,6 +34,10 @@ function isP2TR(script: Uint8Array): boolean {
  *   withParent=false (rescue):  [commit] -> [child]
  *   withParent=true  (parent):  [parent, commit] -> [parent return, child]
  * weight = 4 × non-witness bytes + witness bytes (marker+flag and witness stacks).
+ *
+ * `commitSighash` (optional) sizes the commit signature: 64 bytes for `'default'` (SIGHASH_DEFAULT,
+ * wallet-signed reveals without a parent, the re-signed rescue), 65 bytes otherwise (0x81 / 0x83 /
+ * 0x01). Omitted = 65, the half-signed (K_e) model.
  */
 export function estimateRevealWeight(args: {
   content: InscriptionContent;
@@ -29,6 +45,7 @@ export function estimateRevealWeight(args: {
   recipientScript: Uint8Array;
   parentReturnScript?: Uint8Array;
   parentInputScript?: Uint8Array;
+  commitSighash?: CommitSighashForSizing;
 }): number {
   const { content, withParent, recipientScript } = args;
   if (!(recipientScript instanceof Uint8Array) || recipientScript.length === 0)
@@ -43,9 +60,10 @@ export function estimateRevealWeight(args: {
   base += outputSize(recipientScript.length);
   if (withParent) base += outputSize(args.parentReturnScript?.length ?? P2TR_SCRIPT_LEN);
 
+  const commitSig = commitSignatureSize(args.commitSighash);
   let witness = 2; // segwit marker + flag
   witness += compactSizeLen(3);
-  witness += compactSizeLen(COMMIT_SIG) + COMMIT_SIG;
+  witness += compactSizeLen(commitSig) + commitSig;
   witness += compactSizeLen(leafLen) + leafLen;
   witness += compactSizeLen(CONTROL_BLOCK) + CONTROL_BLOCK;
   if (withParent) witness += compactSizeLen(1) + compactSizeLen(PARENT_SIG) + PARENT_SIG;

@@ -154,4 +154,59 @@ and keep K_e in the user's recovery bundle; services add `expectedParentReturnAd
 `expectedParentValue` (and pass `expectedSighash: 'single_anyonecanpay'` while still accepting legacy
 reveals); rescue tooling uses `buildResignedRescue` for 0x81 orders. 0x83 is removed one release later.
 
+## Wallet-signed reveals (additions; existing signatures unchanged)
+
+The reveal is signed by the user's wallet as a tapscript (script-path) PSBT. Commit = `commitAddress(leafPubkey, content, network)`:
+P2TR(NUMS internal key, single leaf) whose leaf names `leafPubkey`, a key the wallet controls.
+
+```ts
+// Which wallet key is in the leaf: the untweaked internal x-only key, or the tweaked taproot output key (bc1p program).
+export type LeafKeyKind = 'internal' | 'output';
+// Sighash of the commit-input signature. 'default' 0x00 (64-byte sig), 'all' 0x01 (65, same digest; wallets that refuse 0x00),
+// 'all_anyonecanpay' 0x81 (65; required with a parent). Default: 'default' without parent, 'all_anyonecanpay' with one.
+export type WalletRevealSighash = 'default' | 'all' | 'all_anyonecanpay';
+export function walletRevealSighashType(mode: WalletRevealSighash): number;
+export const SIGHASH_ALL: 0x01; export const SIGHASH_DEFAULT: 0x00;
+
+// Unsigned reveal for the wallet. Input `inputIndex` (0) carries witnessUtxo, tapInternalKey = NUMS, tapMerkleRoot = leaf hash,
+// tapLeafScript [{ controlBlock, script, leafVersion 0xc0 }] and PSBT_IN_SIGHASH_TYPE (omitted for 'default').
+// Outputs: [parent return, child] when withParent (defaults to content.parentId !== undefined; sighash must be 'all_anyonecanpay'), else [child].
+export function buildUnsignedRevealPsbt(args: {
+  network: Network; leafPubkey: Uint8Array /* 32-byte x-only */; content: InscriptionContent;
+  commitOutpoint: { txid: string; vout: number }; commitValue: bigint; recipientAddress: string; postage: bigint;
+  withParent?: boolean; parentReturnAddress?: string; parentValue?: bigint; sighash?: WalletRevealSighash;
+}): { psbtBase64: string; inputIndex: number; leafScript: Uint8Array; controlBlock: Uint8Array; tapLeafHash: Uint8Array; commitAddress: string; sighashType: number };
+
+// Wallet-signed PSBT (PSBT_IN_TAP_SCRIPT_SIG for the leaf, or a finalized [sig, leaf, controlBlock] witness; key-path parent input
+// accepted) -> raw tx. Every leaf signature is Schnorr-verified; throws naming the reason (unsigned, other leaf, other key, bad witness).
+export function finalizeWalletSignedReveal(psbtBase64: string): { hex: string; txid: string; weight: number; vsize: number };
+
+// Service side. Recomputes everything from the expected values. With expectedParentReturnAddress: [parent return, child], 0x81 only.
+// Without: [child]; 0x00 / 0x01 / 0x81 accepted unless expectedSighash pins one.
+export function verifyWalletSignedReveal(args: {
+  network: Network; psbtBase64: string; leafPubkey: Uint8Array; content: InscriptionContent;
+  expectedCommitOutpoint: { txid: string; vout: number }; expectedCommitValue: bigint; expectedRecipientAddress: string; expectedPostage: bigint;
+  expectedParentReturnAddress?: string; expectedParentValue?: bigint; expectedSighash?: WalletRevealSighash;
+}): { ok: true } | { ok: false; reason: string };
+
+// Self-rescue: [commit] -> [child], no parent, the wallet re-signs any time. fee = commitValue - postage; with feeRate, throws when
+// fee < ceil(vsize × feeRate). sighash 'default' (0x00) or 'all' (0x01).
+export function buildUnsignedRescuePsbt(args: {
+  network: Network; leafPubkey: Uint8Array; content: InscriptionContent; commitOutpoint: { txid: string; vout: number }; commitValue: bigint;
+  recipientAddress: string; postage: bigint; feeRate?: number; sighash?: 'default' | 'all';
+}): { psbtBase64: string; inputIndex: number; commitAddress: string; fee: bigint; sighashType: number };
+
+// Sizing: estimateRevealWeight gains `commitSighash?: 'default' | 'all' | 'all_anyonecanpay' | 'single_anyonecanpay' | number`
+// (64-byte commit signature for 'default'/0x00, 65 otherwise; omitted = 65). Exact for wallet-signed reveals (tests).
+export function commitSignatureSize(sighash: CommitSighashForSizing | undefined): 64 | 65;
+// revealCommitSighash additionally accepts sighashType 0x01 (same digest as 0x00 apart from the hash-type byte).
+// Helpers: leafKeyOf(leafScript), leafKeyOfPsbt(psbtBase64, inputIndex?), extractLeafSignature(tx, idx, expected?) -> LeafSignature.
+// attachParent / commitSignature accept a wallet-finalized commit input (leaf fields rebuilt from the witness).
+```
+
+Behavioural notes: `commitAddress` is the same function in both models (the K_e model passes an ephemeral key, the wallet model
+a wallet key; internal key is always NUMS). A wallet-signed 0x81 reveal is byte-identical in structure to a K_e half-signed one,
+so `attachParent`, `signParentInput` and `finalizeReveal` are shared. Which wallet uses which `LeafKeyKind` is documented in the
+README ("Wallet-signed reveals"), with VERIFIED / ASSUMED status per wallet.
+
 Funding PSBTs are built by `@bsh/wallet-kit` / the front end, not here.

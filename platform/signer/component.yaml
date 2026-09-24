@@ -1,0 +1,16 @@
+name: signer
+package: "@bsh/signer"
+kind: service
+product: platform
+owner: team-platform
+summary: Remote, policy-constrained BIP340 signing service (taproot key-path PSBT inputs, purpose-gated attestations) so product services never hold keys.
+lifecycle: experimental
+depends_on: ["@bsh/edge"]
+provides: [contracts/openapi/signer.yaml]
+stores: ["memory:signer-audit"]
+secrets: ["services/signer/keys/*", "services/signer/api-key-hashes"]
+env_schema: ./env.schema.json
+runbook: ./RUNBOOK.md
+docs: ./README.md
+commands: { dev: dev, test: test, typecheck: typecheck }
+slo: { availability: "99.9", p95_ms: 100 }

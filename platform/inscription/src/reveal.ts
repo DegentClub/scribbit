@@ -17,6 +17,7 @@ import {
 } from './constants.js';
 import type { InscriptionContent } from './envelope.js';
 import { networkParams, type Network } from './network.js';
+import { controlBlockStruct, extractLeafSignature } from './leaf.js';
 import { decodePsbt, encodePsbt, inputTxid, rawFacts, TX_OPTS } from './psbt.js';
 import { revealCommitSighash, type SighashOutput } from './sighash.js';
 import { estimateResignedRescueWeight, quoteReveal } from './sizing.js';
@@ -35,11 +36,39 @@ function isP2TR(script: Uint8Array): boolean {
   return script.length === 34 && script[0] === 0x51 && script[1] === 0x20;
 }
 
-/** The tapscript signature on a commit input (65 bytes for 0x81/0x83, 64 for DEFAULT), or undefined. */
+/**
+ * The tapscript signature on a commit input (65 bytes for 0x81/0x83/0x01, 64 for DEFAULT), or
+ * undefined. Read from PSBT_IN_TAP_SCRIPT_SIG, or from a finalized `[sig, leaf, control block]`
+ * witness (wallets that finalize what they sign).
+ */
 export function commitSignature(tx: Transaction, idx: number): Uint8Array | undefined {
-  const sigs = tx.getInput(idx).tapScriptSig;
+  const input = tx.getInput(idx);
+  if (input.finalScriptWitness?.length === 3) return input.finalScriptWitness[0];
+  const sigs = input.tapScriptSig;
   if (!sigs || sigs.length !== 1) return undefined;
   return sigs[0]![1];
+}
+
+/**
+ * The commit input in its unfinalized PSBT form (leaf fields + one tapScriptSig). A wallet that
+ * finalized the input stripped the leaf fields; they are rebuilt from the witness so the input can
+ * be carried into the parent layout and finalized again by finalizeReveal.
+ */
+function unfinalizedCommitInput(tx: Transaction, idx: number): Parameters<Transaction['addInput']>[0] {
+  const input = tx.getInput(idx);
+  if (!input.finalScriptWitness?.length) return input;
+  const ls = extractLeafSignature(tx, idx);
+  return {
+    txid: input.txid,
+    index: input.index,
+    sequence: input.sequence,
+    witnessUtxo: input.witnessUtxo,
+    tapInternalKey: NUMS_INTERNAL_KEY,
+    tapMerkleRoot: ls.leafHash,
+    tapLeafScript: [[controlBlockStruct(ls.controlBlock), new Uint8Array([...ls.leafScript, TAPSCRIPT_LEAF_VERSION])]],
+    ...(ls.sighashType === SIGHASH_DEFAULT ? {} : { sighashType: ls.sighashType }),
+    tapScriptSig: [[{ pubKey: ls.pubKey, leafHash: ls.leafHash }, ls.sig]],
+  };
 }
 
 function outputsOf(tx: Transaction): SighashOutput[] {
@@ -190,11 +219,8 @@ export function attachParent(args: {
 
   const half = decodePsbt(args.halfSignedPsbtBase64);
   const type = assertHalfSigned(half);
-  const commitIn = half.getInput(0);
-  if (
-    inputTxid(half, 0) === args.parentOutpoint.txid.toLowerCase() &&
-    commitIn.index === args.parentOutpoint.vout
-  )
+  const commitIn = unfinalizedCommitInput(half, 0);
+  if (inputTxid(half, 0) === args.parentOutpoint.txid.toLowerCase() && half.getInput(0).index === args.parentOutpoint.vout)
     throw new Error('parent outpoint equals commit outpoint');
   const parentReturnScript = addressToScript(args.parentReturnAddress, args.network);
 

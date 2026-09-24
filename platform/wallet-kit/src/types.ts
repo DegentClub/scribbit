@@ -10,7 +10,7 @@
  *   testnet4 (UniSat, Xverse). See README for per-wallet caveats.
  */
 
-export type WalletId = 'unisat' | 'xverse' | 'leather' | 'okx' | 'magiceden';
+export type WalletId = 'unisat' | 'xverse' | 'leather' | 'okx' | 'magiceden' | 'xcp' | 'horizon';
 
 export type Network = 'mainnet' | 'testnet' | 'signet' | 'regtest';
 
@@ -32,6 +32,23 @@ export interface InputToSign {
   address: string;
   /** Allowed sighash types. Forwarded where the wallet supports it (see README). */
   sighashTypes?: number[];
+  /**
+   * Sign this input with the untweaked internal key instead of the tweaked taproot key
+   * (UniSat/OKX `disableTweakSigner`). Needed when a tapscript leaf names the wallet's internal
+   * x-only key (`LeafKeyKind = 'internal'` in @bsh/inscription). Ignored by wallets without the option.
+   */
+  disableTweak?: boolean;
+}
+
+/**
+ * What an inscription commit is for, for wallets that refuse to sign BTC movement they cannot
+ * account for (XCP Wallet's inscription gate). `envelopeScriptHex` is the reveal's tapleaf (the
+ * ord envelope whose OP_CHECKSIG key is the signer's own taproot output key); `commitAddress` is
+ * the P2TR(NUMS, leaf) address the commit pays. Other wallets ignore it.
+ */
+export interface InscriptionContext {
+  envelopeScriptHex: string;
+  commitAddress: string;
 }
 
 export interface SignPsbtOptions {
@@ -40,6 +57,8 @@ export interface SignPsbtOptions {
   finalize?: boolean;
   /** Ask the wallet to broadcast the finalized transaction. Default false. */
   broadcast?: boolean;
+  /** Inscription commit context; required by XCP Wallet to sign a commit, ignored elsewhere. */
+  inscription?: InscriptionContext;
 }
 
 export interface SignPsbtResult {
@@ -50,11 +69,39 @@ export interface SignPsbtResult {
 
 export type MessageSignatureType = 'bip322-simple' | 'ecdsa';
 
+/**
+ * What a wallet can do, as far as we know. `'unknown'` means no reference code or documentation
+ * settles it (see README "Verified vs assumed"); treat it as "try, and handle UNSUPPORTED_METHOD".
+ */
+export interface WalletCapabilities {
+  /** Can relay a signed transaction itself (`broadcast: true` in signPsbt and/or `pushTx`). */
+  broadcast: boolean;
+  /** Signs BIP-322 messages. */
+  bip322: boolean;
+  /** Signs a taproot script-path (tapscript leaf) input from PSBT_IN_TAP_LEAF_SCRIPT. */
+  tapscript: boolean | 'unknown';
+  /**
+   * When signing a tapscript leaf, the wallet signs with its **tweaked** taproot output key
+   * (`taprootOutputKey`) rather than the untweaked internal key. Decides `LeafKeyKind` in
+   * @bsh/inscription: true → `'output'`, false → `'internal'`. UniSat/OKX can do either
+   * (`disableTweak` per input).
+   */
+  tweakedLeafKey: boolean | 'unknown';
+}
+
 export interface ConnectedWallet {
   id: WalletId;
   network: Network;
   ordinals: WalletAccount;
   payment: WalletAccount;
+  capabilities: WalletCapabilities;
+  /**
+   * The x-only **tweaked** taproot output key of the ordinals account: the 32-byte witness
+   * program of its bc1p address, hex. Present when the ordinals address is p2tr. This is the key
+   * an inscription leaf must name for wallets with `tweakedLeafKey: true` (XCP Wallet verifies
+   * the leaf against exactly this value).
+   */
+  taprootOutputKey?: string;
   signPsbt(psbtBase64: string, opts: SignPsbtOptions): Promise<SignPsbtResult>;
   signMessage(message: string, address: string, type?: MessageSignatureType): Promise<string>;
   /** Broadcast a raw transaction through the wallet. Only on wallets that can relay. */

@@ -58,7 +58,7 @@ export class Recorder {
 type Win = Record<string, unknown>;
 export const win = (): Win => window as unknown as Win;
 
-const INJECTED = ['unisat', 'okxwallet', 'XverseProviders', 'LeatherProvider', 'magicEden'];
+const INJECTED = ['unisat', 'okxwallet', 'XverseProviders', 'LeatherProvider', 'magicEden', 'xcpwallet', 'HorizonWalletProvider', 'btc_providers'];
 export function cleanWindow(): void {
   for (const k of INJECTED) delete win()[k];
 }

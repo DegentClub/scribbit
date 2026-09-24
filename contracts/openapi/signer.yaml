@@ -1,0 +1,247 @@
+openapi: 3.1.0
+info:
+  title: Platform signer
+  version: 0.1.0
+  summary: Remote, policy-constrained BIP340 signing so product services never hold signing keys in-process.
+  description: |
+    Provided by `signer` (`@bsh/signer`, platform/signer). Two operations: sign a BIP341 **key-path** input of
+    a PSBT with a named key (the signer re-derives the input's P2TR script from the key it holds, computes the
+    sighash itself and applies the configured policies), and sign a caller-supplied 32-byte digest for an
+    allowlisted attestation **purpose** (e.g. `blockspace.certify`). Every decision — allow, deny, error — is
+    recorded as a structured audit record without key material.
+
+    Authentication: `@bsh/edge` API keys (`Authorization: Bearer bsh_live_…` or `X-API-Key`). Scopes are per key
+    id: `sign:<keyId>` to sign with a key (and read its public key), `keys:read` for any public key,
+    `audit:read` for the audit endpoint. The service is meant to be reachable only over a private network with
+    mTLS at the transport; see platform/signer/README.md "Threat model".
+
+    Errors use the uniform edge body `{ "error": { "code", "message", "requestId" } }`. Policy denials are
+    `403 policy_denied` and MUST NOT be retried by clients; only network failures are retryable.
+  license:
+    name: Proprietary
+servers:
+  - url: http://127.0.0.1:3060
+    description: Local (`pnpm --filter @bsh/signer dev`)
+tags:
+  - name: sign
+  - name: keys
+  - name: ops
+paths:
+  /v1/sign/taproot-keypath:
+    post:
+      tags: [sign]
+      operationId: signTaprootKeyPath
+      summary: Sign one key-path P2TR input of a PSBT
+      security: [{ apiKey: [] }, { bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignTaprootKeyPathRequest' }
+      responses:
+        '200':
+          description: The PSBT with `tapKeySig` set on the input (and finalized when requested).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignTaprootKeyPathResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The input already carries a key-path signature or a final witness (`already_signed`).
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '422':
+          description: The input is not a key-path spend of this key's P2TR output (`input_mismatch`).
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/sign/digest:
+    post:
+      tags: [sign]
+      operationId: signSchnorrDigest
+      summary: Sign a 32-byte digest for an allowlisted purpose (attestations)
+      security: [{ apiKey: [] }, { bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SignSchnorrDigestRequest' }
+      responses:
+        '200':
+          description: BIP340 signature by the untweaked key.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SignSchnorrDigestResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/keys/{id}/pubkey:
+    get:
+      tags: [keys]
+      operationId: getPublicKey
+      summary: Public key of a signing key
+      security: [{ apiKey: [] }, { bearer: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/KeyId' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicKey' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/health:
+    get:
+      tags: [ops]
+      operationId: getHealth
+      summary: Liveness (no auth)
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service, version, network, keys]
+                properties:
+                  status: { type: string, const: ok }
+                  service: { type: string, const: signer }
+                  version: { type: string }
+                  network: { $ref: '#/components/schemas/Network' }
+                  keys: { type: integer, description: Number of keys the provider serves. }
+  /v1/audit:
+    get:
+      tags: [ops]
+      operationId: listAudit
+      summary: Recent audit records (scope audit:read)
+      security: [{ apiKey: [] }, { bearer: [] }]
+      parameters:
+        - { name: keyId, in: query, schema: { $ref: '#/components/schemas/KeyId' } }
+        - { name: decision, in: query, schema: { type: string, enum: [allow, deny, error] } }
+        - { name: principal, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 100 } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [records, total]
+                properties:
+                  records: { type: array, items: { $ref: '#/components/schemas/AuditRecord' } }
+                  total: { type: integer, description: Records currently held by this instance. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: This instance has no queryable audit log (records go to the log pipeline only).
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+components:
+  securitySchemes:
+    apiKey: { type: apiKey, in: header, name: X-API-Key }
+    bearer: { type: http, scheme: bearer }
+  schemas:
+    KeyId:
+      type: string
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'
+    Hex32:
+      type: string
+      pattern: '^[0-9a-fA-F]{64}$'
+    Hex64:
+      type: string
+      pattern: '^[0-9a-f]{128}$'
+    Network:
+      type: string
+      enum: [mainnet, testnet, signet, regtest]
+    SignTaprootKeyPathRequest:
+      type: object
+      required: [psbtBase64, inputIndex, keyId]
+      properties:
+        psbtBase64: { type: string, description: BIP174 PSBT, base64. Every input must carry `witnessUtxo` (or `nonWitnessUtxo`). }
+        inputIndex: { type: integer, minimum: 0 }
+        keyId: { $ref: '#/components/schemas/KeyId' }
+        finalize: { type: boolean, default: false, description: Also finalize the input (`finalScriptWitness`). }
+    SignTaprootKeyPathResult:
+      type: object
+      required: [psbtBase64, keyId, inputIndex, sighashType, signature, digest]
+      properties:
+        psbtBase64: { type: string }
+        keyId: { $ref: '#/components/schemas/KeyId' }
+        inputIndex: { type: integer }
+        sighashType: { type: integer, description: BIP341 hash type used (0 = SIGHASH_DEFAULT), taken from the input's `sighashType` field. }
+        signature: { $ref: '#/components/schemas/Hex64', description: 64-byte BIP340 signature by the tweaked output key (no sighash byte). }
+        digest: { $ref: '#/components/schemas/Hex32', description: The BIP341 sighash that was signed. }
+        txid: { $ref: '#/components/schemas/Hex32', description: Present when finalize produced a complete transaction. }
+    SignSchnorrDigestRequest:
+      type: object
+      required: [keyId, digest32, purpose]
+      properties:
+        keyId: { $ref: '#/components/schemas/KeyId' }
+        digest32: { $ref: '#/components/schemas/Hex32', description: The caller hashes; the purpose defines the preimage (domain-separated). }
+        purpose: { type: string, pattern: '^[a-z][a-z0-9]*(\.[a-z][a-z0-9-]*)*$', examples: [blockspace.certify] }
+    SignSchnorrDigestResult:
+      type: object
+      required: [keyId, purpose, digest32, signature, publicKey]
+      properties:
+        keyId: { $ref: '#/components/schemas/KeyId' }
+        purpose: { type: string }
+        digest32: { $ref: '#/components/schemas/Hex32' }
+        signature: { $ref: '#/components/schemas/Hex64' }
+        publicKey: { $ref: '#/components/schemas/Hex32', description: x-only public key (untweaked) the signature verifies against. }
+    PublicKey:
+      type: object
+      required: [keyId, xOnlyPublicKey, tweakedPublicKey]
+      properties:
+        keyId: { $ref: '#/components/schemas/KeyId' }
+        xOnlyPublicKey: { $ref: '#/components/schemas/Hex32' }
+        tweakedPublicKey: { $ref: '#/components/schemas/Hex32', description: BIP341 output key for a key-path-only P2TR output of this key. }
+    AuditRecord:
+      type: object
+      required: [id, at, kind, keyId, principal, decision, durationMs, details]
+      properties:
+        id: { type: string }
+        at: { type: string, format: date-time }
+        kind: { type: string, enum: [taproot-keypath, schnorr-digest, pubkey] }
+        keyId: { type: string }
+        principal: { type: string, description: API key id of the caller, or `local`. }
+        decision: { type: string, enum: [allow, deny, error] }
+        reason: { type: string, description: '`<policy>: <reason>` for denials; `<code>: <message>` for errors.' }
+        requestId: { type: string }
+        durationMs: { type: integer }
+        details: { type: object, additionalProperties: true, description: Non-secret facts (input, outputs, fee, sighash, digest, purpose, txid). Never key material, PSBT bodies or signatures. }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              description: >
+                Edge codes (missing_api_key, invalid_api_key, insufficient_scope, rate_limited, quota_exceeded,
+                payload_too_large, not_found, internal_error) plus signer codes: invalid_request, psbt_invalid,
+                unknown_key, input_mismatch, already_signed, policy_denied, key_provider_error, signature_invalid.
+            message: { type: string }
+            requestId: { type: [string, 'null'] }
+  responses:
+    BadRequest:
+      description: Malformed request (`invalid_request`, `invalid_json`, `psbt_invalid`, `unsupported_media_type`).
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: Missing or invalid API key.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Missing scope (`insufficient_scope`) or a policy denial (`policy_denied`). Never retry.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Unknown key id.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    RateLimited:
+      description: Per-IP or per-key token bucket exhausted; `Retry-After` set.
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

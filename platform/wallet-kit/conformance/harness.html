@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>wallet-kit conformance</title>
+  <link rel="icon" href="data:," />
+  <style>
+    :root { --fg: #1a1a1a; --bg: #fff; --muted: #666; --pass: #0a7a2f; --fail: #b3261e; --skip: #8a6d00; --line: #ddd; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #eee; --bg: #121212; --muted: #aaa; --line: #333; --pass: #4ade80; --fail: #f87171; --skip: #facc15; } }
+    body { font: 14px/1.4 system-ui, sans-serif; color: var(--fg); background: var(--bg); margin: 0; padding: 16px; }
+    h1 { font-size: 18px; margin: 0 0 8px; }
+    p { color: var(--muted); margin: 4px 0; }
+    #wallets button, #refresh { margin: 4px 6px 4px 0; padding: 6px 10px; }
+    textarea { width: 100%; max-width: 720px; height: 64px; font-family: ui-monospace, monospace; font-size: 12px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+    th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13px; }
+    td:nth-child(4) { word-break: break-word; }
+    tr[data-status="pass"] td:nth-child(3) { color: var(--pass); font-weight: 600; }
+    tr[data-status="fail"] td:nth-child(3) { color: var(--fail); font-weight: 600; }
+    tr[data-status="skip"] td:nth-child(3) { color: var(--skip); }
+  </style>
+</head>
+<body>
+  <h1>@bsh/wallet-kit conformance lab</h1>
+  <p>Runs each adapter through detect → connect → addresses → signMessage → signPsbt (input 0, sighash 0x81) → pushTx (dry run) → disconnect.
+     Nothing here touches funds: the fixture PSBT spends a non-existent outpoint. Use signet.</p>
+  <p>Detected now: <span id="detected">…</span> <button id="refresh" type="button">refresh</button></p>
+  <label>Network
+    <select id="network">
+      <option value="signet">signet</option>
+      <option value="testnet">testnet (testnet4)</option>
+      <option value="regtest">regtest</option>
+      <option value="mainnet">mainnet (Magic Eden only; still no funds involved)</option>
+    </select>
+  </label>
+  <p><label>PSBT override (base64) — for real extensions paste a PSBT whose input 0 is your wallet's payment address:</label></p>
+  <textarea id="psbt" placeholder="leave empty to use the fixture"></textarea>
+  <p><label><input type="checkbox" id="pushTx" /> actually call pushTx (broadcast the fixture; will be rejected by the network — dry run otherwise)</label></p>
+  <div id="wallets"></div>
+  <p id="summary"></p>
+  <table id="results">
+    <thead><tr><th>wallet</th><th>step</th><th>status</th><th>detail</th><th>ms</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <script src="./dist/harness.js"></script>
+</body>
+</html>

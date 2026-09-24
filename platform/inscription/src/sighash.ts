@@ -4,6 +4,7 @@ import {
   REVEAL_LOCKTIME,
   REVEAL_SEQUENCE,
   REVEAL_TX_VERSION,
+  SIGHASH_ALL,
   SIGHASH_ALL_ANYONECANPAY,
   SIGHASH_DEFAULT,
   SIGHASH_SINGLE_ANYONECANPAY,
@@ -34,7 +35,9 @@ const serializeOutput = (o: SighashOutput) => concatBytes(u64le(o.value), compac
  *        Still no input index and no other inputs, so inserting the parent input at index 0 leaves
  *        the digest unchanged; adding, removing or editing any output breaks it.
  *   0x00 (SIGHASH_DEFAULT, `outputs`): commits to everything of a single-input transaction
- *        `[commit] -> outputs` (used by the re-signed rescue; input index 0).
+ *        `[commit] -> outputs` (used by the re-signed rescue and wallet-signed reveals; input index 0).
+ *   0x01 (SIGHASH_ALL, `outputs`): identical digest to 0x00 except for the hash-type byte; the
+ *        signature carries a trailing 0x01 (wallets that refuse SIGHASH_DEFAULT, e.g. XCP Wallet).
  *
  * `sighashType` defaults to 0x83 when `childScript` is given and to 0x81 when `outputs` is given.
  */
@@ -81,7 +84,7 @@ export function revealCommitSighash(args: {
     return taggedHash(concatBytes(head, shaOutputs, spendType, prevout, amount, scriptPubKey, nSequence, ext));
   }
 
-  if (sighashType === SIGHASH_DEFAULT) {
+  if (sighashType === SIGHASH_DEFAULT || sighashType === SIGHASH_ALL) {
     // Single-input transaction: the per-input hashes cover exactly the commit input, input_index = 0.
     return taggedHash(
       concatBytes(

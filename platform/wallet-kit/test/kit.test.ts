@@ -13,8 +13,8 @@ import {
 import { ADDR, PUBKEY_A, win } from './helpers.js';
 
 describe('registry', () => {
-  it('has all five wallets with unique ids', () => {
-    expect([...WALLET_IDS].sort()).toEqual(['leather', 'magiceden', 'okx', 'unisat', 'xverse']);
+  it('has all seven wallets with unique ids', () => {
+    expect([...WALLET_IDS].sort()).toEqual(['horizon', 'leather', 'magiceden', 'okx', 'unisat', 'xcp', 'xverse']);
     for (const a of ADAPTERS) {
       expect(getAdapter(a.id)).toBe(a);
       expect(a.name).toBeTruthy();
@@ -57,6 +57,7 @@ function stubAdapter(id: WalletId, opts: { fail?: unknown; delay?: number } = {}
       network,
       ordinals: { ...acct, purpose: 'ordinals' },
       payment: { ...acct, purpose: 'payment' },
+      capabilities: { broadcast: false, bip322: true, tapscript: 'unknown', tweakedLeafKey: 'unknown' },
       signPsbt: async () => ({ psbtBase64: '' }),
       signMessage: async () => 'sig',
       disconnect,

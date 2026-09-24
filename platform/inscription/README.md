@@ -115,6 +115,90 @@ the parent return output.)
   `withParent: false`; it throws for a 0x81 PSBT that pre-committed a parent return, pointing at
   `buildResignedRescue`. Weight and fee maths are identical in both modes (the tests assert it).
 
+## Wallet-signed reveals ("just PSBTs")
+
+The K_e model above signs the reveal in the browser with an ephemeral key. The wallet-signed model
+signs it with **the user's wallet** as an ordinary PSBT: the commit is still
+`P2TR(NUMS internal key, single leaf)`, but the leaf's `OP_CHECKSIG` key is a key the wallet
+controls, and the wallet performs the tapscript (script-path) spend. This is the construction
+XCP Wallet's inscription gate requires (NUMS internal key + the signer's own taproot key in the
+leaf, see counters.fun `lib/inscribe/envelope.ts`) and every other tapscript-capable wallet
+accepts. Nothing changes on chain: same envelope, same weight, same `commitAddress`.
+
+```
+browser (wallet-kit)                       service                         policy signer
+────────────────────                       ───────                         ─────────────
+leafPubkey = wallet key (see key kinds)
+commitAddress(leafPubkey, content, net) ─► recompute + compare
+quoteReveal(estimateRevealWeight({ commitSighash }))
+buildUnsignedRevealPsbt(...)              (same function on both sides; the service compares)
+wallet.signPsbt(psbt, inputIndex)  ──────► verifyWalletSignedReveal(...)  (store)
+  0x81: [commit] → [parent return, child]
+                                           attachParent(...) ────────────► signParentInput(...)
+                                           finalizeReveal(...) → broadcast in lane
+(no parent)  finalizeWalletSignedReveal(signed) → broadcast
+(timeout)    buildUnsignedRescuePsbt(...) → wallet signs again → finalizeWalletSignedReveal
+```
+
+**Which key is in the leaf (`LeafKeyKind`).** A p2tr account has two 32-byte keys: the untweaked
+**internal** key (what wallets report as `publicKey`, minus the 02/03 prefix) and the tweaked
+**output** key (the witness program of the bc1p address, `wallet.taprootOutputKey` in
+`@bsh/wallet-kit`). The leaf must name the one the wallet will sign with:
+
+| Wallet | Leaf key | Sighash for the commit input | Status |
+|---|---|---|---|
+| XCP Wallet | `'output'` (tweaked; it checks the leaf against `Address().decode(addr).pubkey` and signs with the tweaked private key) | `'all'` (0x01) — rejects `sighashTypes: [0]`; needs `inscription` context `{ revealScript, tapInternalKey: NUMS }` on the **commit** | **VERIFIED** (counters.fun `wallet/adapter.ts` `taprootOutputKey`, `inscribe/psbt.ts`, `sdk/provider.ts`) |
+| Horizon | `'output'` (counters.fun feeds it the same tweaked-key leaf as XCP Wallet; it handles `tapLeafScript`/`tapInternalKey`) | `'default'` or `'all'` (whitelists `[0x00, 0x01]`) | **VERIFIED (indirect)** — counters.fun v2.3.1 adapter signs that leaf; no reveal-specific reference read |
+| UniSat / OKX | `'output'` by default; `'internal'` with `toSignInputs[].disableTweakSigner: true` (`disableTweak` in wallet-kit) | `'default'`, `'all'` or `'all_anyonecanpay'` via `sighashTypes` | **ASSUMED** (UniSat docs; the legacy adapters only declare the field) |
+| Xverse / Magic Eden (sats-connect) | `'internal'` (bitcoinjs signs a tapscript leaf with the untweaked key; no tweak option) | uses the PSBT's own `sighashType` | **ASSUMED** (bitcoinjs behaviour; no reference code) |
+| Leather | `'internal'` presumed (reports both `publicKey` and `tweakedPublicKey`; bitcoinjs-based) | `allowedSighash` | **ASSUMED** — untested |
+
+Getting the kind wrong is detected, never broadcast: `finalizeWalletSignedReveal` /
+`verifyWalletSignedReveal` report "signature is by key X, expected the leaf key Y (internal vs
+tweaked)". The tests sign with a local key as both kinds (raw key for `'internal'`, tweaked key
+for `'output'`).
+
+**Sighash.** `buildUnsignedRevealPsbt` defaults to `'default'` (0x00, 64-byte signature) without
+a parent and `'all_anyonecanpay'` (0x81) with one, and refuses a parent with anything else (the
+service could not insert the parent input). `'all'` (0x01) exists for wallets that refuse
+SIGHASH_DEFAULT; its digest equals 0x00's and the signature is one byte longer.
+`estimateRevealWeight({ commitSighash })` is exact for all of them (64 bytes for `'default'`,
+65 otherwise; omitted = 65, the K_e model). The PSBT omits `PSBT_IN_SIGHASH_TYPE` for
+`'default'` and sets it otherwise; it always carries `witnessUtxo`, `tapInternalKey = NUMS`,
+`tapMerkleRoot = leaf hash` and one `tapLeafScript` (leaf version 0xc0).
+
+**What the service trusts.** Nothing but the signature: `verifyWalletSignedReveal` rebuilds the
+commit from `(leafPubkey, content, network)` and every output from the order, accepts the
+wallet's answer as `tapScriptSig` **or** as a finalized `[sig, leaf, control block]` witness
+(wallets that `autoFinalized`/`broadcast` strip the leaf fields), and Schnorr-verifies over the
+independent BIP341 digest. `attachParent` takes either shape too. With a parent the signature must
+be 0x81; without one 0x00/0x01/0x81 are accepted unless `expectedSighash` pins one.
+
+**Rescue.** No recovery bundle: `buildUnsignedRescuePsbt` rebuilds `[commit] → [child]` from the
+order parameters and the wallet signs it whenever the user likes (SIGHASH_DEFAULT; `'all'` for
+XCP Wallet). It spends the same commit as the service reveal, so whichever confirms first wins.
+
+```ts
+// Browser (wallet = @bsh/wallet-kit ConnectedWallet with a p2tr ordinals account)
+const kind: LeafKeyKind = wallet.capabilities.tweakedLeafKey === false ? 'internal' : 'output';
+const leafPubkey = kind === 'output' ? hex.decode(wallet.taprootOutputKey!) : xOnly(wallet.ordinals.publicKey);
+const commit = ins.commitAddress(leafPubkey, content, 'mainnet');           // fund commit.address
+const weight = ins.estimateRevealWeight({ content, withParent: true, recipientScript, commitSighash: 'all_anyonecanpay' });
+const reveal = ins.buildUnsignedRevealPsbt({ network: 'mainnet', leafPubkey, content,
+  commitOutpoint, commitValue, recipientAddress, postage,
+  parentReturnAddress: COLLECTION_ADDRESS, parentValue: COLLECTION_PARENT_POSTAGE });
+const { psbtBase64 } = await wallet.signPsbt(reveal.psbtBase64, {
+  inputsToSign: [{ index: reveal.inputIndex, address: wallet.ordinals.address, disableTweak: kind === 'internal' }],
+});
+// Service: same checks as verifyHalfSignedReveal, then attachParent / signParentInput / finalizeReveal.
+const v = ins.verifyWalletSignedReveal({ network: 'mainnet', psbtBase64, leafPubkey, content,
+  expectedCommitOutpoint, expectedCommitValue, expectedRecipientAddress, expectedPostage,
+  expectedParentReturnAddress: COLLECTION_ADDRESS, expectedParentValue: COLLECTION_PARENT_POSTAGE });
+// Rescue: the wallet signs [commit] -> [child] again, any time.
+const rescue = ins.buildUnsignedRescuePsbt({ network: 'mainnet', leafPubkey, content, commitOutpoint, commitValue, recipientAddress, postage, feeRate: 2 });
+const { hex: rawHex } = ins.finalizeWalletSignedReveal((await wallet.signPsbt(rescue.psbtBase64, { inputsToSign: [/* … */] })).psbtBase64);
+```
+
 ## API
 
 | Export | Purpose |
@@ -125,7 +209,7 @@ the parent return output.)
 | `encodeParentId(id)` | `txid` reversed + LE index, trailing zeros trimmed |
 | `commitAddress(pub, content, network)` | P2TR(NUMS, single leaf): address, scriptPubKey, leaf, control block, leaf hash |
 | `addressToScript(address, network)` * | scriptPubKey for an address (throws on wrong network) |
-| `estimateRevealWeight(args)` | **Exact** weight of the signed reveal, both layouts, both sighash modes |
+| `estimateRevealWeight(args)` | **Exact** weight of the signed reveal, both layouts, every sighash (`commitSighash`: 64-byte sig for `'default'`, 65 otherwise) |
 | `estimateResignedRescueWeight(args)` * | **Exact** weight of `buildResignedRescue` (rescue layout − 1 WU: no hash-type byte) |
 | `vsizeFromWeight(w)` / `laneFor(w)` | `ceil(w/4)` / `'standard' \| 'block' \| null` |
 | `quoteReveal({revealWeight, feeRate, postage})` | `revealFee = ceil(vsize × feeRate)` in exact decimal; `commitValue = fee + postage` |
@@ -136,7 +220,13 @@ the parent return output.)
 | `finalizeReveal(psbt)` | Raw hex, txid, weight, vsize; throws if any input is unsigned |
 | `buildRescueReveal(args)` | 0x83 rescue: finalize the half-signed PSBT as-is (hex, txid, weight, vsize*) |
 | `buildResignedRescue(args)` * | 0x81 rescue: re-sign `[commit] → [child]` with K_e, SIGHASH_DEFAULT (hex, txid, weight, vsize, fee, overpay?) |
-| `revealCommitSighash(args)` * | Independent BIP341 script-path digest of the commit input for 0x83, 0x81 or SIGHASH_DEFAULT |
+| `revealCommitSighash(args)` * | Independent BIP341 script-path digest of the commit input for 0x83, 0x81, 0x01 or SIGHASH_DEFAULT |
+| `buildUnsignedRevealPsbt(args)` * | Wallet-signed model: unsigned reveal PSBT for the wallet (`leafPubkey` in the leaf, NUMS internal key, `tapLeafScript`, `tapMerkleRoot`, sighash) |
+| `verifyWalletSignedReveal(args)` * | Service: full structural + content + signature check of a wallet-signed reveal (`tapScriptSig` or finalized witness) |
+| `finalizeWalletSignedReveal(psbt)` * | Wallet-signed reveal → raw hex, txid, weight, vsize; Schnorr-verifies every leaf signature, precise error on wrong key/leaf |
+| `buildUnsignedRescuePsbt(args)` * | Wallet-signed rescue `[commit] → [child]` for the wallet to sign (fee = commitValue − postage; `feeRate` check) |
+| `leafKeyOf(script)`, `leafKeyOfPsbt(psbt)`, `extractLeafSignature(tx, idx)` * | Read the leaf key / the wallet's signature (either shape) |
+| `LeafKeyKind`, `WalletRevealSighash`, `walletRevealSighashType`, `SIGHASH_ALL`, `SIGHASH_DEFAULT`, `commitSignatureSize` * | Wallet-signed model types / helpers |
 | `sha256Hex`, `inscriptionIdFromReveal` | Utilities |
 | `NUMS_INTERNAL_KEY`*, `REVEAL_TX_VERSION`*, `REVEAL_LOCKTIME`*, `REVEAL_SEQUENCE`*, `SIGHASH_ALL_ANYONECANPAY`*, `SIGHASH_SINGLE_ANYONECANPAY`*, `DEFAULT_REVEAL_SIGHASH_MODE`*, `revealSighashType`*, `TAPSCRIPT_LEAF_VERSION`*, `networkParams`* | Constants / helpers (`RevealSighashMode` = `'all_anyonecanpay' \| 'single_anyonecanpay'`) |
 
@@ -251,6 +341,7 @@ weight recomputed from the raw hex (`3 × stripped + total`), and btc-signer's
 | `parent.test.ts` | attachParent layout in both modes (0x81: asserts, never duplicates, the parent return), parent key-path signature against the tweaked key, finalization, error paths, buildRescueReveal refusing a parent-committed 0x81 PSBT |
 | `rescue.test.ts` | `buildResignedRescue`: script-path spend with a 64-byte SIGHASH_DEFAULT signature verified over the BIP341 digest (btc-signer and ours), exact weight, fee/overpay, same commit outpoint as the service reveal |
 | `quote.test.ts` | Fee maths incl. fractional rates (1.1 × 1000 = 1100, not 1101) and a quote funding a real reveal |
+| `wallet.test.ts` | Wallet-signed model, both `LeafKeyKind`s (raw key vs tweaked key as "the wallet"), 0x00/0x01/0x81, `tapScriptSig` and finalized-witness answers: commit == `commitAddress`, PSBT fields, sighash equality (btc-signer vs ours), exact weight (== K_e model for 0x81, == re-signed rescue for 0x00), parent attach on a wallet-signed 0x81, negative cases (wrong key kind, forged pubkey label, other leaf, bad control block, tampering, wrong sighash), rescue path with `feeRate` |
 
 ## Envelope notes
 

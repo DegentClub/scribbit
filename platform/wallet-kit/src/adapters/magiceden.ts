@@ -11,6 +11,7 @@
  * (ASSUMED; see README).
  */
 import { base64urlnopad, utf8 } from '@scure/base';
+import { CAPABILITIES } from '../capabilities.js';
 import { WalletError, WalletNotInstalledError } from '../errors.js';
 import {
   account,
@@ -21,6 +22,7 @@ import {
   guard,
   isObject,
   validateInputsToSign,
+  withTaprootOutputKey,
 } from '../internal.js';
 import { normalizePsbtBase64 } from '../psbt.js';
 import type { ConnectedWallet, MessageSignatureType, Network, SignPsbtOptions, WalletAdapter } from '../types.js';
@@ -97,6 +99,8 @@ async function connectLegacy(p: MagicEdenLegacyProvider, network: Network): Prom
     network,
     ordinals,
     payment,
+    capabilities: CAPABILITIES.magiceden,
+    ...withTaprootOutputKey(ordinals),
     async signPsbt(psbtBase64: string, opts: SignPsbtOptions) {
       validateInputsToSign('magiceden', opts, owned);
       const byAddress = new Map<string, { address: string; signingIndexes: number[]; sigHash?: number }>();

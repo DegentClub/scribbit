@@ -12,6 +12,7 @@
  * `getAddresses` (the method the legacy Skrybit adapters used), moving on only
  * when a method is reported as not found.
  */
+import { CAPABILITIES } from '../capabilities.js';
 import { UnsupportedNetworkError, WalletError, WalletNotInstalledError } from '../errors.js';
 import {
   type RpcProvider,
@@ -26,6 +27,7 @@ import {
   rpcRequest,
   signInputsMap,
   validateInputsToSign,
+  withTaprootOutputKey,
 } from '../internal.js';
 import { normalizePsbtBase64 } from '../psbt.js';
 import type {
@@ -125,6 +127,8 @@ export function satsConnectWallet(
     network,
     ordinals,
     payment,
+    capabilities: CAPABILITIES[id],
+    ...withTaprootOutputKey(ordinals),
 
     async signPsbt(psbtBase64: string, opts: SignPsbtOptions) {
       validateInputsToSign(id, opts, owned);

@@ -28,6 +28,23 @@ function decode(coder: typeof bech32, s: string): Decoded | undefined {
   return (coder.decodeUnsafe(s, 90) as Decoded | undefined) ?? undefined;
 }
 
+/** Witness version and program of a segwit address, or undefined when it is not one (or fails its checksum). */
+export function segwitProgram(address: string): { version: number; program: Uint8Array } | undefined {
+  const lower = address.trim().toLowerCase();
+  if (address.trim() !== lower && address.trim() !== address.trim().toUpperCase()) return undefined;
+  const sep = lower.lastIndexOf('1');
+  if (sep < 1 || !SEGWIT_HRP[lower.slice(0, sep)]) return undefined;
+  const v0 = decode(bech32, lower);
+  const v1plus = decode(bech32m, lower);
+  const decoded = v0 && v0.words[0] === 0 ? v0 : v1plus && (v1plus.words[0] ?? 0) >= 1 ? v1plus : undefined;
+  if (!decoded) return undefined;
+  try {
+    return { version: decoded.words[0]!, program: bech32.fromWords(decoded.words.slice(1)) };
+  } catch {
+    return undefined;
+  }
+}
+
 function decodeSegwit(address: string): AddressInfo | undefined {
   const lower = address.toLowerCase();
   // Mixed case is invalid bech32 (BIP-173).

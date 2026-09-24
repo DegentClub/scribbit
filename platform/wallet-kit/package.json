@@ -5,16 +5,23 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "conformance:build": "tsx conformance/build.ts",
+    "conformance": "tsx conformance/build.ts && vitest run --config conformance/vitest.config.ts",
+    "conformance:serve": "tsx conformance/build.ts && tsx conformance/serve.ts"
   },
   "dependencies": {
-    "@scure/base": "^2.4.0"
+    "@scure/base": "^2.4.0",
+    "@scure/btc-signer": "^2.4.1"
   },
   "devDependencies": {
     "typescript": "^5",
     "vitest": "^5.0.1",
     "@types/node": "^22",
-    "jsdom": "^30.1.1"
+    "jsdom": "^30.1.1",
+    "esbuild": "^0.28.2",
+    "playwright-core": "1.56.1",
+    "tsx": "^4.23.15"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

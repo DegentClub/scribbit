@@ -1,6 +1,7 @@
 /** Helpers shared by the adapters. Not exported from the package root. */
 import { addressMatchesNetwork, detectAddressType } from './address.js';
 import { UnsupportedNetworkError, WalletError, toWalletError } from './errors.js';
+import { taprootOutputKeyOf } from './taproot.js';
 import type { AddressPurpose, ConnectedWallet, Network, SignPsbtOptions, WalletAccount, WalletId } from './types.js';
 
 /** The page's global object, or undefined outside a browser. Read at call time so tests can inject providers. */
@@ -15,6 +16,12 @@ export function isObject(v: unknown): v is Record<string, unknown> {
 
 export function account(address: string, publicKey: string, purpose: AddressPurpose): WalletAccount {
   return { address, publicKey, purpose, addressType: detectAddressType(address) };
+}
+
+/** `{ taprootOutputKey }` for a p2tr ordinals account, `{}` otherwise (spread into a ConnectedWallet). */
+export function withTaprootOutputKey(ordinals: WalletAccount): { taprootOutputKey?: string } {
+  const key = ordinals.addressType === 'p2tr' ? taprootOutputKeyOf(ordinals) : undefined;
+  return key ? { taprootOutputKey: key } : {};
 }
 
 /** Throws UnsupportedNetworkError unless every account's address belongs to `network`. */

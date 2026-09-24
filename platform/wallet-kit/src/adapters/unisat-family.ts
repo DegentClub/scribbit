@@ -4,8 +4,9 @@
  * `signMessage(msg, 'bip322-simple' | 'ecdsa')`, and expose a single address
  * that serves as both the ordinals and the payment account.
  */
+import { CAPABILITIES } from '../capabilities.js';
 import { WalletError } from '../errors.js';
-import { assertOwnAddress, guard, quietly, validateInputsToSign } from '../internal.js';
+import { assertOwnAddress, guard, quietly, validateInputsToSign, withTaprootOutputKey } from '../internal.js';
 import { psbtBase64ToHex, psbtHexToBase64 } from '../psbt.js';
 import type { ConnectedWallet, MessageSignatureType, Network, SignPsbtOptions, WalletAccount, WalletId } from '../types.js';
 
@@ -50,6 +51,8 @@ export function unisatFamilyWallet(cfg: UnisatFamilyConfig): ConnectedWallet {
     network,
     ordinals,
     payment,
+    capabilities: CAPABILITIES[id],
+    ...withTaprootOutputKey(ordinals),
 
     async signPsbt(psbtBase64: string, opts: SignPsbtOptions) {
       validateInputsToSign(id, opts, owned);
@@ -60,6 +63,7 @@ export function unisatFamilyWallet(cfg: UnisatFamilyConfig): ConnectedWallet {
         index: i.index,
         address: i.address,
         ...(i.sighashTypes ? { sighashTypes: [...i.sighashTypes] } : {}),
+        ...(i.disableTweak !== undefined ? { disableTweakSigner: i.disableTweak } : {}),
       }));
       const p = cfg.provider();
       const signedHex = await guard(id, () => p.signPsbt(psbtHex, { autoFinalized: finalize, toSignInputs }));

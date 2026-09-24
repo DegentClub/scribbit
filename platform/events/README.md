@@ -32,6 +32,7 @@ await bus.publish(blockIndexed.create({
 | `in-memory-bus.ts` | `InMemoryBus` for dev/tests: per-subscription retry with backoff, dead letters, `redrive()` |
 | `outbox.ts` | `OutboxPublisher` + `OutboxStore` port + `InMemoryOutboxStore` |
 | `amqp.ts` | `AmqpBusAdapter` over the injectable `AmqpChannel` (an amqplib `ConfirmChannel` fits) |
+| `amqplib-channel.ts` | `amqplibChannel(confirmChannel)` binding + `connectAmqpBus({ url, service, … })` factory that lazily imports the optional `amqplib` peer |
 | `clock.ts`, `backoff.ts` | `Clock` port, `ManualClock` fake for deterministic tests, exponential backoff with jitter |
 
 ## Topics and versioning
@@ -84,16 +85,41 @@ lease with the **same id**; consumers de-duplicate.
 
 ### RabbitMQ (`AmqpBusAdapter`)
 
-The adapter needs no amqplib dependency; the deploying service owns it:
+`amqplib` is an **optional peer dependency**: `@bsh/events` imports nothing from it (the binding is typed
+structurally against amqplib's method signatures), so the in-memory bus never loads it. A service that binds
+RabbitMQ adds `amqplib` to its own `package.json` and uses the factory:
 
 ```ts
-import amqplib from 'amqplib';                       // in the service's package.json
-const conn = await amqplib.connect(process.env.AMQP_URL!);
-const channel = await conn.createConfirmChannel();  // confirm channel => publish() awaits broker acks
-const bus = new AmqpBusAdapter({ channel, service: 'degent-mint', registry: platformRegistry() });
-await bus.init();
-conn.on('close', () => process.exit(1));             // let the supervisor restart; unacked messages are redelivered
+import { connectAmqpBus, platformRegistry } from '@bsh/events';
+
+const { bus, close } = await connectAmqpBus({
+  url: process.env.AMQP_URL!,                // amqp(s)://user:pass@host:5672/vhost
+  service: 'degent-mint',
+  registry: platformRegistry(),
+  socketOptions: { heartbeat: 30 },          // passed to amqplib.connect()
+  onClose: () => process.exit(1),            // broker/network closed us: let the supervisor restart
+  onNack: (i) => log.error({ msg: 'publish nacked', ...i }),
+});
+process.on('SIGTERM', () => close().then(() => process.exit(0)));   // stops retries, closes channel then connection
 ```
+
+`connectAmqpBus` does `await import('amqplib')` on first use (or takes `amqplib:` injected — tests pass a
+fake module), connects, opens a **confirm channel**, wraps it with `amqplibChannel()` and calls `bus.init()`;
+a failure at any step closes what was opened and rethrows. The lower-level pieces are exported too:
+
+```ts
+import amqplib from 'amqplib';
+const channel = await (await amqplib.connect(url)).createConfirmChannel();
+const bus = new AmqpBusAdapter({ channel: amqplibChannel(channel), service: 'degent-mint', registry: platformRegistry() });
+```
+
+`amqplibChannel` differs from handing amqplib's channel to the adapter directly in one way: `publish()` uses
+the per-message confirm callback and `waitForConfirms()` waits for the publishes made **through the binding**
+that are still outstanding, not for every publish on the channel (amqplib's channel-wide wait stalls on an
+unrelated slow publish). A broker nack rejects that wait (so `bus.publish()` throws) and calls `onNack`.
+`persistent: true` is also mapped to `deliveryMode: 2` explicitly. Messages, `ack`, `nack`, `prefetch`,
+`consume` and `cancel` pass straight through — an amqplib `ConsumeMessage` already has the
+`{ content, fields, properties }` shape the adapter reads.
 
 - Wire format: CloudEvents structured mode, `content-type: application/cloudevents+json`, routing key = `type`,
   `message-id` = `id`, `app-id` = `source`, persistent, `traceparent` header.
@@ -103,6 +129,9 @@ conn.on('close', () => process.exit(1));             // let the supervisor resta
   the copy is confirmed. The wait happens in-process and holds a prefetch slot; for backoffs longer than seconds
   use per-delay TTL retry queues (`x-message-ttl` + dead-letter back to the main queue) instead.
 - Unparseable or schema-invalid messages go straight to the DLQ.
+- Tests: `test/fake-amqplib.ts` is a fake amqplib (confirm-callback `publish`, `ConsumeMessage` shape,
+  `connect()` → `createConfirmChannel()`) over the in-process broker model; `test/amqplib-channel.test.ts`
+  runs the full adapter (retry, dead-letter, confirms) through the binding.
 
 ## Commands
 

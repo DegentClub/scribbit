@@ -9,3 +9,4 @@ export * from './in-memory-bus.js';
 export * from './outbox.js';
 export * from './amqp.js';
 export * from './platform-topics.js';
+export * from './amqplib-channel.js';

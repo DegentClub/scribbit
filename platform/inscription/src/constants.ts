@@ -35,6 +35,8 @@ export const SIGHASH_SINGLE_ANYONECANPAY = 0x83;
 export const SIGHASH_ALL_ANYONECANPAY = 0x81;
 /** BIP341 SIGHASH_DEFAULT (64-byte signature, no trailing hash-type byte). */
 export const SIGHASH_DEFAULT = 0x00;
+/** SIGHASH_ALL (65-byte signature): same digest as DEFAULT, kept for wallets that refuse 0x00 (XCP Wallet). */
+export const SIGHASH_ALL = 0x01;
 
 /**
  * Sighash mode of the browser's commit-input signature.

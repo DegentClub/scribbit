@@ -1,7 +1,9 @@
+import { horizonAdapter } from './adapters/horizon.js';
 import { leatherAdapter } from './adapters/leather.js';
 import { magicEdenAdapter } from './adapters/magiceden.js';
 import { okxAdapter } from './adapters/okx.js';
 import { unisatAdapter } from './adapters/unisat.js';
+import { xcpAdapter } from './adapters/xcp.js';
 import { xverseAdapter } from './adapters/xverse.js';
 import { WalletError } from './errors.js';
 import type { WalletAdapter, WalletId } from './types.js';
@@ -13,6 +15,8 @@ export const ADAPTERS: readonly WalletAdapter[] = Object.freeze([
   leatherAdapter,
   okxAdapter,
   magicEdenAdapter,
+  xcpAdapter,
+  horizonAdapter,
 ]);
 
 export const WALLET_IDS: readonly WalletId[] = Object.freeze(ADAPTERS.map((a) => a.id));

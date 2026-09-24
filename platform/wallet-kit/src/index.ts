@@ -4,16 +4,21 @@ export type {
   ConnectOptions,
   ConnectedWallet,
   InputToSign,
+  InscriptionContext,
   MessageSignatureType,
   Network,
   SignPsbtOptions,
   SignPsbtResult,
   WalletAccount,
   WalletAdapter,
+  WalletCapabilities,
   WalletId,
 } from './types.js';
+export { CAPABILITIES } from './capabilities.js';
+export { deriveTaprootOutputKey, taprootOutputKeyOf, taprootOutputKeyOfAddress, xOnlyPubkey } from './taproot.js';
 export {
   UnsupportedAddressTypeError,
+  UnsupportedMethodError,
   UnsupportedNetworkError,
   UserRejectedError,
   WalletError,
@@ -30,6 +35,7 @@ export {
   getAddressInfo,
   isSegwit,
   requireSegwitPayment,
+  segwitProgram,
   type AddressInfo,
   type AddressNetwork,
 } from './address.js';
@@ -48,3 +54,5 @@ export { okxAdapter } from './adapters/okx.js';
 export { xverseAdapter } from './adapters/xverse.js';
 export { leatherAdapter } from './adapters/leather.js';
 export { magicEdenAdapter } from './adapters/magiceden.js';
+export { xcpAdapter, XCP_NUMS_INTERNAL_KEY } from './adapters/xcp.js';
+export { horizonAdapter } from './adapters/horizon.js';

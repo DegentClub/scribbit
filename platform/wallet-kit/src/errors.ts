@@ -73,6 +73,14 @@ export class UnsupportedAddressTypeError extends WalletError {
   }
 }
 
+export class UnsupportedMethodError extends WalletError {
+  declare readonly code: 'UNSUPPORTED_METHOD';
+  constructor(walletId: WalletId, message: string) {
+    super('UNSUPPORTED_METHOD', message, { walletId });
+    this.name = 'UnsupportedMethodError';
+  }
+}
+
 export function isWalletError(e: unknown): e is WalletError {
   return typeof e === 'object' && e !== null && e instanceof WalletError;
 }

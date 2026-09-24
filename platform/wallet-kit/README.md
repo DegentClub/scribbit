@@ -199,3 +199,88 @@ pnpm --filter @bsh/wallet-kit typecheck
 Each adapter's tests install a fake `window.*` provider that records every call. They assert account
 mapping, PSBT encoding (hex vs base64) and input mapping, network selection and validation, user-rejection
 mapping, and not-installed detection.
+
+## Conformance lab
+
+`conformance/` proves the adapters in a **real browser**, not jsdom: real `window` injection timing, provider
+round-trips through the page's event loop, DOM rendering, and extension → page events.
+
+```bash
+pnpm --filter @bsh/wallet-kit conformance          # build the harness with esbuild, run Playwright against fake providers in Chromium
+pnpm --filter @bsh/wallet-kit conformance:serve    # serve the harness for real extensions (MANUAL-MATRIX.md)
+```
+
+| Piece | What |
+|---|---|
+| `conformance/harness.html` + `harness.ts` | Static page that loads wallet-kit and exposes `window.__walletKitHarness` — `run(walletId, opts)`, `runAll()`, `detect()`, `results`, `events`, `kit`. Steps: detect → connect → addresses → signMessage (BIP-322) → signPsbt (fixture PSBT, input 0, sighash 0x81) → pushTx dry-run (capability only unless `pushTx: true`) → disconnect. Renders a results table; `?wallet=&network=&auto=1` runs on load |
+| `conformance/fixtures.ts` | Checksum-valid signet/mainnet addresses from throwaway keys, a real PSBT (P2WPKH input, `sighashType 0x81`) and a signed raw tx that spends a non-existent outpoint: nothing can move funds |
+| `conformance/fakes/providers.ts` | Fake `window.unisat`, `window.XverseProviders`, `window.LeatherProvider`, `window.okxwallet`, `window.magicEden`, modelled on the adapters' assumptions (hex vs base64 PSBTs, JSON-RPC envelopes, per-network OKX providers, UniSat chain vs legacy network API, Magic Eden v1 JWT surface, each family's rejection shape). Configured through `window.__fakeWalletConfig`, records every call in `window.__fakeWalletCalls`, fires account/network events via `window.__fakeWallet.emit()` |
+| `conformance/playwright/*.test.ts` | vitest + `playwright-core` (no `playwright install`: Chromium is found via `WALLET_KIT_CHROMIUM`, `/opt/pw-browsers`, `PLAYWRIGHT_BROWSERS_PATH` or `~/.cache/ms-playwright`). Fakes are injected with `addInitScript` before page scripts, like an extension. Asserts every step passes per adapter, rejection maps to `USER_REJECTED`, the exact provider call shapes (UniSat `switchChain('BITCOIN_SIGNET')` verified after switching, Xverse `signInputs` grouped by address, Leather `signAtIndex` + `allowedSighash`, OKX per-network provider and `pushTx(rawtx)`, Magic Eden v1 tokens), wrong-network refusals, and that a wallet-side account switch drops the session |
+| `conformance/MANUAL-MATRIX.md` | The checklist for real extensions on signet: install, connect, ordinals + payment addresses, BIP-322 sign, PSBT with a 0x81 input, broadcast, account switch, network switch — with a results table to fill in and commit |
+| `conformance/build.ts`, `serve.ts` | esbuild bundling (IIFE) into the git-ignored `conformance/dist/`; static http server (`PORT`, default 4173) |
+
+The Playwright run is deliberately **not** part of `pnpm test` (it needs a browser binary); CI jobs with
+Chromium available run `pnpm --filter @bsh/wallet-kit conformance`. Passing against the fakes means the
+adapter does what the README claims; only the manual matrix can move a row from ASSUMED to VERIFIED.
+
+## XCP Wallet, Horizon, capabilities and tapscript signing
+
+Two Counterparty wallets were added (ported from counters.fun `apps/web/src/lib/wallet/`), plus what an
+inscription reveal signed **by the wallet** needs (see `@bsh/inscription` README, "Wallet-signed reveals").
+All additions are backward compatible.
+
+**New surface.**
+
+| Addition | What |
+|---|---|
+| `WalletId` | gains `'xcp' \| 'horizon'`; `xcpAdapter`, `horizonAdapter` in `ADAPTERS` |
+| `ConnectedWallet.capabilities` | `{ broadcast, bip322, tapscript: boolean \| 'unknown', tweakedLeafKey: boolean \| 'unknown' }` (table `CAPABILITIES`) |
+| `ConnectedWallet.taprootOutputKey?` | x-only **tweaked** key of a p2tr ordinals account (hex): the bc1p witness program, derived with `@scure/btc-signer`. The key an inscription leaf must name when `tweakedLeafKey` is true |
+| `InputToSign.disableTweak?` | Sign with the untweaked internal key. UniSat/OKX: forwarded as `toSignInputs[].disableTweakSigner`. Ignored elsewhere |
+| `SignPsbtOptions.inscription?` | `{ envelopeScriptHex, commitAddress }`. XCP Wallet: sent as `inscription: { revealScript, tapInternalKey: NUMS }` (required for it to sign a commit). Ignored elsewhere (Horizon deliberately does not forward it) |
+| `UnsupportedMethodError` | `code: 'UNSUPPORTED_METHOD'` (e.g. BIP-322 on Horizon, broadcast on Horizon, ECDSA on XCP) |
+| `deriveTaprootOutputKey(pubHex)`, `taprootOutputKeyOfAddress(addr)`, `taprootOutputKeyOf(account)`, `xOnlyPubkey(hex)`, `segwitProgram(addr)` | Key helpers |
+
+`@scure/btc-signer` is now a dependency (BIP86 tweak; finalizing XCP's unfinalized PSBTs before relaying).
+
+**Support matrix rows.**
+
+| | XCP Wallet | Horizon |
+|---|---|---|
+| Provider | `window.xcpwallet.request({ method, params })` | `window.HorizonWalletProvider.request(method, params)`; WBIP-004 `window.btc_providers[{ id: 'HorizonWalletProvider' }]` counts for `isInstalled` |
+| Connect | `xcp_requestAccounts` (`{ accounts, proof }` or legacy `string[]`), then `xcp_getAddresses` for the public key (best effort) | house `getAddresses` (no params) → `{ addresses[{ address, publicKey, type }] }` |
+| Ordinals address | the single active account | `type: 'p2tr'` (else first) |
+| Payment address | the same account | `type: 'p2wpkh'` (else the ordinals account) |
+| signPsbt format | `xcp_signPsbt [{ hex, signInputs: { [address]: index[] }, sighashTypes?, inscription? }]` → `{ hex }`, unfinalized. `sighashTypes` sent only when requested (it rejects `[0]`) | house `signPsbt { hex, signInputs, sighashTypes: [0x00, 0x01, …requested] }` → `{ hex }`, unfinalized |
+| Broadcast | `broadcast: true` finalizes locally and relays via `xcp_broadcastTransaction [raw]` → `{ txid }`; `pushTx(raw)` | **none**: `broadcast: true` throws `UNSUPPORTED_METHOD`; relay yourself; no `pushTx` |
+| signMessage | BIP-322 only: `xcp_signMessage [message]`; `'ecdsa'` → `UNSUPPORTED_METHOD` | ECDSA / BIP-137 only (**default type `'ecdsa'`**): `signMessage { message, address }`; `'bip322-simple'` → `UnsupportedMethodError` |
+| Disconnect | `xcp_disconnect` | `wallet_disconnect {}` |
+| Account-change events | `on('accountsChanged' / 'disconnect')` | none |
+| Networks | mainnet only | mainnet, testnet, signet, regtest (checked from the returned addresses) |
+| Errors | EIP-1193: `4001` → `USER_REJECTED`, `4100` → `NOT_CONNECTED` | rejected `{ error: string }` → `USER_REJECTED`; `{ error: { code: -32000 } }` → `USER_REJECTED`, `-32002` → `NOT_CONNECTED` |
+
+**Capabilities.**
+
+| Wallet | broadcast | bip322 | tapscript | tweakedLeafKey | Status |
+|---|---|---|---|---|---|
+| UniSat | yes | yes | yes | yes (`disableTweak` → internal) | tapscript/tweak ASSUMED (UniSat docs; legacy code only declares `disableTweakSigner`) |
+| OKX | yes | yes | unknown | unknown | ASSUMED |
+| Xverse | yes | yes | yes | no (untweaked) | ASSUMED (bitcoinjs behaviour; no reference code) |
+| Magic Eden | yes | yes | unknown | unknown | ASSUMED |
+| Leather | yes | yes | unknown | unknown | ASSUMED |
+| XCP Wallet | yes | yes | yes | **yes** | VERIFIED (counters.fun signs the re-keyed ord envelope reveal with it; its gate checks the leaf against the address's output key) |
+| Horizon | **no** | **no** | yes | yes | VERIFIED (counters.fun, extension v2.3.1: handles `tapLeafScript`/`tapInternalKey`, same tweaked-key leaf as XCP) |
+
+**XCP / Horizon verified vs assumed.** VERIFIED (counters.fun `sdk/provider.ts`, `adapters/xcp.ts`, `adapters/horizon.ts`):
+every XCP method name and param shape above, the `inscription` context and NUMS requirement, `sighashTypes: [0]`
+refusal, `xcp_getAddresses` shape; Horizon's `getAddresses` / `signPsbt { hex, signInputs, sighashTypes: [0, 1] }`
+house calls, WBIP-004 discovery, `wallet_disconnect`, no broadcast, rejection shapes. ASSUMED: XCP `on`/
+`removeListener` event names beyond `accountsChanged`/`disconnect`; XCP mainnet-only (the SDK validates mainnet
+prefixes only); Horizon `signMessage { message, address }` param shape (counters.fun never calls it; only
+"ECDSA / BIP-137, no BIP-322" is documented there); Horizon on non-mainnet networks. The conformance fakes do not
+cover these two wallets yet; add them to `conformance/fakes/providers.ts` and `MANUAL-MATRIX.md`.
+
+Tests: `test/xcp.test.ts`, `test/horizon.test.ts` (fake providers: connect, accounts, `signPsbt` param mapping,
+inscription context, broadcast, message signing incl. Horizon BIP-322 refusal, not-installed, rejections),
+`test/capabilities.test.ts` (table, `taprootOutputKey` derivation equal to btc-signer `p2tr().tweakedPubkey` and to
+the decoded bc1p program, `disableTweak` → `disableTweakSigner`).
