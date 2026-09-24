@@ -14,7 +14,7 @@ code. Three questions come up constantly and today need code archaeology:
 1. *What exists?* Components, their kind, owner, lifecycle, where they live, how to run them.
 2. *What depends on what?* Package edges, contract providers and consumers, event channels.
 3. *Where does it run and how do I reach it?* Answered in the `infra` repository by the Fleet API
-   (`fleet-mcp.hs.skrybit.dev`, tools `fleet_services` / `fleet_get`), generated from the Nix fleet manifest.
+   (`fleet-mcp.internal.example`, tools `fleet_services` / `fleet_get`), generated from the Nix fleet manifest.
 
 The first two belong to this repository; the third belongs to `infra`. They should join on a stable key instead
 of each re-deriving the other.
