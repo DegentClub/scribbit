@@ -1,0 +1,11 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: mesh
+package: "@bsh/mesh"
+kind: library
+product: platform
+owner: team-platform
+summary: FlashyOS AAO accountability formats (charter, frontdoor, directory, shipped, checkpoint) and signed invoice/receipt money documents.
+lifecycle: experimental
+depends_on: []
+docs: ./README.md
+commands: { test: test, typecheck: typecheck }

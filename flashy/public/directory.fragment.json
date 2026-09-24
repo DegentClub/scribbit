@@ -1,0 +1,180 @@
+{
+  "directory": "0.1",
+  "source": "repo/scribbit",
+  "generated": "2026-09-24",
+  "nodes": [
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "agent/scribbit-agent-gateway",
+      "kind": "Agent",
+      "name": "agent-gateway",
+      "description": "Serves the platform to agents: authenticates who is asking, limits what one caller may consume, and answers in the contract's shape."
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "agent/scribbit-fee-oracle",
+      "kind": "Agent",
+      "name": "fee-oracle",
+      "description": "Aggregates fee estimates from the mempool and the network and publishes the one rate the engine quotes against."
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "agent/scribbit-inscription-engine",
+      "kind": "Agent",
+      "name": "inscription-engine",
+      "description": "Turns content into a committed and revealed inscription: quoted exactly before a satoshi moves, and recoverable when a reveal is left behind."
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "agent/scribbit-settlement",
+      "kind": "Agent",
+      "name": "settlement",
+      "description": "Posts what was paid and what was owed when an inscription or an invoice completes, issues the signed receipt, and refunds what did not complete."
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "org/scribbit",
+      "kind": "Organization",
+      "name": "scribb.it",
+      "description": "The write product of Blockspace Holdings: scribb.it inscribes content onto Bitcoin, and this repository holds the shared platform every Blockspace product builds on.",
+      "platform": "bitcoin",
+      "vertical": "scribbit"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "prop/scribb.it",
+      "kind": "Property",
+      "name": "scribb.it",
+      "url": "https://scribb.it",
+      "tenure": "freehold",
+      "platform": "bitcoin",
+      "vertical": "scribbit"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "src/scribbit-aao-0-1",
+      "kind": "Source",
+      "name": "aao/0.1 — scribbit",
+      "url": "https://scribb.it/.well-known/flashyos-charter.json",
+      "description": "The aao/0.1 surface this organisation serves."
+    }
+  ],
+  "edges": [
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "declares",
+      "from": "org/scribbit",
+      "to": "agent/scribbit-agent-gateway",
+      "role": "agent-gateway",
+      "scope": [
+        "serve",
+        "authenticate",
+        "limit"
+      ]
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "declares",
+      "from": "org/scribbit",
+      "to": "agent/scribbit-fee-oracle",
+      "role": "fee-oracle",
+      "scope": [
+        "aggregate",
+        "publish"
+      ]
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "declares",
+      "from": "org/scribbit",
+      "to": "agent/scribbit-inscription-engine",
+      "role": "inscription-engine",
+      "scope": [
+        "quote",
+        "envelope",
+        "rescue"
+      ]
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "declares",
+      "from": "org/scribbit",
+      "to": "agent/scribbit-settlement",
+      "role": "settlement",
+      "scope": [
+        "post",
+        "receipt",
+        "refund"
+      ]
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "declares",
+      "from": "org/scribbit",
+      "to": "src/scribbit-aao-0-1"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "operates",
+      "from": "org/scribbit",
+      "to": "prop/scribb.it"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "accountableFor",
+      "from": "person/bsh-accountable",
+      "to": "org/scribbit"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "cites",
+      "from": "src/scribbit-aao-0-1",
+      "to": "std/aao-0-1"
+    }
+  ]
+}

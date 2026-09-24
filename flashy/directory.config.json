@@ -1,0 +1,16 @@
+{
+  "//": "Options for `mesh emit-directory` (@bsh/mesh directoryFromCharter). Everything the org and its roles imply is read from charter.json; only what this repository is additionally the authority for is here. `asserted` is pinned so the emitted fragment is reproducible in CI.",
+  "asserted": "2026-09-24",
+  "expires": "2027-09-24",
+  "assertedBy": "person/bsh-accountable",
+  "platform": "bitcoin",
+  "vertical": "scribbit",
+  "properties": [
+    {
+      "domain": "scribb.it",
+      "name": "scribb.it"
+    }
+  ],
+  "emitters": [],
+  "externalsOut": "directory.externals.json"
+}

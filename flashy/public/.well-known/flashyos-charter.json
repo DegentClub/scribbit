@@ -1,0 +1,113 @@
+{
+  "x-comment": [
+    "The AAO 0.1 charter of scribb.it, the write product of Blockspace Holdings, and of the",
+    "shared platform this repository holds. Source of truth for flashy/public/flashyos.roles.json",
+    "and flashy/public/.well-known/flashyos-charter.json - regenerate with `pnpm mesh:emit`,",
+    "validate with `pnpm mesh:check`. Rules: platform/mesh (@bsh/mesh), mirroring FlashyLabs'",
+    "check-charter.mjs.",
+    "",
+    "accountableTo is a PLACEHOLDER that validates: it must become a real, named human's",
+    "address before this charter is published on scribb.it (see platform/mesh/README.md).",
+    "",
+    "Four roles, four families. growth, revenue, product, operations, risk, governance and",
+    "support are empty on purpose: this is a platform before it is a business, and an empty",
+    "family is honest."
+  ],
+  "aao": "0.1",
+  "name": "scribb.it",
+  "slug": "scribbit",
+  "description": "The write product of Blockspace Holdings: scribb.it inscribes content onto Bitcoin, and this repository holds the shared platform every Blockspace product builds on.",
+  "accountableTo": "accountable@scribb.it",
+  "escalation": "settlement",
+  "repositories": [
+    {
+      "name": "scribbit",
+      "url": "github.com/DegentClub/scribbit",
+      "holds": [
+        "platform",
+        "products",
+        "contracts",
+        "tools",
+        "docs"
+      ],
+      "default": true
+    }
+  ],
+  "roles": [
+    {
+      "name": "inscription-engine",
+      "family": "engineering",
+      "purpose": "Turns content into a committed and revealed inscription: quoted exactly before a satoshi moves, and recoverable when a reveal is left behind.",
+      "measure": "Reveals whose fee prediction matched the signed transaction to the vbyte",
+      "capabilities": [
+        "quote",
+        "envelope",
+        "rescue"
+      ],
+      "humanApprovalAtOrAbove": "LOW",
+      "worksIn": [
+        "scribbit"
+      ]
+    },
+    {
+      "name": "fee-oracle",
+      "family": "data",
+      "purpose": "Aggregates fee estimates from the mempool and the network and publishes the one rate the engine quotes against.",
+      "measure": "Quoted rate confirmed within one block of the target",
+      "capabilities": [
+        "aggregate",
+        "publish"
+      ],
+      "humanApprovalAtOrAbove": "LOW",
+      "worksIn": [
+        "scribbit"
+      ]
+    },
+    {
+      "name": "agent-gateway",
+      "family": "engineering",
+      "purpose": "Serves the platform to agents: authenticates who is asking, limits what one caller may consume, and answers in the contract's shape.",
+      "measure": "Requests answered within the published contract, and none answered outside it",
+      "capabilities": [
+        "serve",
+        "authenticate",
+        "limit"
+      ],
+      "humanApprovalAtOrAbove": "MEDIUM",
+      "worksIn": [
+        "scribbit"
+      ]
+    },
+    {
+      "name": "settlement",
+      "family": "finance",
+      "purpose": "Posts what was paid and what was owed when an inscription or an invoice completes, issues the signed receipt, and refunds what did not complete.",
+      "measure": "Settled invoices whose receipt verifies offline under our published key",
+      "capabilities": [
+        "post",
+        "receipt",
+        "refund"
+      ],
+      "humanApprovalAtOrAbove": "CRITICAL",
+      "worksIn": [
+        "scribbit"
+      ]
+    }
+  ],
+  "x-bitcoin": {
+    "comment": "Scribbit extension carried by @bsh/mesh; not part of aao 0.1.",
+    "networks": [
+      "mainnet",
+      "testnet4",
+      "signet"
+    ],
+    "chains": [
+      "btc:mainnet",
+      "btc:testnet4",
+      "btc:signet"
+    ],
+    "custody": "non-custodial: the platform never holds a user's private key (ADR-0002)",
+    "addresses": "bech32 / bech32m segwit only; validated by @bsh/mesh validateBtcDestination",
+    "keyBinding": "/.well-known/bsh-key-binding.json"
+  }
+}

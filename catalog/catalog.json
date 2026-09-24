@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-24T00:43:42.332Z",
+  "generatedAt": "2026-09-24T01:25:06.791Z",
   "schema": "schemas/component.schema.json",
   "components": [
     {
@@ -207,6 +207,31 @@
         "env_schema": "platform/ledger/env.schema.json",
         "runbook": "platform/ledger/RUNBOOK.md",
         "docs": "platform/ledger/README.md"
+      },
+      "dependents": []
+    },
+    {
+      "name": "mesh",
+      "package": "@bsh/mesh",
+      "kind": "library",
+      "product": "platform",
+      "owner": "team-platform",
+      "summary": "FlashyOS AAO accountability formats (charter, frontdoor, directory, shipped, checkpoint) and signed invoice/receipt money documents.",
+      "lifecycle": "experimental",
+      "depends_on": [],
+      "docs": "./README.md",
+      "commands": {
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "platform/mesh",
+      "version": "0.1.0",
+      "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "docs": "platform/mesh/README.md"
       },
       "dependents": []
     },
@@ -588,6 +613,7 @@
         "identity",
         "inscription",
         "ledger",
+        "mesh",
         "notify",
         "signer",
         "wallet-kit"
@@ -596,7 +622,7 @@
         "team-platform"
       ],
       "kinds": {
-        "library": 6,
+        "library": 7,
         "service": 2
       }
     },

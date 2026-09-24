@@ -1,0 +1,6 @@
+The files in this directory are copied unmodified from the public FlashyLabs
+repository github.com/FlashyLabs/flashy-ledger (Apache License 2.0, Copyright
+Flashy Labs). They are the AAO charter, frontdoor, directory fragment, shipped/1
+fragment and checkpoint/1 head that repository actually publishes, and they are
+used here as conformance fixtures: @bsh/mesh must accept them, re-derive them and
+recompute their seals and Merkle root byte for byte. See test/conformance.test.ts.

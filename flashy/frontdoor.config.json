@@ -1,0 +1,68 @@
+{
+  "property": "scribbit",
+  "org": "blockspace-holdings",
+  "voice": "What are you writing onto Bitcoin, and what is in your way?",
+  "lanes": [
+    {
+      "id": "integrate",
+      "question": "What are you building on scribb.it, and what is missing?"
+    },
+    {
+      "id": "partnership",
+      "question": "What do you bring that we cannot build, and what do you need from us?"
+    },
+    {
+      "id": "machine",
+      "question": "Who delegated this authority, and can the chain be verified?",
+      "minRung": 1
+    },
+    {
+      "id": "general"
+    }
+  ],
+  "rungs": [
+    {
+      "n": 0,
+      "id": "open",
+      "name": "Open",
+      "did": "You sent a message",
+      "detail": "The ordinary form. No account, no artifact, no integration.",
+      "cost": "Two minutes",
+      "owed": "We read everything. We do not promise a reply, and we say so here rather than letting silence say it for us.",
+      "sla": "No SLA — and we say so"
+    },
+    {
+      "n": 1,
+      "id": "identified",
+      "name": "Identified",
+      "did": "You published a charter",
+      "detail": "An AAO charter at your own domain, at /flashyos.roles.json. You paste a domain; we fetch and verify it.",
+      "cost": "About twenty minutes",
+      "owed": "A reply within five business days from a named person, not an alias. Your charter is read before the meeting, so the meeting starts further along.",
+      "sla": "Five business days · a named human"
+    },
+    {
+      "n": 2,
+      "id": "connected",
+      "name": "Connected",
+      "did": "You are in the mesh",
+      "detail": "A directory fragment we can merge, and keys we can verify: an Ed25519 key your invoices and receipts are signed with, and a BIP340 key bound to it.",
+      "cost": "An afternoon",
+      "owed": "A call, and your record in our directory: we cite your fragment and you can cite ours. Invoices between us settle with signed receipts.",
+      "sla": "A call · a directory entry"
+    },
+    {
+      "n": 3,
+      "id": "integrated",
+      "name": "Integrated",
+      "did": "Something of yours runs on something of ours",
+      "detail": "An inscription committed through the engine, an invoice settled on Bitcoin with a receipt that verifies offline, or an agent working through the gateway. Running, not announced.",
+      "cost": "Real engineering",
+      "owed": "Diligence begins. You are in the pipeline with a decision date rather than a maybe, and a no comes with the reason in writing.",
+      "sla": "Diligence · a decision date · a reasoned no"
+    }
+  ],
+  "endpoint": "https://scribb.it/frontdoor",
+  "ladder": "https://scribb.it/engage/",
+  "updated": "2026-09-24"
+}

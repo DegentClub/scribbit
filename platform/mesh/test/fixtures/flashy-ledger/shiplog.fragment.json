@@ -1,0 +1,1580 @@
+{
+  "shipped": "1",
+  "source": "repo/flashy-ledger",
+  "org": "org/flashy-ledger",
+  "generated": "2026-09-23T09:22:06.738Z",
+  "entries": [
+    {
+      "id": "ship/flashy-ledger/2ece35756fcc",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-22T19:40:06Z",
+      "kind": "infra",
+      "title": "Harden CI: pin actions to commit SHAs, add CodeQL and Scorecard",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-22",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Every actions/checkout and actions/setup-node call across the six\nworkflow files that use them was pinned to a tag (@v4), which can be\nretargeted upstream by the action's own maintainer or an attacker who\ncompromises their account. Repinned to actions/checkout@v7.0.1 and\nactions/setup-node@v7.0.0 by commit SHA, verified against\n`git ls-remote --tags`. secret-scan.yml's reusable workflow reference\nto FlashyLabs/flashy-infra@main is left as-is: an internal, org-owned\nworkflow doesn't carry the same retargeting risk a third-party action\ndoes.\n\nAdds CodeQL (javascript-typescript, weekly + on push/PR) and OpenSSF\nScorecard, both read-only static analysis. Scorecard's publish_results\nis false from the start: this org's GitHub Actions OIDC token endpoint\ndoesn't hand back a signable token (proven on wdk-policy-guard), so the\npublic securityscorecards.dev badge publish step fails; results still\nupload as SARIF to this repo's own code scanning tab.\n\ntests/workflow-pins.test.ts makes the SHA-pinning convention a real,\nfailing test rather than a habit someone could forget — matching the\npattern already in wdk-policy-guard, wdk-staking-kit and\nwdk-capability-audit. dependabot.yml already tracks github-actions\nweekly, so no change needed there.\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01CLZMfnkGGUXXzv9VA1td1c",
+      "refs": {
+        "commit": "2ece35756fcc4d94ab7e9104f89953e095899ec7"
+      },
+      "digest": "3474f023ccd59b7c580c00af729ed95afe1bd4d9ff59a263f4b5e7b579c4076a"
+    },
+    {
+      "id": "ship/flashy-ledger/2ee1adf7189a",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-22T19:36:52Z",
+      "kind": "fix",
+      "title": "Fix CI: type the JSON.parse results in charter/devlog tests, patch js-yaml",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-22",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Both test files accessed properties on values typed `any` from a raw\nJSON.parse(), tripping @typescript-eslint/no-unsafe-member-access and\nno-unsafe-return (21 errors). charter-served.test.ts now types the\nparsed charter; devlog.test.ts casts json()'s return at each call site\ninstead of a single-use generic, which no-unnecessary-type-parameters\nalso flagged.\n\nnpm audit fix bumps the transitive dev dependency js-yaml 4.3.1 -> 4.3.2,\nclearing the CPU-DoS advisory (GHSA-2883-xcg3-v3hh).\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01CLZMfnkGGUXXzv9VA1td1c",
+      "refs": {
+        "commit": "2ee1adf7189ac88a227db91b66d8043f586c947a"
+      },
+      "digest": "c20ac3b52d6339ce0a29a9c8058b219d18e67e97242702228a8d96311521cbd0"
+    },
+    {
+      "id": "ship/flashy-ledger/560fd67532f5",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-22T13:48:45Z",
+      "kind": "other",
+      "title": "devlog/1: re-vendor vendor-shiplog.mjs, and de-flake the served-copy test",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-22",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "flashyos's own devlog/1 rollout found the canonical vendor-shiplog.mjs\nhad drifted from its TypeScript source: MACHINE_LOCAL_PARTS was\nmissing 'pulse', 'delivery', 'directory' and 'ritual', and\nBOOKKEEPING_SUBJECTS/isOwnBookkeeping was missing pulse/1, notary/1 and\nthe whole AUTOMATION_SUBJECTS mechanism. Re-vendored to pick up the\nfix; this repository derives no new or changed entries from it (0 new\non emit).\n\ntests/devlog.test.ts's served-copy assertion compared the root and\nserved devlog.fragment.json byte-for-byte, which only held because two\nseparate `new Date().toISOString()` calls happened to land in the same\nmillisecond on a fast local run — the same reason shiplog.json's own\n`generated` differs from its root fragment's. Compares devlog/source/\norg/entries instead, which is what the config actually promises.\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01X8LDnsexvNjSkqc2ihZR7U",
+      "refs": {
+        "commit": "560fd67532f51f7dd3bda6ccdffd26f1e563228e"
+      },
+      "digest": "4d600b074c778ce576d5689816ea38978f602725ea09f5fa4574d479794b6255"
+    },
+    {
+      "id": "ship/flashy-ledger/b1cdbd4847ab",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-22T13:15:56Z",
+      "kind": "feature",
+      "title": "devlog/1: adopt the human-readable half of shipped/1",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-22",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Re-vendors vendor-shiplog.mjs from flashyos, whose emitter now also\nwrites DEVLOG.md and devlog.fragment.json alongside the existing ship\nlog, derived from the same commit history with no bespoke shaping.\n.shiplog/config.json gains one field (serveDevlog), matching how\nshiplog.json is already served from public/.well-known/ — the same\nmechanism, flipped on for one more file, not a new one.\n\nNo live deployment for this repository was confirmed while doing this\n(it publishes to GitHub Packages; no Vercel/Pages/deploy workflow\nexists here), so the served copy's actual reachability over https is\nunverified rather than assumed — the same is true of the shiplog.json\ncopy already sitting beside it. Noted in README.md and tests/devlog.test.ts\nrather than silently treated as settled.\n\ntests/devlog.test.ts asserts the fragment's shape, that the served copy\nmatches the emitted one exactly, and that DEVLOG.md matches both.\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01X8LDnsexvNjSkqc2ihZR7U",
+      "refs": {
+        "commit": "b1cdbd4847ab0485f38f4a9f8607dfd42e46c4c0"
+      },
+      "digest": "752245db1eb377e556399ae9529fd27e6b18ac46cdd5f94a403e59b956a73b27"
+    },
+    {
+      "id": "ship/flashy-ledger/a6e4735444b0",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-15T17:44:23-04:00",
+      "kind": "other",
+      "title": "Re-vendor check-directory.mjs from canon (#12)",
+      "by": [
+        "person/michael"
+      ],
+      "asserted": "2026-09-16",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Re-vendor check-directory.mjs from canon",
+      "refs": {
+        "commit": "a6e4735444b029fc03be6422c02d38cd112599f4",
+        "pr": "https://github.com/FlashyLabs/flashy-ledger/pull/12"
+      },
+      "digest": "cf49320240fddc206d86bb7d5d43f4d9dacacfa34d180459ac75644f3923386c"
+    },
+    {
+      "id": "ship/flashy-ledger/fac512346c3e",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-08T12:37:02Z",
+      "kind": "other",
+      "title": "Re-vendor check-directory.mjs: it never took dependsOn",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-08",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "`@flashyos/directory` added the `dependsOn` edge type — the only edge a\nstranger can check without asking us, since a version range is verifiable\nfrom a registry — and the vendored checker in flashyos was updated with\nit. This copy was not, so it would reject a valid `dependsOn` edge as an\nunknown type while the canonical validator accepts it.\n\nThat is how a vendored copy fails: not by breaking, but by disagreeing,\nsilently, about exactly the field somebody has just changed. Seventeen\nrepositories carried the older copy and the estate's `Vendored emitter\ncurrent` dimension read 15 of 34.\n\nByte-identical to `packages/directory/vendor-check-directory.mjs`;\n`tools/vendored-directory.test.mjs` in flashyos compares every copy and\nfails on any difference.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BjzD1kWqueq1ArT1m4mZsy",
+      "refs": {
+        "commit": "fac512346c3e2a8c84713ee57078ea8d9e351252"
+      },
+      "digest": "5db909069089423010c5d58bb6ca7ef0cba641e2ac97e404c1c1effbe1430a7c"
+    },
+    {
+      "id": "ship/flashy-ledger/35148f1e9420",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-08T12:11:19Z",
+      "kind": "other",
+      "title": "The index describes the shipping ref, not this laptop",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-08",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The first version generated from `git ls-files` — the working tree. On a\ncheckout six commits behind its remote that saw three documents where the\nref holds six, so it would have written an index naming half of them and\nreported the repository done. Across this machine 39 of 40 checkouts are\nbehind their remote, so almost every index written yesterday described a\ntree that ships nowhere.\n\nSay which tree you measured — this estate's first house rule, broken by\nthe tool written to make things findable, and the third tool here to\nbreak it. It reads `git ls-tree` and `git show` against the shipping ref\nnow, so a document committed on a laptop and pushed nowhere is\ndeliberately absent: a reader who follows a link to a file only one\nmachine has is a reader the index lied to.\n\nThe generator and the gate also disagreed about what a document IS —\n`SPEC.md` was an entry point to one and not the other — so the gate could\nask for an index in a repository the generator refused to write one for.\nThe population is imported now, one definition.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BjzD1kWqueq1ArT1m4mZsy",
+      "refs": {
+        "commit": "35148f1e942019b37e108d8c342f93f0e76d544f"
+      },
+      "digest": "451873b563ad76361f273672ac3e88dc42b67c19f77635f3faaceecf19c55389"
+    },
+    {
+      "id": "ship/flashy-ledger/3d2d19c5fa29",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-08T11:59:29Z",
+      "kind": "other",
+      "title": "An index of every document and every runnable, generated from the tree",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-08",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "This repository held documents that nothing pointed at and scripts that\nnothing named. `tools/estate-findable.mjs` in flashyos measured the\nestate at 9 of 25 repositories with reachable documents and 0 of 16 with\nany index at all — nobody had built a door, so nobody had one to add a\ndocument to.\n\nGenerated, never maintained. Every title is read from the document's own\nfirst heading, every date from its last commit, and every runnable's line\nfrom that file's own first comment. A document added here is in the index\non the next run whether anybody remembered it or not, which is the one\nproperty a hand-written index does not have.\n\nBeing listed is not being used. `estate-findable` excludes a generated\nindex from vouching for anything, so writing this moves `docsIndexed` and\nleaves `docsReachable` exactly where it was. Three states, not two:\nunlisted, listed-and-unused, and reached by work.\n\nRegenerate with `node tools/estate-doc-index.mjs --write` from a flashyos\ncheckout beside this one; `--check` runs in `npm run estate` there.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BjzD1kWqueq1ArT1m4mZsy",
+      "refs": {
+        "commit": "3d2d19c5fa291328d217e7a981337fd02170b346"
+      },
+      "digest": "817aa4f590b222bacff16c122e2afbaf3e80d80262957d4ed18dbc4524065aee"
+    },
+    {
+      "id": "ship/flashy-ledger/f7cda06cf09b",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-05T15:18:35Z",
+      "kind": "docs",
+      "title": "Confirmed from the registry: both releases were there all along",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-05",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Kind: docs\n\nv0.6.3 and v0.8.0 were pushed today. Both fired the tag flow, and both runs\nreached `npm publish` and stopped at E409 \"Cannot publish over existing\nversion\" — with GITHUB_TOKEN, on a clean runner.\n\nThat is the registry itself confirming both versions are present, which is\nthe strongest evidence available for the corrected diagnosis, and it settles\nthe access question in the other direction too: the token reaches the registry\nperfectly well. No package access list needed changing, and none was.\n\nEvery version this package has declared now has either a tag or a recorded\nreason for not having one.\n\nA GUARD I WROTE IN THE WRONG SHAPE\n\n`does not claim a tag for a publish that failed` asserted that the 0.6.3 and\n0.8.0 rows must show ❌ in Tagged. That was true when written and pinned to a\nsnapshot rather than to a rule, so it failed the moment those two were\ncorrectly tagged — and it rested on the belief that their publishes had\nfailed, which they had not.\n\nReplaced with the rule that does not go stale: a row may claim a tag only\nwhere the ledger records the publish as having reached the registry. Checked\nby flipping 0.7.0 to a bogus tag and confirming the suite goes red, because a\nguard that has never been seen to fail is not known to do anything.\n\n194 tests pass.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "f7cda06cf09b40a94b323b844e586d8185122cef"
+      },
+      "digest": "2de513acd68fae08bf9838a02598edcf4a21450fb2972b61cef4b6f70d2329ce"
+    },
+    {
+      "id": "ship/flashy-ledger/8169783e25ed",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-05T14:19:21Z",
+      "kind": "fix",
+      "title": "The publishes succeeded — a broken mirror step ate the tags",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-05",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Kind: fix\n\n0.6.3 and 0.8.0 are on GitHub Packages. They always were. Three sessions,\nthis one included, wrote them up as failed publishes blocked on a package\naccess list, and the reason is the same each time: everybody read the LAST\nerror in the run log and stopped there.\n\nRead the whole job and it is unmistakable — runs 13 and 14 have identical\nstep outcomes:\n\n    Run npm publish                     success   ← the release LANDED\n    Mirror to the public npm registry   failure   ← a different step\n    Tag the released version            skipped   ← collateral damage\n\nRun 14's log carries `+ @flashylabs/ledger@0.8.0` and only then fails. Run 15,\ndispatched later to retry with a PAT, was refused with E409 \"Cannot publish\nover existing version\" — the registry stating plainly that 0.8.0 is there.\n\nTHE MIRROR STEP HAD TWO BUGS\n\nIt wrote the npmjs token to `~/.npmrc` while `setup-node` had set\nNPM_CONFIG_USERCONFIG to a temp file, so the credential landed somewhere npm\nnever read. And `npm pkg set publishConfig.registry` loses to the scoped\n`@flashylabs:registry` that setup-node wrote into that same temp config — a\nscoped registry beats publishConfig and `--registry` both. So the step meant\nto mirror to npmjs re-published to GITHUB PACKAGES with an npmjs token and\ndied E401 against a registry it should never have touched.\n\nThen, because a failed step skips every step after it, a release that had\ngenuinely succeeded could not get its tag.\n\nFixed: the mirror writes to the config npm actually reads, sets the scoped\nregistry, and is `continue-on-error` — a mirror that breaks the release it is\nonly copying is worse than no mirror. The tag step keys on the publish step's\nown conclusion (`steps.publish.conclusion`) rather than the implicit\n`success()`, which is what silently swept it away.\n\nThe invariant is unchanged and is still the point: a tag is written only where\na release actually landed. What was broken is that a landed release could not\nget one.\n\nRELEASES.md is correct",
+      "refs": {
+        "commit": "8169783e25edaa64bf86759d1b1789bac13d9eaf"
+      },
+      "digest": "56220554a7e9116def43abbe247e9f8a7ef5ae309ee350a39526a92586ff57c7"
+    },
+    {
+      "id": "ship/flashy-ledger/abdff36bc09b",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-05T12:29:31Z",
+      "kind": "fix",
+      "title": "0.7.0 did exist, and a test was pinning the claim that it did not",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-05",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Kind: fix\n\nRELEASES.md landed this morning with a measured release trail and a guard, and\nboth are the right idea. One of its findings is wrong, and it was wrong in the\nmost expensive way available: a test asserted the ledger must NOT contain a\n0.7.0 row, so recording the truth would have failed CI.\n\n`6af5ee1` is titled \"0.7.0 — declare the civilization commodities, and…\" and\nis the DIRECT PARENT of the 0.8.0 bump `e52704b`. Verified by reading\npackage.json at every commit in the repository rather than by trusting either\naccount: exactly two commits carry 0.7.0, and no path from 0.6.3 reaches 0.8.0\nwithout passing through it. The claim \"the version went 0.6.3 → 0.8.0\ndirectly\" is not true of any history in this repo.\n\nThe row is restored, the test now requires its presence, and the paragraph\nsays what happened rather than quietly dropping it — a file whose subject is a\nverifiable trail should record having been wrong about its own.\n\nA second guard is added, because this is the part that must not be lost:\n0.6.3 and 0.8.0 died on E401 and their rows must keep saying so. The workflow\ntags ONLY after a successful publish, so hand-creating v0.6.3 or v0.8.0 would\nassert two releases that exist on no registry — and would then make \"Refuse to\ndispatch-release an already-tagged version\" reject the real publish once\naccess is fixed, permanently blocking the fix it looks like.\n\nI had that wrong too. My own runbook told the operator to hand-tag v0.7.0 and\nv0.8.0, which would have done exactly that. RELEASES.md now says so directly.\n\nThe diagnosis this file makes is right and is the thing to act on: the trail\nis blocked on registry access, not on remembering to tag. GITHUB_TOKEN can\nread @flashylabs/ledger but cannot PUT to it, because the package was created\nby manual PAT publishes and the package's own Actions access list decides who\nmay publish.\n\n194 tests pass.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5Z",
+      "refs": {
+        "commit": "abdff36bc09b06b16006f8ff4549225d8a619ca4"
+      },
+      "digest": "bf1f0e762f09a914949f2bf3f9f41325f37a7a43b9bd17ecb10fd297ea7dde11"
+    },
+    {
+      "id": "ship/flashy-ledger/d7a417a70dbb",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-05T11:39:16Z",
+      "kind": "release",
+      "title": "Release ledger: make the trail traceable, and stop a bump going unrecorded",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-05",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The package declares 0.8.0 while the last tag is v0.6.0, which fails the\nfirst question a serious adopter asks. Read against the history and the\npublish workflow, the gap is not what the roadmap assumed: there was never a\n0.7.0 (0.6.3 went straight to 0.8.0), and 0.6.3/0.8.0 are untagged because\ntheir publishes died on E401, not because someone forgot to tag — the\nworkflow tags only after a successful publish, on purpose.\n\nSo the trail is blocked on registry access (the package's Actions access\nlist, or a PACKAGES_TOKEN), which is an operator action RELEASES.md spells\nout. What lands here is the record and the guard: RELEASES.md is the measured\nledger with honest publish-status caveats, and tests/releases.test.ts fails\nif package.json's version has no row — turning 'published a version nobody\nwrote down' from a silent gap into a red build. It also pins that no 0.7.0\nexists, so a reader acting on the roadmap's claim has to reckon with the line.\n\nCo-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01X8LDnsexvNjSkqc2ihZR7U",
+      "refs": {
+        "commit": "d7a417a70dbb17d6efd5409a4a2b3f20255ca1f2"
+      },
+      "digest": "70eb5b3d2a6b51faf63374ff09db7005274081ccb24c7b8619eb8384ab786a52"
+    },
+    {
+      "id": "ship/flashy-ledger/35cb3b504cd3",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-04T17:25:00Z",
+      "kind": "other",
+      "title": "Re-vendor the directory checker for dependsOn",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-04",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "directory/1 gained an edge type: one published artifact requiring\nanother to run. Not folded into `cites`, which the vocabulary has always\ndocumented as being for sources — a dependency is a hard requirement a\npackage manager enforces, and giving one edge type two meanings is the\nfailure this vocabulary has recorded twice already.\n\nThis copy is byte-identical to packages/directory/vendor-check-directory.mjs\nin flashyos. Changing the source there does nothing here until the copy\nis replaced, and a stale copy does not fail — it disagrees, silently,\nabout exactly the field somebody has just changed.\n\nKind: chore\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "35cb3b504cd333ec5feb7a8d6bb2d27dac3e2208"
+      },
+      "digest": "32b336afd9c25db1e6b1d3800bc317045bf42579c736f42fba15cfc5359c64f1"
+    },
+    {
+      "id": "ship/flashy-ledger/87b24b8ca85a",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-02T16:22:34Z",
+      "kind": "other",
+      "title": "Re-vendor: the ship log learns ritual/1 before its first commit",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-02",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "`vendor-shiplog.mjs` gained `ritual/1: observe the office` in\nBOOKKEEPING_SUBJECTS upstream, so every copy in this estate disagreed with\ncanon about whether that workflow's refresh commits are work. A stale\nvendored copy does not fail — it disagrees, silently, about exactly the\nfield somebody has just changed, and the last three entries on that list\nwere each added only after their commits had already sealed as work under\nagent/unattributed.\n\nReplaced by `node tools/estate-revendor.mjs --write` in flashyos, which\ncompares every copy byte-for-byte against the default branch rather than\nagainst whatever is checked out.\n\nKind: chore\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "87b24b8ca85a67f9d0971ce4000c220ea72ad376"
+      },
+      "digest": "780d0f216907e530791afd1dd8972a24b5cf6671d984e4aef6a032a1bb51b81e"
+    },
+    {
+      "id": "ship/flashy-ledger/68f31bb9937b",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-01T21:08:57Z",
+      "kind": "feature",
+      "title": "Tell the estate the moment this repository pushes a record",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-01",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "graph.yml in flashyos merges every property's fragment on a daily\nschedule, so without a dispatch a change here is invisible to the estate\nfor up to 24 hours — and \"the graph is a day behind\" is\nindistinguishable from \"this property has nothing new to say\".\n\nThe dispatch has been in the shiplog/backlog template since August and\nin no repository, because each vendored its workflow before the template\nhad it. This adds it, gated on the commit step having actually pushed: a\ndispatch per run rather than per change would turn one daily merge into\na merge per push across thirty repositories.\n\nThe commit step is replaced with one canonical form rather than patched,\nbecause the estate had two vintages of it — some repositories carry a\nfive-attempt push retry the template lacked, and re-emitting would have\ndeleted it. Both halves are here now.\n\nThe retry resolves the branch per run instead of resetting to a literal\norigin/main. Eleven repositories in this estate have an agent branch as\ntheir default, and there a rejected push would reset the checkout to a\ndifferent branch and push that over the deploy branch.\n\nUnset ESTATE_DISPATCH_TOKEN means a delay of up to 24 hours, never a\nloss — the daily merge is the floor, and the step says so loudly rather\nthan skipping green.\n\nKind: feature\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01FDosmV9fXV6oZ9NXe7PZ76",
+      "refs": {
+        "commit": "68f31bb9937b038d28730b2de474486fca4e6292"
+      },
+      "digest": "cbe34821c28114d680dc15121d003cd37d7b1e135e14eb67eaec42ab1aa915ad"
+    },
+    {
+      "id": "ship/flashy-ledger/4c502d2d27e3",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-01T17:58:20Z",
+      "kind": "other",
+      "title": "Re-vendor shiplog: the filter learns directory/1, delivery/1 and intent/1",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-01",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Three formats gained a workflow that commits a refresh. Without this the\nfirst run of each seals as work under agent/unattributed, inflating the\ntwo numbers the record exists to make honest.\n\nA vendored change does nothing until the copy is replaced, and a stale\ncopy does not fail — it disagrees, silently, about exactly the field\nsomebody has just changed.\n\nKind: chore",
+      "refs": {
+        "commit": "4c502d2d27e3956beafd4e53720064ed60e310d1"
+      },
+      "digest": "779d585daa04060ba0860d5533a183867c8951d8b734be0d3fa22133778aca98"
+    },
+    {
+      "id": "ship/flashy-ledger/75d368652a3d",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-01T14:53:45Z",
+      "kind": "feature",
+      "title": "Give this repository's directory fragment a machine that refreshes it",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-01",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "shipped/1 and backlog/1 each ship a workflow with their adoption, so\nevery repository filing one has something re-running the emitter.\ndirectory/1 never did — sixteen repositories in this estate got the\nfragment and nothing else, and were still serving the bytes one\nhand-sweep produced on 2026-08-31.\n\nNothing was red, and nothing would have gone red. A fragment nobody\nre-emits does not decay for a year; it stops being true. A machine\nsurface added here never enters the graph, the asserted date freezes,\nand a change to the vendored emitter reaches a copy that never runs it.\n\nThe workflow is generated by workflow() in @flashyos/directory rather\nthan hand-written, gates on the default branch resolved per run, and\ncommits with [skip ci] because a refresh is a record of what already\nhappened.\n\nvendor-shiplog.mjs is re-vendored in the same commit: its bookkeeping\nfilter had never heard of \"directory/1: refresh the fragment\", so the\nfirst refresh would have sealed as work under agent/unattributed.\n\nKind: feature",
+      "refs": {
+        "commit": "75d368652a3d4d7d98f24911247c468167d261c3"
+      },
+      "digest": "7ae654fedbfd51a0d1fb544ce74afa7f841aec636e23e8d3fd1d6a70e1b21cee"
+    },
+    {
+      "id": "ship/flashy-ledger/e90755c3912b",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-01T14:33:33Z",
+      "kind": "fix",
+      "title": "Re-vendor check-directory.mjs: enforce what every edge type must carry",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-01",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The vendored checker had hand-written blocks for three of the sixteen edge\ntypes and nothing for the other thirteen, so engaged without a basis,\ndelegatedTo without a scope and issued without a date all validated clean —\nin thirty identical copies that agreed with each other perfectly.\n\nIt reads a requires table now, mirroring EDGE_REQUIRES in\n@flashyos/directory, with one conditional: `declares` needs a role when it\nnames an agent and not when it names a machine surface. That split was\nmeasured, not decided — across the estate all 88 agent declarations carry a\nrole and none of the 43 surface declarations do.\n\nflashyos/tools/vendored-directory.test.mjs differentials this copy against\nthe package by verdict, and asserts every estate copy is byte-identical to\nit. This repository's fragment passes the stricter checker unchanged.\n\nKind: fix",
+      "refs": {
+        "commit": "e90755c3912b610d972d16c5e0ceb70c1071679c"
+      },
+      "digest": "ae8291692e0748ca410c7ecf35067633e5f5b74d605515e10fc0c0d03af86968"
+    },
+    {
+      "id": "ship/flashy-ledger/527194678dd0",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-09-01T14:23:43Z",
+      "kind": "feature",
+      "title": "Open the LICENSE with the licence, so a scanner can see it",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-01",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "GitHub reports NOASSERTION on this repository despite a complete, genuine\nlicence file. So does SPDX, and so does every SBOM generator and licence\ncompliance tool that reads the same signal — which is what stalls an\nenterprise procurement review before a human opens the file.\n\nThe cause is that a copyright line and a sentence of description sat above the\ncanonical text, and a scanner reads the first bytes. Measured on 2026-09-01:\nall thirteen repositories in this estate that carry a LICENSE read NOASSERTION,\nnot the one that an outside review happened to notice — that one is simply the\nonly public repository, so nobody had ever looked at the rest.\n\nThe copyright is not dropped. A licence text naming nobody is a grant on\nbehalf of nobody, which this estate has already written up once. Both licences\ndesignate a place for it — Apache's APPENDIX, the AGPL's \"How to Apply\" — and\nit now sits there, which satisfies the scanner and the lawyer at the same time.\n\nNothing about the licence changed: same licence, same holder, same terms. The\nrule and the rewrite live once, in flashyos's tools/estate-licences.mjs, with\ntests.",
+      "refs": {
+        "commit": "527194678dd0b50cd56f2620bc00c20357defa8c"
+      },
+      "digest": "a8316c5e0bffe4c1b08037c0cd711ec172199969edfe1369f5fbd7da37cf237b"
+    },
+    {
+      "id": "ship/flashy-ledger/ea1d145dbb88",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T19:43:10Z",
+      "kind": "fix",
+      "title": "Re-vendor shiplog: the hold retracts, and bookkeeping stays filtered [vercel skip]",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-01",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Two fixes in one copy, and this repository had neither.\n\nThe hold is applied at projection as well as at derivation, so it can retract\nan entry already sealed public — the case claimyour.gold found, where an entry\nquoting a bootstrap credential was served among 746 public entries. Visibility\nis inside the digest, so re-deriving to change it is the restatement\nappend-only forbids; the entry now keeps its seal and stops being handed out.\n\nAnd the bookkeeping filter tolerates the suffixes those subjects have grown.\nIt anchored on $ exactly, so adding [skip ci] to every emitted commit would\nhave started sealing each refresh as a shipped entry under agent/unattributed.\n\nHolding is not remediation. A credential that reached a public history stays\nburned until it is rotated.\n\nKind: fix",
+      "refs": {
+        "commit": "ea1d145dbb8843541b87baa45e9f4f76c4dbed25"
+      },
+      "digest": "9b5cf5f967a9661b53e0117ae9016c2d6b572951bd06d0b7885801c9093a2374"
+    },
+    {
+      "id": "ship/flashy-ledger/cd88bf3a235b",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T19:40:20Z",
+      "kind": "infra",
+      "title": "backlog/1: refresh the fragment [skip ci]",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "cd88bf3a235bcce184a58b00b27e592d1cd2394f"
+      },
+      "digest": "38e9158703b6aabf5e925cf1e504b0c790a229a04fca599aa39d7d88ab1c127c"
+    },
+    {
+      "id": "ship/flashy-ledger/59603a831b22",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T19:40:10Z",
+      "kind": "fix",
+      "title": "Re-vendor shiplog: the hold can now retract an already-published entry [vercel skip]",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Visibility is inside an entry's digest, so an entry sealed public stays sealed\npublic — re-deriving it to change that is the restatement append-only forbids.\nSo a hold added afterwards changed nothing here: the entry kept being handed\nout at the well-known URL.\n\nclaimyour.gold found the case. An entry explaining the removal of a bootstrap\ncredential quoted the token and the admin password verbatim, and was being\nserved among 746 public entries.\n\nThe fix applies the hold at projection as well as at derivation, so the record\nkeeps its seal and the served copy honours the hold: the entry stays in the\nfragment, digest intact, counted, and simply stops being handed out.\n\nIt existed in flashyos's own root copy and in no other repository. Twenty-eight\nvendored the version without it — including the one where the incident\nhappened. This is that copy, replaced.\n\nHolding is still not remediation. A credential that reached a public history\nstays burned until it is rotated.\n\nKind: fix",
+      "refs": {
+        "commit": "59603a831b22ddeff472227838278e450fe803de"
+      },
+      "digest": "de1bc553320fe8c640ef5c54671ffb2a83a996d6f81f5de78beaed3a82ce958b"
+    },
+    {
+      "id": "ship/flashy-ledger/0d982de658ef",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T17:20:12Z",
+      "kind": "infra",
+      "title": "backlog/1: refresh the fragment [skip ci]",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "0d982de658ef7ad1a05f756d6b53ca1f6d59f6a3"
+      },
+      "digest": "d1a9fe8b1ea0621508efcbe102af868a06fa4d60e996f61562d9fe2b59cdf225"
+    },
+    {
+      "id": "ship/flashy-ledger/3099c5476ffa",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T17:20:09Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it [skip ci]",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "3099c5476ffafc86705835f931788e5aac5c224b"
+      },
+      "digest": "3dbfdbd9c889ae0445ed4c4bb54bf20d4133c566751737fb371c83dcab03c14d"
+    },
+    {
+      "id": "ship/flashy-ledger/2adae1699fa4",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T17:19:43Z",
+      "kind": "other",
+      "title": "Derived-log workflows survive a moving main; the served fragment matches the record",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The backlog and shiplog workflows carried a bare 'git push', which loses\nthe race whenever main moves under the run — the failure flashyos hit\nthree runs straight before growing the regenerate-on-the-new-tip retry\nthis ports. Rebase is deliberately not the retry: these artifacts derive\nfrom the very history that moved.\n\nWhere this repository's served public/directory.fragment.json trailed\nthe committed record (the diff the Directory workflow refuses), the two\nare re-synced from the emitter's output, with every directory check run\nlocally before committing.\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_019pUgSYP9uuYUPC3BJUmCxo",
+      "refs": {
+        "commit": "2adae1699fa4ae2d61146d4079be3832c3879928"
+      },
+      "digest": "2ee809d66ab0ad40988232cc4a6fd1c3f902b430348c2dc59f75285b0e39b566"
+    },
+    {
+      "id": "ship/flashy-ledger/15ee37b67cee",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T17:07:04Z",
+      "kind": "infra",
+      "title": "backlog/1: refresh the fragment [skip ci]",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "15ee37b67ceeef85c63d45709059ab1c6f73c22b"
+      },
+      "digest": "d18b1543fea47e56f980d76f4ffe8156fdac825bf54c004bde7ade9a9073a972"
+    },
+    {
+      "id": "ship/flashy-ledger/7e790ce4e8f7",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T17:06:50Z",
+      "kind": "fix",
+      "title": "Serve the charter where the checker actually reads it [vercel skip]",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "@flashyos/conformance reads a charter from /.well-known/flashyos-charter.json\nand nowhere else. Holding one in the repository is a different fact from\nserving one, and the estate has now got that wrong three times: nine properties\nwere fixed in August 2026 and the failure written up as closed; a read of every\ndefault branch on 30 August found seven still holding a complete roster and\nserving it nowhere; this property was one of them on 31 August.\n\nNothing failed. A conformance run against this domain simply stopped at L1\nwhile the roster sat in git looking finished.\n\nThe served copy is byte-identical to the one this repository holds, and a test\npins that. Byte-identity rather than field-by-field, deliberately: a test that\nchecks the fields somebody thought to list says nothing about the field added\nnext week.\n\nKind: fix",
+      "refs": {
+        "commit": "7e790ce4e8f73e92ca463a61f30a39316b8fcc3d"
+      },
+      "digest": "338817c6ead7539ec65f7b866cb23910aff46c8677cfbc758746ff6f6b5eb6d5"
+    },
+    {
+      "id": "ship/flashy-ledger/6395fc400858",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T16:42:59Z",
+      "kind": "fix",
+      "title": "An emitted record must not spend a deploy [vercel skip]",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The emitters commit a refreshed fragment on every push, and each of those is a\ndeployment. On 2026-08-31 the estate landed 594 commits on default branches and\n321 of them — 54% — were emitters refreshing their own output. Vercel's build\nrate limit is 100 a day across the account, so the record-keeping machinery was\nconsuming the whole estate's deploy budget three times over and starving the\npushes people actually made.\n\nIt was invisible everywhere. Each property sat a few revisions behind, gda.group\nhad stopped on 30 August, nothing was red. The one place it was written down was\na commit status on a dependabot PR nobody had opened: \"Deployment rate limited —\nretry in 24 hours.\"\n\n[skip ci] is the marker Vercel and GitHub Actions both honour. The fragment\nstill reaches the domain on the next deploy a real push triggers, which is the\nright cadence for a record of something that already happened.\n\nThis commit carries [vercel skip] rather than [skip ci] so CI still validates\nit without spending one of the deploys it exists to save.\n\nKind: fix",
+      "refs": {
+        "commit": "6395fc4008589a9790f5911f563669bb58172cc9"
+      },
+      "digest": "73f3f855f5fa2f0de63b743154e6e7d17059b4b5438833344430f2ed695694b4"
+    },
+    {
+      "id": "ship/flashy-ledger/f0632ab26a5c",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T12:43:33Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "f0632ab26a5c5a91bff8dc5dff0cfd22eadf949f"
+      },
+      "digest": "d914c6bb09e10352e13d0278e1275e1f40f78814904d6dc066654d20fc82781c"
+    },
+    {
+      "id": "ship/flashy-ledger/18b79bf7f49c",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T12:43:22Z",
+      "kind": "fix",
+      "title": "Stop declaring surfaces at a hostname that does not exist",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "`SURFACE_HOST` fell back to the charter slug when a repository has no\nproperty, which manufactures a hostname out of a repository name. This\nrepository is a library with no website, so its published record declared four\nsurfaces at `https://flashy-ledger/.well-known/...` — a URL that resolves for\nnobody, in a document whose whole purpose is to tell a stranger where to look.\n\nNothing caught it because every check reads git: the files really are in\n`public/`, the fragment really validates, and only a fetch finds out. It took\na tool that fetches, and this was the first thing it reported.\n\nThe Source is emitted without a URL now. Serving these files is true; saying\nwhere somebody can GET them is not, and a declared surface that cannot be\nfetched is a promise in the record with nothing behind it — the rule three\ncomments above it in the same file.\n\nKind: fix",
+      "refs": {
+        "commit": "18b79bf7f49ce501170a1067c926f94ba43b54c6"
+      },
+      "digest": "43178f4e484d8f6d8906ed7d9c34a8a204ac6e4129b721cbecf12308ed749b62"
+    },
+    {
+      "id": "ship/flashy-ledger/7b9ed3a2ff96",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T12:27:06Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "7b9ed3a2ff965b6e8a2741fdc4a71ed6f612ce36"
+      },
+      "digest": "3bf8169b4a39712a06f2a17314490e232b6f7e74a13df6eeb38ac5795d796256"
+    },
+    {
+      "id": "ship/flashy-ledger/599853a32663",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T12:26:54Z",
+      "kind": "other",
+      "title": "Re-vendor the directory checker, which had drifted in twelve repositories",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "`scripts/check-directory.mjs` is a copy of\n`packages/directory/vendor-check-directory.mjs` in flashyos, under a different\nname — and `estate-hygiene` matched vendored copies by the `vendor-*` filename\npattern, so it never compared this one. Twelve repositories were running a\ncopy old enough not to read `directory.externals.json` at all, which is the\nfile that tells a borrowed id from a dangling one.\n\nNothing failed. That is how a vendored file fails: not by breaking, but by\ndisagreeing about exactly the field somebody has just started writing.\n\nKind: chore",
+      "refs": {
+        "commit": "599853a3266373e3a2153fda4093ded2676ba668"
+      },
+      "digest": "fe859d5b85846bf5168177fccc06e61f81aba1f3aa8c8a74549f60b31ba69e20"
+    },
+    {
+      "id": "ship/flashy-ledger/a0b982134b9f",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T10:56:47Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "a0b982134b9f8b0a81419152b0e663b48e2410a4"
+      },
+      "digest": "6cb78d8e64a4fe5eaa3753475da2112bba6044c232545cc520df49672e336e2f"
+    },
+    {
+      "id": "ship/flashy-ledger/02f4f3123d68",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T02:19:28Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "02f4f3123d68fb3d191b4b07a486c5a0d3e3cff9"
+      },
+      "digest": "63ec43c104ab30a69202e06fa5a4b237a79e49fa9d4c87157ce0ec060c2ff6c6"
+    },
+    {
+      "id": "ship/flashy-ledger/f28faeaa313d",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T02:19:17Z",
+      "kind": "other",
+      "title": "Re-vendor the backlog emitter: it can revise an item now",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "`file` has taken `--wants` since the beginning and nothing could add them\nafterwards, so every item filed across the estate — all of them filed without\nwants — was permanently invisible to the matcher, which refuses an item that\nnames no `capabilitiesWanted`. A format whose central field is\nwrite-once-at-creation is a format whose central field is empty.\n\n`revise` changes everything about an item except its visibility. Promotion\nstays a separate verb because it is a separate decision: it refuses anything\nbut a `person/` id, and folding it in would give a revision the power to\npublish. Unmentioned fields are left alone — `close` is a revision too, and\nclearing on absence would strip every want in the repository.\n\nCopied byte-identical from flashyos rather than edited here. A stale vendored\nfile does not break; it disagrees, silently, about exactly the field somebody\nhas just added.\n\nKind: chore",
+      "refs": {
+        "commit": "f28faeaa313d5a72d837e65ca2bb15677bee221a"
+      },
+      "digest": "fce7d2913bc9089e6fbd9b6a3aad84dd56b721a9a7a48a35cce5a8f8e320dacd"
+    },
+    {
+      "id": "ship/flashy-ledger/068e979081e1",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T01:00:02Z",
+      "kind": "feature",
+      "title": "Declare the machine that files this repository's intentions",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Two machines write this repository's record and only one was declared.\n`.shiplog/config.json` stamps `agent/<slug>-ci` on every sealed entry;\n`.backlog/config.json` stamps `agent/<slug>-bot` on every filed item. Both\nappear in published fragments. The second appeared in no declaration anywhere\nin the estate.\n\nIt survived the `-ci` rollout because the declaration looked complete:\n`recordEmitter` listed `backlog/1` among the record emitter's formats, so\neverything comparing formats saw it named and stopped, and nothing compared the\nsignature. A declaration naming the right format and the wrong machine is\ncomplete in every respect except the one that matters.\n\nThe record emitter's scope narrows to `shipped/1`, which is what it signs. The\nbacklog emitter is declared beside it with its own `operates` and its own\n`delegatedTo` from the accountable human, bounded to `backlog/1`.\n\nTwo machines is not an artefact of tooling. The tenses are shaped differently\non purpose — an item decays and is never sealed, an entry is sealed and never\ndecays — and different things write them at different times: the seal on a push\nto the default branch, the filing whenever somebody records an intention.\n\nBoth ids are read from the config that stamps them, never composed.\n\nKind: chore\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "068e979081e15cee597b6071d4848d2926ee5634"
+      },
+      "digest": "9875bda0b5173a6408b149f3e7e0f893a2e0bf35464be86a8d86e496fbc4b25c"
+    },
+    {
+      "id": "ship/flashy-ledger/433c3a05a0bf",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T00:50:58Z",
+      "kind": "feature",
+      "title": "Declare the machine surfaces this property serves",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Every property in the estate serves the same handful of documents — a\nhandshake, a charter, backlog/1, shipped/1, checkpoint/1 — and said nothing\nabout them in its own record. That silence is most of why the estate measured\nas thirty graphs rather than one: a fragment describing only its own\norganisation has no reason to name anything another repository defines, so\nnothing crossed a boundary except one person's name on a commit.\n\nServing a format is a fact about this repository; the format belongs to\nflashyos. `cites` is the edge for referencing something somebody else\nauthored, so each of these is a real join rather than a manufactured one.\n\nDetected from disk, never listed. A hand-kept list keeps claiming a surface\nthe day somebody deletes the file, and a declared surface that cannot be\nfetched is worse than an undeclared one — a promise in the record with\nnothing behind it.\n\n`directory.externals.json` is emitted beside the fragment and names what this\nrepository borrows: the standards flashyos authors, and the person\ngord-holdings is the authority for. `check-directory.mjs` reads it instead of\ntaking `--external` flags, so the list cannot drift from the emitter.\n\nThe vendored checker was also one revision behind the canonical copy in\nflashyos and would have rejected an `engaged` edge. Re-vendored.\n\nKind: feature\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01FDosmV9fXV6oZ9NXe7PZ76",
+      "refs": {
+        "commit": "433c3a05a0bf70423dbe31d90473da8c055ad35c"
+      },
+      "digest": "3ca44478184ee411888ac150e7a228aa00d220256a6712b16dd2e7200a1cbd72"
+    },
+    {
+      "id": "ship/flashy-ledger/be907b281cc1",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-31T00:44:30Z",
+      "kind": "docs",
+      "title": "Say whose authority the record emitter signs under",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "`operates` says this organisation runs the machine that seals its record. It\ndoes not say who answers for what the machine signs, and that is the fact a\nsignature rests on: an agent acts *for* somebody, the somebody answers, and an\nagent with no stated bound is one nobody can say has exceeded anything.\n\n`delegatedTo` is that edge — person to agent, carrying the same scope the\nemitter operates under. It is the shape of a Flashy ID root grant, whose issuer\nis the accountable human and whose scope a chain may only ever narrow. The\nrecord states the delegation; the signed assertion that enforces it lives in\nFlashy ID, and no signature belongs here, because proof never moves into the\nrecord.\n\nThe edge type has been in the vocabulary since the vocabulary was written and\nno fragment in the estate had ever used one. Writing the first exposed two\nfaults in flashyos that are fixed there: the rule required `scopes` where the\nedge carries `scope`, so no delegation could have satisfied it, and the\nflat-to-embedded conversion discarded every relationship attribute but two, so\nan edge that stated what it owed was reported as missing it.\n\nKind: chore\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "be907b281cc18e6d9617612a85d3ba7aa6758f55"
+      },
+      "digest": "d81c0b24f649418c888059297fca70e62e8c486c488e54c7e28b59b9e8cebc3b"
+    },
+    {
+      "id": "ship/flashy-ledger/e1e636fc9fd0",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T22:07:08Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-31",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "e1e636fc9fd0627e6a284f59b8a7ec48bdfe4f81"
+      },
+      "digest": "9107cd8d2aae2b814c4319dd6e8087958d603dcad3c61df0cf5baf00f6cc8f7e"
+    },
+    {
+      "id": "ship/flashy-ledger/bba4649eae9f",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T22:06:06Z",
+      "kind": "other",
+      "title": "Re-vendor the checkpoint and frontdoor emitters",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Two dead imports were found by running a linter over a repository that vendors\nthese files: a `join` from `node:path` in `vendor-checkpoint.mjs` and another\nin `vendor-emit-frontdoor.mjs`. Both are fixed at their source in flashyos and\ncopied here byte-identical.\n\nNeither changes behaviour. The reason to carry the copy anyway is the estate\nrule that produced the fix: a vendored file that disagrees with its source does\nnot fail, it disagrees — silently, about whichever field somebody has just\nchanged — and `estate-hygiene` compares these byte-for-byte precisely so a copy\ncannot quietly fall behind.\n\nKind: chore\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "bba4649eae9f7582a0c2212623212a7739f0fde7"
+      },
+      "digest": "90961a42eef56da6ec1e32ddfa1d9d5fcf15e0d4ad6a497c6bee170748bb90b6"
+    },
+    {
+      "id": "ship/flashy-ledger/6b4240a35bf8",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T21:44:31Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "6b4240a35bf845ebdf235f9e2f7a7a139c1dca5a"
+      },
+      "digest": "6cdaeaaa99939f11743d2ccbb9b6654dd1ec6992842dd5544f490f1af81ff3d3"
+    },
+    {
+      "id": "ship/flashy-ledger/2c92e800ef29",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T21:44:17Z",
+      "kind": "fix",
+      "title": "Read the emitter id, do not derive it",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The declaration added moments ago used `${charter.slug}-ci` and was wrong here:\nthis repository signs its record with an id the charter slug does not produce,\nso it declared an agent that matched no signature anywhere. A declaration that\nmatches nothing is indistinguishable from one that works — every check that\nlooks at shape passes, and the provenance number does not move.\n\nThe id now comes from `.shiplog/config.json`, which is the file that actually\nstamps it. Two of ten repositories were affected: ClaimYour.Gold signs\n`agent/claimyour.gold-ci` against a charter slug of `claimyour-gold`, and\ndais-global signs `agent/dais-global-ci` against a slug of `dais`.\n\n`tools/emitter-declaration.test.mjs` in flashyos now compares the declared id\nagainst the stamped one, which is the check that was missing.\n\nKind: fix\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01FDosmV9fXV6oZ9NXe7PZ76",
+      "refs": {
+        "commit": "2c92e800ef2935f9ada7741a403afa1af00c7d8e"
+      },
+      "digest": "7fd9cd4302e14a60ea670fe6fe16784edaa97df707d163d68bee490c50d71a62"
+    },
+    {
+      "id": "ship/flashy-ledger/7475f50be97a",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T21:38:21Z",
+      "kind": "feature",
+      "title": "Declare the machine that signs this repository's record",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Every sealed entry and every fragment here carries\n`assertedBy: agent/<slug>-ci`, and until now that was an id nothing in the\nestate declared. Across thirty properties it was 2,478 edges citing an agent\nthat formally did not exist — provenance that reads as provenance and carries\nnone, which is worse than an empty field, because the empty field is honest\nabout not knowing who made the claim.\n\nDeclared as an Agent the organisation `operates`, not as a charter role. A\nrole is a governance label the org answers for and it is rendered into the\nhandshake's advertised capabilities, so a \"ci\" role would tell the network\nthis organisation does continuous integration for other people.\n\nThe canonical form is `declareEmitters` in `@flashyos/directory`. It is\ninlined here because `scripts/directory.mjs` is dependency-free by design, and\n`tools/emitter-declaration.test.mjs` in flashyos is the drift test that keeps\nthe two in step.\n\nKind: feature\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01FDosmV9fXV6oZ9NXe7PZ76",
+      "refs": {
+        "commit": "7475f50be97a4a6fe476e7c085eb9009bb3e342f"
+      },
+      "digest": "1c6a0066811ef6c3ca57d196fa67035574991f1dee7f28e3de5f21041050a888"
+    },
+    {
+      "id": "ship/flashy-ledger/be20119735a6",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T20:27:41Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "be20119735a699b10892da247dbf0ad38fd1dd4d"
+      },
+      "digest": "ee46b037b119b1a4980aa599a4ee790d1f972a4dd03d04319aa7f4f59596af35"
+    },
+    {
+      "id": "ship/flashy-ledger/68ce392f8e0b",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T20:27:29Z",
+      "kind": "feature",
+      "title": "Publish a front door, and serve the charter it points at",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "This repository publishes a handshake and a shiplog and had no door: nothing\nsaying which lanes it opens, what it asks at each, or what it owes in return.\nAn organisation reachable on the mesh with no stated way in is a doorbell\nwired to nothing.\n\nThe lanes are chosen from what this property actually is rather than copied\nfrom a sibling. It opens the lanes it can answer and does not advertise one it\ncannot.\n\nTwo things vendored byte-identical from the estate: the emitter and the\nchecker. `notAuthority` is carried verbatim and the checker rejects any door\nthat paraphrases it — a door quietly read as an authorisation is how this\nstops being a front door and becomes a vulnerability.\n\nThe workflow also required something this repository did not do: serve the\ncharter. It existed at the repository root only, where a static deploy never\nserves it, so `/flashyos.roles.json` would have 404d while the standard this\nestate publishes tells everyone else to put exactly that path there. The\nserved copy is now committed and the workflow holds the two identical.\n\nEvery step of the workflow was run locally first, so it arrives green rather\nthan as an alarm on arrival.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "68ce392f8e0bc3081f073024fab4fe57b9156a3d"
+      },
+      "digest": "7e9a28ce12cb5dbf4fb71b4a7689f26e9db79ad4796152d6acc504247d90fa43"
+    },
+    {
+      "id": "ship/flashy-ledger/26839fd7446c",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T19:46:27Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "26839fd7446c2308aca91b249967e01abd6c334f"
+      },
+      "digest": "c071f0449c040634d59d3f42ec1e29294a3d6fb0e0a513fd273b56f72b0b9a04"
+    },
+    {
+      "id": "ship/flashy-ledger/6e78df978118",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T19:45:10Z",
+      "kind": "fix",
+      "title": "Re-vendor the charter checker: it had drifted from the spec",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The vendored checker rejected renamedFrom, which the charter defines and the\nrole-rename sync reads; rejected a digit in a role name, which the spec's own\nregex allows; and enforced no length bound at all, so the 24-character role\nname cap was the one rule this pre-install check could not see.\n\nEleven byte-identical copies across the estate agreed with each other\nperfectly and disagreed with @flashyos/aao in all four places. The monorepo\nnow runs both checkers over the same documents and fails on any disagreement\nabout the verdict.\n\nThis charter still passes.\n\nKind: fix",
+      "refs": {
+        "commit": "6e78df978118d64d51c22bf887a05cf52633abbf"
+      },
+      "digest": "382eaf6a259ce4bbbea86fd88559f7ba9949b8959d1650f4c376f29dd26382cd"
+    },
+    {
+      "id": "ship/flashy-ledger/4be5c9f6d10f",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T19:25:14Z",
+      "kind": "fix",
+      "title": "Name a copyright holder, and stop granting what was never ours",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Two errors from the licence sweep of 2026-08-30, found by putting the\nestate's licences in one register and comparing.\n\nA LICENCE THAT NAMED NOBODY\n\nEleven repositories carried a bare Apache-2.0 text with no copyright line\nat all. That is not a missing file — it is a file that answers the\nquestion wrongly. It reads as a grant, and no reader can tell who made it\nor whether they were entitled to. Every LICENSE now opens with the holder\nand one line saying what the repository is.\n\nAN OPEN LICENCE ON SOMEBODY ELSE'S PROPERTY\n\nkopman-build and buildos are a construction firm's marketing site and the\napplication behind that engagement. Both carried AGPL-3.0-only, which\noffers a client's own site to anyone willing to publish their changes.\nNobody decided that; it was the default that got reached for. Both are now\nall rights reserved, held by Kopman Build, with a line saying ownership is\ngoverned by the agreement between the firm and the studio rather than by\nthe file.\n\nThe same care had already been taken for marco.law an hour earlier and\nthen not taken here, which is the argument for a register rather than for\nbeing more careful next time.\n\nEight further repositories moved from an unattributed Apache-2.0 to all\nrights reserved: the org profile, the Terraform that can delete\nproduction, three brand properties and the three Life repositories.\nflashy-sdk is among them and its package.json already said UNLICENSED —\nthe LICENSE file had been contradicting its own manifest.\n\n`tools/estate-licences.mjs` in flashyos is now the one declaration, and it\nreports a checkout and a default branch separately, because conflating\nthose is the mistake this estate's tooling keeps making.\n\nKind: fix",
+      "refs": {
+        "commit": "4be5c9f6d10fc51bd8837d48a27939774c32187b"
+      },
+      "digest": "4f0562393ebce38e5f52d3f50ad2067cbf3f9d69684655de36aa0e4f2c4370bf"
+    },
+    {
+      "id": "ship/flashy-ledger/50bae4c329ff",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T18:01:34Z",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "50bae4c329ffd3b5c82d1112c6a4e2581cbdc3f1"
+      },
+      "digest": "cbe3ac4c5cc4c107738396f401f9b428dcc3ddcaa5261655a7ee09a03a279536"
+    },
+    {
+      "id": "ship/flashy-ledger/0219e06d2460",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T18:01:25Z",
+      "kind": "other",
+      "title": "Re-emit against the rebased tree",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Kind: chore",
+      "refs": {
+        "commit": "0219e06d246059e445f38bae3cb5a8c1621260b0"
+      },
+      "digest": "5e2892de984728e37fe9d3cd849c42505241c77d818c20726987a0fbde70f49a"
+    },
+    {
+      "id": "ship/flashy-ledger/0962abf4dc28",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T17:59:02+00:00",
+      "kind": "fix",
+      "title": "Carry the current vendored emitters",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "A stale copy fails silently and in the dangerous direction: it does not know\nabout rules added since it was vendored, so it ignores them rather than\nerroring. Re-emitted and re-verified against the refreshed copies.\n\nKind: fix",
+      "refs": {
+        "commit": "0962abf4dc289cd854aee42519bbc2b4c1b399eb"
+      },
+      "digest": "702b59a2597ca813ba3d8399f85acb690ab32babc31ef283a75573c7cf0aa082"
+    },
+    {
+      "id": "ship/flashy-ledger/0c0d65227fdc",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T17:38:45+00:00",
+      "kind": "infra",
+      "title": "shipped/1: refresh the log, and the checkpoint over it",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "0c0d65227fdc499f658b290cbda1eeecf1e25060"
+      },
+      "digest": "b7ed74ccda78bc15d97c17e78012f67e70f48c055a7218809bd2f92c0f575161"
+    },
+    {
+      "id": "ship/flashy-ledger/c05ef1e25410",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T17:38:31+00:00",
+      "kind": "fix",
+      "title": "Fail loudly on a fragment that exists and cannot be parsed",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The emitter treated an unparseable fragment as an absent one and built a head\nover whatever else it could read. A conflicted fragment produced a\nvalid-looking head over nothing.\n\nKind: fix",
+      "refs": {
+        "commit": "c05ef1e254106753aa60502540b1443cccb1ffb6"
+      },
+      "digest": "24c2631a6b014d85e0d4790a359658b5c1d69a0b3a135725db4000d4d43f7c9b"
+    },
+    {
+      "id": "ship/flashy-ledger/fddf555654e7",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T17:22:54+00:00",
+      "kind": "other",
+      "title": "Re-emit the log and its checkpoint after rebase",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Kind: chore",
+      "refs": {
+        "commit": "fddf555654e74aaa8770ee80c010adc116bca65f"
+      },
+      "digest": "2ed297bb26f3a90f442f463f5deed608887c22c83d05dd9d04a839cc74738e5e"
+    },
+    {
+      "id": "ship/flashy-ledger/4851f8997206",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T17:18:12+00:00",
+      "kind": "feature",
+      "title": "Adopt checkpoint/1 — a tree head over what this repository seals",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "An RFC 6962 Merkle root over the sealed claims already published here, served\nbeside them. Anyone holding the fragments can recompute it and see whether the\nrecord still describes what it said it did.\n\nThe head is deliberately unsigned. A signature over a root computed and checked\nby the same party is ceremony without a property — what makes history provably\nappend-only is a witness who is not us, and that is not built. The root catches\ndrift and after-the-fact edits, and nothing here claims more.\n\nIt is refreshed by the shiplog workflow rather than its own, so the head and\nthe log it commits to always move in one commit. A separate workflow would\nleave a window in which the published root and the published record disagree,\nand a reader hitting that window sees a forged-looking estate.\n\nKind: feature",
+      "refs": {
+        "commit": "4851f8997206eeaa9336701264b329b145a988d4"
+      },
+      "digest": "7605bd343d7660dbcb0f0392bba0f3510f342dab2263d50f08090d1feb51c835"
+    },
+    {
+      "id": "ship/flashy-ledger/10178cf6e269",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T16:50:49Z",
+      "kind": "other",
+      "title": "Merge main, then publish",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Another session adopted these formats here independently. Its author\ntable and its branch-agnostic workflows are better than mine and are\ntaken as-is; the emitter is mine, because it carries three things theirs\ndoes not and one of them is load-bearing under their design.\n\nAn emit is now a union rather than a replacement. Their workflow fires on\nany push and gates the job on the default branch, which is the right fix\nfor the branch-pinning trap — but combined with derive-and-overwrite it\nwould let a feature branch rewrite the trunk’s log with its own\nfirst-parent shape. Together the two changes are safe.\n\nAlso mine: .shiplog/held.json, so publishing a log is not the same\ndecision as publishing every entry in it; a guard that stops an agent’s\ncommits being filed under a person; and a filter for this format’s own\nrefresh commits, which were being recorded as things that shipped.\n\nvisibility is now public. That is the decision that turns an internal\nrecord into a changelog anyone can read.\n\nKind: other",
+      "refs": {
+        "commit": "10178cf6e26990275681254ea762c7faf24db1cc"
+      },
+      "digest": "a40a892146b67cdf60edceffe3a9cdafb214f03f525de837626b253ff2677bc4"
+    },
+    {
+      "id": "ship/flashy-ledger/454ff29c9ad8",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T16:24:30Z",
+      "kind": "feature",
+      "title": "Publish the log: 282 entries across the estate become public",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Everything derived has landed private since adoption. This flips\nvisibility for the estate-owned properties, which is the decision that\nturns an internal record into a public changelog.\n\nTwo entries are held back by .shiplog/held.json, with the reason written\nnext to each: one names a credential that is still unrotated, one is a\nfrank internal note about a durability gap in a live product. Held, not\ndeleted — both are still in this repository’s own record, sealed and\ncounted. Only whether a stranger can read them changes.\n\nThe vendored emitter is re-copied in the same commit. The hold did\nnothing until it was: the previously vendored copy predated the feature\nand published the held entry regardless, silently.\n\nKind: feat",
+      "refs": {
+        "commit": "454ff29c9ad8a642d82c0997e0e02a6a4220de40"
+      },
+      "digest": "02a0dd16cae9d456db6f41d8e27b58fa4e8276d19e4c6764caeac43d123448e0"
+    },
+    {
+      "id": "ship/flashy-ledger/00e4f23e6486",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T16:24:16+00:00",
+      "kind": "other",
+      "title": "Re-emit the log with authorship mapped",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Kind: chore",
+      "refs": {
+        "commit": "00e4f23e64865d55458fc332707e4bfedd24d834"
+      },
+      "digest": "d50a8f5ea14fd94781e94fcd4e72820e182392c9819a9cb9307f68b03cb880ea"
+    },
+    {
+      "id": "ship/flashy-ledger/d2bfaab67d44",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T16:23:34+00:00",
+      "kind": "other",
+      "title": "Re-emit after rebase",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Kind: chore",
+      "refs": {
+        "commit": "d2bfaab67d448cc287f84cdd8faab2d453c6c45e"
+      },
+      "digest": "396d127809535a57a6e5378a48905722a74ced309e1838c71bf9ccc78ff1f364"
+    },
+    {
+      "id": "ship/flashy-ledger/323f2643beb2",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T16:04:31Z",
+      "kind": "feature",
+      "title": "Adopt the two tenses: what this repository intends, and what it shipped",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "`backlog/1` and `shipped/1`, both emitted by a vendored, dependency-free\nscript and refreshed by a workflow on this repository's default branch.\n\nEverything lands private. The served fragment publishes nothing until\nsomebody changes one field, which is the decision that turns an internal\nlog into a public changelog — not a side effect of adopting.\n\nThe log credits the agents that wrote the commits. That needed a fix\nupstream first: with an empty `authors` table every unrecognised address\nfell through to `defaultAuthor`, and the estate's first derived log read\n100% human-authored over a history that was 95/107 agent-authored. `adopt`\nnow seeds the machine addresses it finds in the history.\n\nThe workflow triggers on the branch `git symbolic-ref refs/remotes/origin/HEAD`\nreports, which is not always `main` in this estate and is never the branch\nadoption happened on.\n\nKind: feat",
+      "refs": {
+        "commit": "323f2643beb246368ae127964deeb5141879fddc"
+      },
+      "digest": "abc719c99ee54bc0c6a0a9e05077a2943ffbe1404b8a117f46442cb692325414"
+    },
+    {
+      "id": "ship/flashy-ledger/f4d436fb879a",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T15:46:15+00:00",
+      "kind": "fix",
+      "title": "Stop pinning the shiplog and backlog workflows to a branch name",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Each workflow triggered on `branches: ['<the default branch at adoption>']`.\nEleven repositories in this estate have a `claude/*` branch as their GitHub\ndefault; renaming one to `main` is the right thing to do and would have stopped\nits workflow firing. Nothing would have failed — the fragment would simply have\nstopped advancing, and a stale changelog reads exactly like a current one.\n\nThe trigger now matches any push and the job is gated on\n`github.ref_name == github.event.repository.default_branch`, resolved per run,\nso a rename is survived rather than discovered. `branch` is dropped from the\nconfig: nothing read it, and a stored branch name is a snapshot of something\nthat changes.\n\nKind: fix",
+      "refs": {
+        "commit": "f4d436fb879a0c741d2d04064cbc299e1282553e"
+      },
+      "digest": "dd56e87fcbd0eb3f94c2822ecb69d2127e34e1737f12dbf5ecbd78ed51ab237e"
+    },
+    {
+      "id": "ship/flashy-ledger/1afe30f6c43d",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T13:21:23+00:00",
+      "kind": "infra",
+      "title": "Reclassify the log against the convention this estate writes in",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The derived log was classified only by conventional-commit prefixes, and\nthis repository writes declarative English. Unclassified went from 96%\nto 21% by reading the estate's declared imperative lexicon, looking\npast a project prefix to the verb behind it, and dropping merges of\nanother branch into this line — which are not things that shipped.\n\nNothing is published: entries remain private and the served copy is the\npublic projection.\n\nKind: infra\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01FDosmV9fXV6oZ9NXe7PZ76",
+      "refs": {
+        "commit": "1afe30f6c43dead0c0d1802c690e14b903f2f896"
+      },
+      "digest": "ded1d70877118a65ae0ff5ddf184407c434d80c3fce31acaa48c885af8c44331"
+    },
+    {
+      "id": "ship/flashy-ledger/8c105726360e",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T13:06:38Z",
+      "kind": "infra",
+      "title": "secret scanning, through the shared workflow",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Ten of thirty-five repositories in the estate had a secret scan, and each\ncarried its own private copy. flashy-infra's CLAUDE.md said the estate consumed\na shared template; no repository referenced it, and the file was not a reusable\nworkflow anyway.\n\nThis is one file calling one shared definition, so a change to the scan reaches\nevery repository on its next run rather than needing thirty pull requests.\n\nVerified against this repository's working tree before being added: a scan\nswitched on into an existing failure is a red check nobody can act on, which is\nhow a check becomes one everybody learns to ignore.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_0114eERowmBzsxqy4tBNm6a5",
+      "refs": {
+        "commit": "8c105726360e25aa59c72dc28982c13ee48a5f3b"
+      },
+      "digest": "7ac3405cf66193ab3647666940a994eef06fd7f08e31237cde6ea8946098ceab"
+    },
+    {
+      "id": "ship/flashy-ledger/308767436b00",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T05:45:17+00:00",
+      "kind": "feature",
+      "title": "Adopt backlog/1 and shipped/1",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "This repository now publishes the two tenses the estate records: what it\nintends, and what it shipped. Both are emitted by a dependency-free\nvendored script, so nothing here gains a toolchain it did not have.\n\nNothing is published by this commit. Backlog items are filed private and\nreach the served fragment only when a named human promotes one; shipped\nentries land private until someone changes one field in\n.shiplog/config.json. The served copy is the public projection and the\nemitter writes it, so a private record cannot reach a URL through a\nforgotten copy step.\n\nDerived 25 entries from this repository's own history, every seal\nrecomputed. Org org/flashy-ledger, served at public/.well-known/shiplog.json.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01FDosmV9fXV6oZ9NXe7PZ76",
+      "refs": {
+        "commit": "308767436b005f85b9ef7257fa60c70b82815a4d"
+      },
+      "digest": "eeda477201035c56be955cae01a448accceca38dad3b822325b5cb11d9e05f0f"
+    },
+    {
+      "id": "ship/flashy-ledger/b495325de576",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-30T01:35:04+00:00",
+      "kind": "feature",
+      "title": "Serve the directory fragment, which this property was not doing",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The fragment lived only at the repository root. A Next.js app does not\nserve the repository root, so https://<this property>/directory.fragment.json\nreturned 404 — and the estate's directory is federated, meaning every\nproperty is supposed to publish its own fragment for anyone to fetch and\nmerge.\n\nThirteen of fourteen properties were in this state. The consequence is\nlarger than a missing file: the estate graph could only be assembled by\nsomeone with a git checkout of every repository, which defeats the entire\nreason for federating it. A graph you can only build from a laptop proves\nthe files are on that laptop. A graph assembled from published URLs proves\nthe estate publishes what it says it does, can be reproduced by somebody\nwho does not trust us, and is the only shape that lets an organisation we\ndo not own ever join it.\n\nSame defect as the charter, found the same way and fixed the same way: the\nfragment is copied into the served directory and CI diffs the served copy\nagainst the source so the two cannot drift.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01BEaXzktRU5ZPe3R2NY7CKD",
+      "refs": {
+        "commit": "b495325de5762f80a6f09961aa14b0c665eae5c5"
+      },
+      "digest": "6c30909473d177d2a5f978634e3faa74329d0e2573b4ab66e6682f5b4c7b2c41"
+    },
+    {
+      "id": "ship/flashy-ledger/0bd60ffa2df3",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-28T19:51:38+00:00",
+      "kind": "infra",
+      "title": "Make every charter in the estate conform, and gate it",
+      "by": [
+        "person/michael"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Ran the estate's own published validator - validateCharterDocument from\n@flashyos/aao - against every charter for the first time. None passed,\nincluding FlashyOS's own production charter and flashy-academy's. Two real\nclasses of failure:\n\n  _comment is not part of aao 0.1. The spec's own extension convention is an\n  x- prefix, and the validator says so in the error. Ten charters carried a\n  bare key the standard does not recognise.\n\n  Four family names were invented: trust, release, inbound, network-effects.\n  The ten declared families are growth, revenue, product, engineering,\n  operations, data, finance, risk, governance, support. Remapped trust to risk\n  (compliance, security, audit), release to engineering, and inbound and\n  network-effects to growth.\n\n10/10 charters now clean against the published validator.\n\nAdds scripts/check-charter.mjs, mirroring the static half of the conformance\nsuite, dependency-free so it runs before an install, vendored byte-identical\nacross the estate. Wired into the Directory workflow ahead of the fragment\ncheck. The published validator stays authoritative; when @flashyos/agent is\navailable, `npx @flashyos/agent conform` supersedes this.\n\nVerified against six failure modes, all caught: a bare non-spec key, an\ninvented family, a codename role, the template placeholder as accountable\nhuman, a capability naming a department rather than an action, and an\nescalation pointing at no declared role.\n\nOne correction along the way: the checker first flagged CRITICAL as an invalid\napproval threshold in flashyos and flashy-ledger. IMPACT_ORDER is LOW, MEDIUM,\nHIGH, CRITICAL - the charters were right and the checker was wrong. Fixed.\n\nmetaverse-group gains the charter it never had: six roles, four families left\ndeliberately empty, and its emitter now reads the charter so the two cannot\ndisagree.\n\n11 fragments, 199 nodes, 188 edges, 100% freshness, zero errors.",
+      "refs": {
+        "commit": "0bd60ffa2df330788d75d632c6e17600f859ba75"
+      },
+      "digest": "e67d31075f7258832600904a532ced4ab039dd46d51cad0f300b1762573660d8"
+    },
+    {
+      "id": "ship/flashy-ledger/e54b641d5623",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-28T18:04:19+00:00",
+      "kind": "infra",
+      "title": "Gate the directory fragment in CI, in the repository that produces it",
+      "by": [
+        "person/michael"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The estate-wide merge catches contested authority and dangling references, but\nit runs elsewhere and cannot say which repository caused them. This runs here,\non every push, and fails at the point the mistake is made.\n\nscripts/check-directory.mjs is dependency-free on purpose - a validator that\nneeds an install is a validator that gets skipped. It is vendored byte-identical\ninto every repository in the estate; repository-specific values are passed as\n--external flags rather than edited in, so the copies cannot drift.\n\n.github/workflows/directory.yml runs three steps: emit from the charter, check\nthe fragment, then `git diff --exit-code` on the committed fragment. The third\nis the one that matters - a committed fragment differing from a freshly emitted\none means someone edited the JSON instead of the source it comes from.\n\nVerified against six real failure modes, each caught with the right code:\na claim defined twice, a deleted accountability edge, a reference to a node\nnobody emits, an expiry before its assertion, an ownership edge with no\ninstrument, and hand-reordered nodes.\n\nEleven repositories still merge clean: 193 nodes, 182 edges, 100% freshness.",
+      "refs": {
+        "commit": "e54b641d562343cbfcb4239841eb7cb40b994754"
+      },
+      "digest": "51fe67683845f6409713f21df2b50331c1850533c404f9ccd3bcba060d61838a"
+    },
+    {
+      "id": "ship/flashy-ledger/f5ab2e1e89c5",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-28T17:23:52+00:00",
+      "kind": "feature",
+      "title": "Emit this repository's directory fragment",
+      "by": [
+        "person/michael"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Reads flashyos.roles.json and emits the organisation, each declared role as an\nagent, the accountability edge, and the properties this repository operates.\nThe charter and the fragment cannot disagree because the fragment is generated\nfrom the charter.\n\nReferences person/michael rather than defining it - only repo/gord-holdings is\nthe authority for people. Merges clean with the rest of the estate.",
+      "refs": {
+        "commit": "f5ab2e1e89c5ac55020201d32a7b11a214afc915"
+      },
+      "digest": "3ddd5c47f0f57abd9cf4f7c41c5e6cf92c789d554c838cc25b4193e880959656"
+    },
+    {
+      "id": "ship/flashy-ledger/10b71b4156e2",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-27T23:02:42+00:00",
+      "kind": "feature",
+      "title": "Publish with the PAT again; E409 never proved GITHUB_TOKEN could publish",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The registry checks version-existence before it verifies the token, so\nrun 12 reaching E409 proved nothing about auth. Every dispatch since\nthe GITHUB_TOKEN-first flip (0.6.3, 0.8.0) died with the same E401 on\nthe PUT while npm ci in the same runs read the package fine: the token\ncan read but not publish, because the package was created by manual PAT\npublishes and its own access list decides who may PUT new versions.\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01YNESB1KMv7EFEYFFYU5JWY",
+      "refs": {
+        "commit": "10b71b4156e2b8afac02c77e245571e0fe4c3db4"
+      },
+      "digest": "c4a7aa767c9c43a10a4e365a68bb80bf90a78858b2161ec5b975d992658ebeda"
+    },
+    {
+      "id": "ship/flashy-ledger/e52704b9f2c2",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-27T22:13:17+00:00",
+      "kind": "other",
+      "title": "0.8.0 — the Merkle spec becomes the package's, not one repo's",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Ported verbatim from flashy-network's src/lib/merkle.ts. The producer\n(ClaimYour.Gold's nightly anchor) and the verifier (flashynetwork.com)\nmust hash identically or every published root stops verifying; two\ncopies of the same spec is how that failure arrives silently, and one\npackage is how it cannot.\n\nDomain separation, byte-wise id sort and promoted-not-duplicated odd\nnodes are unchanged. Index reads are guarded for this package's\nnoUncheckedIndexedAccess; the pinned-vector tests hard-code the\ncanonical string, a leaf digest and a three-entry root, so any change\nto the bytes fails loudly as the format break it would be.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01YNESB1KMv7EFEYFFYU5JWY",
+      "refs": {
+        "commit": "e52704b9f2c2eca1072cc1172b53eabae8db86af"
+      },
+      "digest": "30097914440e0cbf04e61bd105b1f88b6ac6a320be331ed4b4d7057566e29f3c"
+    },
+    {
+      "id": "ship/flashy-ledger/6af5ee1064e0",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-27T14:14:44+00:00",
+      "kind": "other",
+      "title": "0.7.0 — declare the civilization commodities, and stop XP changing hands",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Two additions, both moving a rule out of prose and into the package.\n\nWHEAT, WOOD, STONE and IRON join the registry. ClaimYour.Gold has\ncarried them as four Asset rows and a hand-written slug map since before\nthis registry existed, which is the exact shape the registry was built\nto end: the same asset declared twice is the same asset until somebody\nedits one of them. Zero decimals is not a display preference — amounts\nare hashed as minor units, so a disagreement there reinterprets every\nhistorical entry.\n\npostTransfer refuses a non-transferable asset class. The asset-class\ncomment has said XP is never convertible since the experience domain\nlanded and nothing checked it; a sentence in a comment and a check in\npostTransfer are not the same artefact, and only one survives a\ncontributor who has not read the comment.\n\nRe-cut from 0.6.0 to 0.7.0: main released an asset registry as 0.6.0\nwhile this was in flight and has since reached 0.6.3.\n\nTwo existing tests needed fixing rather than working around. One used\n'wheat' as its example of an unknown slug — an absence test whose subject\nquietly becomes real stops testing absence. The other built a defineAsset\nfixture called wheat that now shadows a declared asset; it is barley.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01YNESB1KMv7EFEYFFYU5JWY",
+      "refs": {
+        "commit": "6af5ee1064e036fc960a3b71dfa51608626cf097"
+      },
+      "digest": "f747191b9bbd4b701ac26a2c91784c8c15bd2f67d6480d06b5586282b76d91ec"
+    },
+    {
+      "id": "ship/flashy-ledger/37319e039ce7",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-22T13:23:22Z",
+      "kind": "infra",
+      "title": "Point the disclosure route at the domain that serves it",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-09-05",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "SECURITY.md sent researchers to https://flashy.network/security/ and told them\ncorrected issues appear at /incidents/. Neither URL is on the property any more;\nflashynetwork.com is. A disclosure document is the wrong place to be stale —\nsomeone following it is by definition acting in good faith on a schedule, and a\ndead link is how a report goes to nobody.\n\nsecurity@flashy.network is left alone. Whether that mailbox exists at the new\ndomain is an operational fact rather than a branding one, and the failure mode\nof guessing wrong is silent.\n\nINVARIANTS.md's I-3 note updated for the same reason: it cites where the\nreconciliation invariant runs, and a citation nobody can follow is not one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01X8LDnsexvNjSkqc2ihZR7U",
+      "refs": {
+        "commit": "37319e039ce7c7eeb22092630656af84fdbc083b"
+      },
+      "digest": "4b4bbc03490a3c44de36a7999eae2c16792fd4f56ec5633223c081925c29e9f9"
+    },
+    {
+      "id": "ship/flashy-ledger/6aac70903b2d",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-21T15:46:03+00:00",
+      "kind": "other",
+      "title": "0.6.0 — a skill asset cannot change hands",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The asset-class comment has said XP is 'never convertible' since the\nexperience domain landed, and experience.ts states the ledger enforces\nthe half it can see. Nothing did.\n\npostTransfer now rejects any asset whose class is not transferable, and\nproduces no entries when it does. SKILL_XP is the only such class today;\ncurrency, commodities and partner credit still move, because raids and a\nmarketplace need them to.\n\nConsumption is left open on purpose. Whether XP can be spent is a product\ndecision somebody should have to write down; what this forecloses is XP\nchanging hands.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01YNESB1KMv7EFEYFFYU5JWY",
+      "refs": {
+        "commit": "6aac70903b2d57efcc2d97c15c7f51e328016ae0"
+      },
+      "digest": "69681a561cfee792373522c1b1f61800a5c6b95aa4c674c32e08f2791c301d5b"
+    },
+    {
+      "id": "ship/flashy-ledger/dabe8f0f590d",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-21T13:48:37+00:00",
+      "kind": "other",
+      "title": "0.3.0 — experience settles on these books, and XP cannot be given away",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Folds the experience domain in from an unreleased fork that shipped as\n@flashy/ledger@0.2.0: the same version number as this package's 0.2.0\nwith different contents, because it branched before tenant isolation.\nIts consumer only used the pure domain functions, so 0.2.0's breaking\nstore changes do not touch it.\n\nFive SKILL_XP assets at zero decimals, ids pinned by a literal test\nbecause they go into every entry hash. xpIdempotencyKey() puts the key\nconvention in one function so ClaimYour.Gold and Flashy Academy derive\nit identically and the second product to award a lesson collides rather\nthan pays again.\n\npostTransfer now rejects non-transferable classes. The fork carried a\ndoc comment saying the ledger enforced the XP/currency separation while\nno code did; skill assets moving between identities is a market in\nstatus, which is a currency by another name.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01YNESB1KMv7EFEYFFYU5JWY",
+      "refs": {
+        "commit": "dabe8f0f590d0c7253b59bffb97140e5ec096ddb"
+      },
+      "digest": "c404de0545b412baece980bf4fea566b783783bbd1d4ef4635b377a7e7e59a45"
+    },
+    {
+      "id": "ship/flashy-ledger/cd236f379dc5",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-20T12:58:37+00:00",
+      "kind": "infra",
+      "title": "Align the package name across docs, and backfill the released versions",
+      "by": [
+        "person/michael",
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "main renamed the package to @flashylabs/ledger in package.json only, so the\nREADME and the entry-point docblock still told a reader to install a scope that\ndoes not exist. Anyone copy-pasting the install line got nothing.\n\nThe changelog also claimed 0.1.0 was the first tagged release, which was true\nwhen this branch was cut and stopped being true while it was open — v0.1.0,\nv0.1.1 and v0.1.2 are all published. Backfilled from the commits on main so the\n0.2.0 entry sits on an accurate history rather than an invented one.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01X8LDnsexvNjSkqc2ihZR7U",
+      "refs": {
+        "commit": "cd236f379dc5e3d317254a5c1ac3167344803a55"
+      },
+      "digest": "211da210006f213e818c63fa8c753a5aefb81f2f924a903468add3e63174ba72"
+    },
+    {
+      "id": "ship/flashy-ledger/274729d182d7",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-20T12:56:47+00:00",
+      "kind": "infra",
+      "title": "Drop the release workflow; main already publishes via publish.yml",
+      "by": [
+        "person/michael"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "refs": {
+        "commit": "274729d182d7ed2c6779e56858a360ced5d25562"
+      },
+      "digest": "1544a1f687485423c307921ab5ff8d772cd50a63a1b55648dc2860851da999ff"
+    },
+    {
+      "id": "ship/flashy-ledger/9480b7ccd5ac",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-20T12:54:38+00:00",
+      "kind": "infra",
+      "title": "Make tenancy a boundary instead of a label",
+      "by": [
+        "person/michael",
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "tenantId was written onto every asset and every entry — the comment above it\nalready read \"which network's books this asset belongs to\" — and used in no\nquery, no index and no type signature. With one tenant that is harmless. With\ntwo it is three money bugs, and two of them are unique indexes on a collection\nthat would by then hold production entries.\n\nThe worst was idempotency. Keys derive from source events; this package's own\nexample is quest:q_9:identity_1, so two networks running similar mechanics\ncollide by construction. Globally scoped, a second tenant's legitimate award\nfound the first tenant's entry and returned it as a successful deduplication —\na lost award and a cross-tenant disclosure in the same code path, reporting\nsuccess. The chain-head constraint had the same shape: two tenants' first\nentries for one identity both carry previousHash null, and the second was\nrefused as a duplicate. And reads folded across tenants, so a balance became\nthe sum of two networks' books.\n\nReads now take a scope object rather than positional strings. Three same-typed\nparameters are transposable and this one decides whose money you are looking at,\nso AccountRef and HistoryRef make the tenant impossible to omit and impossible\nto put in the wrong slot. There is no overload without one.\n\nensureIndexes() drops the pre-0.2 indexes by name before creating the scoped\nones. This is the part that would otherwise have been missed: a surviving\nuniq_idempotency still rejects a second tenant's legitimate write even though\nthe new index permits it, so creating the new indexes without removing the old\nwould look like a migration and behave like none.\n\nSix isolation cases in the conformance suite, run against every adapter —\nisolation is a property of the port, and a reference implementation that\nisolates while the database adapter does not is worse than neither doing it.\nFour of the six were verified to fail against the pre-fix implementation by\nreverting the change and watching them go r",
+      "refs": {
+        "commit": "9480b7ccd5acf31a1dfcbf5cdc1bb90c9eba32e4"
+      },
+      "digest": "cf0544e846b58e85658367739b63aa6a2c41340def44f07bdbd57df826cd525b"
+    },
+    {
+      "id": "ship/flashy-ledger/a558791e8638",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-19T16:43:01+00:00",
+      "kind": "infra",
+      "title": "rename scope to @flashylabs to match the GitHub account",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "Every publish attempt so far has failed on the actual npm publish step,\neven with a correctly-scoped PACKAGES_TOKEN (repo + write:packages).\nGitHub Packages requires the npm scope to exactly match the GitHub\naccount that owns the repo — this repo is under FlashyLabs, not flashy,\nso @flashy/ledger could never resolve to a real installation. Testing\nthe fix on this package alone before renaming @flashy/identity and\nanything downstream.",
+      "refs": {
+        "commit": "a558791e863835d5e0cd3332c7553ca1a946442b"
+      },
+      "digest": "8c731c970f842bb6ce512a33fdc08105308a7339238afd8c70a22d8efda75087"
+    },
+    {
+      "id": "ship/flashy-ledger/74a2b5c30888",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-19T16:03:24+00:00",
+      "kind": "infra",
+      "title": "Bump @flashy/ledger to 0.1.1 to cut a clean release tag",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "v0.1.0 was tagged before the PACKAGES_TOKEN publish fix existed, and\nmoving that tag over an unreliable connection kept failing silently.\nA fresh version+tag avoids re-pushing over an existing ref.",
+      "refs": {
+        "commit": "74a2b5c30888f9c583efc4bf31d9c7194a35574b"
+      },
+      "digest": "29ec4887fe7ed36631458bdba53e656e563f6d0729f94b3c95c9c618f2e99f80"
+    },
+    {
+      "id": "ship/flashy-ledger/fc2dfefe3e53",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-19T16:02:27+00:00",
+      "kind": "release",
+      "title": "CUT-1: publish with a PAT instead of GITHUB_TOKEN",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "GITHUB_TOKEN's Packages authorization was returning 403 'The requested\ninstallation does not exist' on every publish attempt, identically on\nthis repo and on flashy-contracts, despite an otherwise correct\nworkflow. Switching NODE_AUTH_TOKEN to a classic PAT (PACKAGES_TOKEN\nsecret, write:packages scope) to get past it.",
+      "refs": {
+        "commit": "fc2dfefe3e53dd1f757af3b914cde73770a4b4e1"
+      },
+      "digest": "78ea851a2c039a363e1328d7830522c4d115f618149acb3f6dd5811fd9ca3fa5"
+    },
+    {
+      "id": "ship/flashy-ledger/5fda67f0cc8d",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-19T13:54:35+00:00",
+      "kind": "release",
+      "title": "CUT-1: automate publishing @flashy/ledger to GitHub Packages",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The package itself was already publish-ready — package.json already had\nthe right name, publishConfig (npm.pkg.github.com, restricted access),\nand repository field. What was missing was any way to actually run\n`npm publish` without someone doing it by hand from a machine with a\npersonal GH Packages token.\n\nTag-triggered (push a v0.1.0-shaped tag), not push-to-main-triggered —\na merge shouldn't be indistinguishable from a release. Uses the\nworkflow's own GITHUB_TOKEN with an explicit packages: write\npermission rather than a manually-created NPM_TOKEN secret — nothing\nto provision, rotate, or leak. Verifies the tag matches package.json's\nversion before publishing, so a forgotten version bump fails the job\ninstead of shipping under the wrong version number.\n\nThis is CUT-2's actual prerequisite: flashygoldams currently vendors\nthis package's build output into vendor/flashy-ledger specifically\nbecause it isn't published anywhere reachable. Once a tag is pushed\nand this runs once, that vendoring (and flashy-network's separate\ngithub:-URL + Vercel GIT_CREDENTIALS workaround) can be retired.",
+      "refs": {
+        "commit": "5fda67f0cc8de603bd7fe9d62e2ec198fac86a02"
+      },
+      "digest": "ed2f9265b25b1afb28de67634720df6822b39c21c51d7121698e81a2959e1d6d"
+    },
+    {
+      "id": "ship/flashy-ledger/d28b7eab1396",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-14T22:57:32+00:00",
+      "kind": "feature",
+      "title": "Ship a CommonJS build alongside the ESM one",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "ClaimYour.Gold runs Jest with ts-jest, which transforms .ts and leaves .js\nin node_modules alone. An ESM-only package therefore fails at parse time\nwith \"Unexpected token 'export'\" pointing at the importing test file, not\nat the package — and relaxing transformIgnorePatterns does not help,\nbecause ts-jest has no .js transform to apply.\n\nWidening the peer range let the package install; this is what lets it be\nused. Both were blocking the same consumer.\n\ndist-cjs gets its own package.json declaring \"type\": \"commonjs\". The root\ndeclares \"type\": \"module\", which applies to every .js beneath it, so Node\nwould otherwise load the CommonJS output as ESM and fail with \"exports is\nnot defined\" — a message that reads like a bug in the package rather than a\nbuild configuration problem. The alternative was renaming every emitted\nfile to .cjs and rewriting its internal requires.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_019pUgSYP9uuYUPC3BJUmCxo",
+      "refs": {
+        "commit": "d28b7eab1396e79824e5ed1ab8462283920477d3"
+      },
+      "digest": "e8e4ee08b73dc7bd21f18b315dc33cf9e1367f8ace5f9609dc12d640dbc03a5a"
+    },
+    {
+      "id": "ship/flashy-ledger/449b0d724fa6",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-14T22:51:44+00:00",
+      "kind": "infra",
+      "title": "Accept mongodb 7, and make the peer optional",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "ClaimYour.Gold is on mongodb 7 and this package peered on ^6.21.0, so the\ninstall failed outright — the first real consumer could not take the\ndependency at all.\n\nThe range now spans both majors because the adapters use only driver APIs\nthat did not change between them: collection, createIndex, insertOne,\nfindOne, find/sort/limit/toArray, startSession, withTransaction,\nendSession. Checked rather than assumed. The alternative on the consumer\nside was --legacy-peer-deps, which silences every peer conflict in the tree\ninstead of the one that was actually understood.\n\nOptional, because the domain imports no driver at all. post, postTransfer,\nhashEntry, verifyChain and the money helpers are pure. A consumer that\nwants the rules and brings its own storage should not have to install a\ndatabase driver to get them — which is precisely ClaimYour.Gold's case: it\ncomputes hash chains with this package and writes through Prisma.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_019pUgSYP9uuYUPC3BJUmCxo",
+      "refs": {
+        "commit": "449b0d724fa6000553ca7c28c2a6e99ab697e72f"
+      },
+      "digest": "23daefbd930f15586b34d1533fa4547843e0b3fd9a1894afe8a868c5e7a20739"
+    },
+    {
+      "id": "ship/flashy-ledger/329884999fd5",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-14T20:09:36+00:00",
+      "kind": "other",
+      "title": "Type the test's index access instead of destructuring it",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "noUncheckedIndexedAccess is on, and `const [entry] = ...` hides a possibly\nundefined behind an assertion failure on a property of undefined. The\nhelper fails with a message that says what actually went wrong.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_019pUgSYP9uuYUPC3BJUmCxo",
+      "refs": {
+        "commit": "329884999fd59c25e6675eddd087bb0c52edecc5"
+      },
+      "digest": "da7726009952e5aea65de56a509ad9d6fcbccfc37a5bceff6e88fc674c4163d4"
+    },
+    {
+      "id": "ship/flashy-ledger/c448f23a2620",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-14T20:03:16+00:00",
+      "kind": "feature",
+      "title": "Add a read-only reader over ClaimYour.Gold's existing ledger",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "MongoLedgerStore writes this package's own format: hash-chained entries in\nledger_entries, integer minor units. ClaimYour.Gold's live ledger is not\nin that format — gold_ledger has floating-point amounts, no chain, and a\ndifferent column set, holding years of real money. The two cannot be\nswapped by changing a connection string.\n\nThe decision taken was to chain forward: new entries adopt the chained\nformat from a marked cutover; historical rows keep their shape and do not\nclaim a tamper-evidence they never had. This is the first half — anything\nbuilt on the LedgerStore port can read the live ledger today, with no\nmigration and no second query language.\n\nIt deliberately has no append, so it is not a LedgerStore. postEntry stays\nthe only writer of gold_ledger while both formats coexist, and a consumer\nthat tries to write fails to compile rather than at runtime against money.\n\nheadHash is always null. Inventing one would look like tamper-evidence to\nevery caller while proving nothing.\n\nThe float-to-minor conversion rounds rather than truncates: 12.34 in a\nfloat column reads back as 12.339999999999998, and truncating loses a\nwhole minor unit per entry, always in the same direction.\n\nverifyBalance answers the question nobody has been able to answer against\nproduction data — whether wallet.goldBalance still equals the ledger.\n\n13 tests against a fake collection, 100% line coverage. 55 tests total.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_019pUgSYP9uuYUPC3BJUmCxo",
+      "refs": {
+        "commit": "c448f23a2620af52e38ad7a9a433465ae5a4af37"
+      },
+      "digest": "e674bd1a99aeccb095b39bda0a72e654ef44f1a03adf44119b3edc4e420ddda6"
+    },
+    {
+      "id": "ship/flashy-ledger/a1b2dd56a8e5",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-14T18:50:09+00:00",
+      "kind": "infra",
+      "title": "Make the package installable",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "private:true meant no repo could depend on this even in principle, which\nis the actual reason \"wire the consumers\" never started — the blocker was\ndistribution, not code.\n\n`prepare` matters more than it looks: npm runs it after installing from a\ngit URL, so dist/ gets built on the consumer's machine. Without it the\ninstall succeeds and every import fails at runtime, a long way from the\ncause.\n\npublishConfig points at GitHub Packages for when a token exists. Git\ndependencies work today with none.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_019pUgSYP9uuYUPC3BJUmCxo",
+      "refs": {
+        "commit": "a1b2dd56a8e53716b1a3ae7ed8f27e837c337f1e"
+      },
+      "digest": "adb807fdff1794020b1c77dadc1edcd9c2802d0c83b1629303624eec92b5871f"
+    },
+    {
+      "id": "ship/flashy-ledger/36e3944e091b",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-13T18:30:41+00:00",
+      "kind": "feature",
+      "title": "Add the MongoDB adapter, and a conformance suite that proves it interchangeable",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "The single largest gap in this package: LedgerStore had one implementation and\nit was in-memory, so nothing could run against real data.\n\nWHAT THE DATABASE ENFORCES, RATHER THAN THIS FILE\n\nThree of the port's guarantees are indexes, not code, because code here runs\nonce per process and an index runs on every write from every process forever:\n\n  - idempotencyKey is unique, so a replay cannot become a second entry even\n    when two processes race the same key at the same instant;\n  - (identityId, assetId, previousHash) is unique, which is what stops two\n    concurrent appends both building on the same chain head and silently\n    forking history. It does not need to be partial: identityId and assetId\n    are in the key, so \"one entry with no predecessor\" is scoped per chain\n    rather than one null across the collection;\n  - nothing updates or deletes, because no code path here issues either.\n\nappendAll refuses a multi-entry batch when constructed without a MongoClient,\nrather than writing a transfer half-way. Sessions need the client, and a torn\ntransfer is worse than a loud failure. Results are rebuilt inside the\ntransaction callback because withTransaction may retry it, and results from an\naborted attempt are not real.\n\nAmounts are stored as strings and converted only at this boundary. Minor units\nare integers that can outgrow a double over a long-lived ledger, and the domain\nnever sees a Mongo type.\n\nTHE CONFORMANCE SUITE\n\ntests/conformance.test.ts runs the identical suite against every adapter. The\nport is the seam the whole migration story rests on — a document database today,\na chain-backed store later, with the domain indifferent. \"Indifferent\" was an\nintention; this makes it a build failure.\n\nIt skips Mongo unless MONGO_URL is set, so a laptop with no database still gets\nthe in-memory pass. CI provides one as a SINGLE-NODE REPLICA SET rather than a\nstandalone: sessions require a replica set, and a standalone would pass every\ntest here except the transfer ones ",
+      "refs": {
+        "commit": "36e3944e091b38a4f1a453a41046463d22181b1d"
+      },
+      "digest": "dc2effada01d7bbbad7129fbf92c97f16645cdae4608fed0209dd020c6f5b2ae"
+    },
+    {
+      "id": "ship/flashy-ledger/a18cfaddd5c5",
+      "repo": "repo/flashy-ledger",
+      "at": "2026-08-12T04:45:54+00:00",
+      "kind": "infra",
+      "title": "Initial ledger: pure domain, storage behind a port",
+      "by": [
+        "agent/claude"
+      ],
+      "asserted": "2026-08-30",
+      "assertedBy": "agent/flashy-ledger-ci",
+      "visibility": "public",
+      "detail": "An append-only, multi-asset settlement ledger. Flashy Gold is the first\nasset on it rather than the thing itself; ore, stone and wheat are\nconfiguration records, not new code paths.\n\nEvery design choice here answers a defect found in the predecessor's\nproduction data:\n\n  - Amounts are signed integers in minor units, because Float columns\n    drift and 185 rows carried a sign that contradicted their own balance\n    movement.\n  - Transfers are two entries, because gifts and tips moved both wallets\n    while writing nothing on either side.\n  - Entries are append-only and content-hashed into a per-identity chain,\n    because history you can edit is not evidence.\n  - Writes are idempotent under a stable key, because retries are constant\n    at scale and a double award is unrecoverable.\n\nThe domain is pure — no database, clock or randomness — and a lint rule\nfails the build if that slips. All persistence sits behind LedgerStore,\nwhich is the only thing a move onto different infrastructure, including a\nchain, would have to reimplement.\n\n32 tests, 99% coverage with the gate failing the build below threshold,\nstrict type-checked lint, and three ADRs recording why.\n\nCo-Authored-By: Claude Fable 5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_019pUgSYP9uuYUPC3BJUmCxo",
+      "refs": {
+        "commit": "a18cfaddd5c537965720aae0f5960c3d1fc59747"
+      },
+      "digest": "6e41cd6daf94d31eae19e445527f0f46a8c2f4d110c0240c034774c1e15b9988"
+    }
+  ]
+}

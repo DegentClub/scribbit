@@ -22,6 +22,7 @@
 /platform/identity/                               @DegentClub/team-platform
 /platform/inscription/                            @DegentClub/team-platform
 /platform/ledger/                                 @DegentClub/team-platform
+/platform/mesh/                                   @DegentClub/team-platform
 /platform/notify/                                 @DegentClub/team-platform
 /platform/signer/                                 @DegentClub/team-platform
 /platform/wallet-kit/                             @DegentClub/team-platform

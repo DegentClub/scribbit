@@ -11,6 +11,7 @@ Start from [`template.md`](template.md).
 | [0003](0003-machine-readable-catalog.md) | Machine-readable component catalog | Accepted |
 | [0004](0004-repo-split.md) | Three repositories under DegentClub, platform pinned as a submodule | Accepted |
 | [0009](0009-ledger-payees-and-psbt-payments.md) | Ledger payees, the `psbt` payment method and payout records | Accepted |
+| [0010](0010-mesh-accountability-layer.md) | The mesh accountability layer: FlashyOS AAO formats implemented in the platform, published per organisation | Accepted |
 
 Infrastructure decisions (fleet, networking, secrets, Fleet API) live in the `infra` repository's own ADR series
 and are cited as `infra ADR-NNN`.

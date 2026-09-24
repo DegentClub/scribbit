@@ -12,6 +12,8 @@
     "catalog": "pnpm --filter @bsh/catalog-tool run catalog",
     "validate": "pnpm --filter @bsh/catalog-tool run validate",
     "lint:boundaries": "pnpm --filter @bsh/catalog-tool run boundaries",
+    "mesh:check": "node platform/mesh/bin/mesh.mjs check flashy",
+    "mesh:emit": "node platform/mesh/bin/mesh.mjs emit flashy",
     "check": "pnpm validate && pnpm lint:boundaries && pnpm typecheck && pnpm test"
   },
   "devDependencies": {

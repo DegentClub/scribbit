@@ -40,11 +40,22 @@ jobs:
       - name: Enforce import boundaries
         run: pnpm lint:boundaries
 
+      # flashy/public/** (the FlashyOS well-known files this repo publishes) is generated from
+      # flashy/charter.json, frontdoor.config.json and directory.config.json by @bsh/mesh. A diff
+      # after re-emitting means someone edited the output instead of its source.
+      - name: FlashyOS well-known files are generated from their sources
+        run: |
+          pnpm mesh:emit
+          git diff --exit-code -- flashy/
+
+      - name: FlashyOS well-known files conform
+        run: pnpm mesh:check
+
       - name: Catalog is up to date
         run: pnpm catalog --check
 
       - name: CODEOWNERS is up to date
-        run: pnpm --filter @bsh/catalog-tool run codeowners --check
+        run: pnpm --filter @bsh/catalog-tool run codeowners --check -- --org DegentClub
 
       - name: No breaking OpenAPI changes (oasdiff)
         if: github.event_name == 'pull_request'
