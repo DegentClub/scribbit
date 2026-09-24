@@ -23,6 +23,15 @@ Humans start here; agents start at [`AGENTS.md`](AGENTS.md) / [`CLAUDE.md`](CLAU
 fleet), chain nodes, data pipelines and forks live in separate repositories; see
 [ADR-0001](docs/adr/0001-monorepo-structure.md).
 
+## Live demo
+
+The scribb.it mint app in demo mode (simulated wallets, node and chain; the transaction maths and signatures are
+real; no bitcoin moves and the page makes no third-party requests):
+**https://degentclub.github.io/scribbit/** (once Pages is enabled). It is built and deployed by
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml), which stays idle until the owner sets
+Settings → Pages → Source to "GitHub Actions" and the repository variable `PAGES_ENABLED=true`.
+Locally: `VITE_DEMO_DEFAULT=1 pnpm --filter @bsh/scribbit-mint exec vite build --base /scribbit/`.
+
 ## Quickstart
 
 ```bash

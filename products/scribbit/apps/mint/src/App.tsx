@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { AppConfig } from './config';
-import { networkLabel } from './config';
+import { networkLabel, withBase } from './config';
 import type { Services } from './services/types';
 import { browserStore, type KeyValueStore } from './lib/pending';
 import { OrdinalsPage } from './pages/OrdinalsPage';
@@ -35,7 +35,7 @@ export function App({ app, services, store = browserStore(), initialRoute }: App
   const go = (r: Route) => (e: React.MouseEvent) => {
     e.preventDefault();
     try {
-      history.pushState(null, '', `${r}${location.search}`);
+      history.pushState(null, '', `${withBase(app.base, r)}${location.search}`);
     } catch {
       /* jsdom / sandbox */
     }
@@ -54,17 +54,17 @@ export function App({ app, services, store = browserStore(), initialRoute }: App
         </div>
       ) : null}
       <header className="header">
-        <a className="brand" href="/" onClick={go('/')}>
+        <a className="brand" href={withBase(app.base, '/')} onClick={go('/')}>
           <span className="brand__mark">
             scribb<span className="brand__dot">.</span>it
           </span>
           <span className="brand__tag">write to Bitcoin</span>
         </a>
         <nav className="nav" aria-label="Main">
-          <a href="/ordinals" aria-current={route === '/ordinals' ? 'page' : undefined} onClick={go('/ordinals')}>
+          <a href={withBase(app.base, '/ordinals')} aria-current={route === '/ordinals' ? 'page' : undefined} onClick={go('/ordinals')}>
             /ordinals
           </a>
-          <a href="/counters" aria-current={route === '/counters' ? 'page' : undefined} onClick={go('/counters')}>
+          <a href={withBase(app.base, '/counters')} aria-current={route === '/counters' ? 'page' : undefined} onClick={go('/counters')}>
             /counters
           </a>
         </nav>
@@ -106,12 +106,12 @@ export function App({ app, services, store = browserStore(), initialRoute }: App
               <p className="lede">Put a file on Bitcoin, byte for byte. You see the exact bytes, weight and cost first; your wallet signs every transaction; this site never holds a key and nothing is custodial.</p>
             </header>
             <div className="home-cards">
-              <a className="card home-card" href="/ordinals" onClick={go('/ordinals')}>
+              <a className="card home-card" href={withBase(app.base, '/ordinals')} onClick={go('/ordinals')}>
                 <p className="card__kicker">/ordinals</p>
                 <h2>Inscribe anything</h2>
                 <p>Any file or text as an Ordinals inscription: images, HTML, audio, a poem. One file or a batch.</p>
               </a>
-              <a className="card home-card" href="/counters" onClick={go('/counters')}>
+              <a className="card home-card" href={withBase(app.base, '/counters')} onClick={go('/counters')}>
                 <p className="card__kicker">/counters</p>
                 <h2>Mint a Bitcoin Counter</h2>
                 <p>A Counterparty asset whose description is the file itself, numbered forever. Counter, reinscription or an XCP-69 fair launch.</p>

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { readConfig } from '../src/config';
+import { readConfig, withBase } from '../src/config';
 import { createDemoServices } from '../src/services';
 import { loadPendingCounters, loadPendingOrdinals } from '../src/lib/pending';
 import { routeOf } from '../src/App';
@@ -23,6 +23,28 @@ describe('config and routing', () => {
     expect(routeOf('/ordinals/')).toBe('/ordinals');
     expect(routeOf('/counters')).toBe('/counters');
     expect(routeOf('/x')).toBe('/');
+  });
+
+  it('VITE_DEMO_DEFAULT=1 (the GitHub Pages build) makes demo the default; ?demo=0 still reaches live', () => {
+    expect(readConfig({ VITE_DEMO_DEFAULT: '1' }, '').demo).toBe(true);
+    expect(readConfig({ VITE_DEMO_DEFAULT: 'true' }, '?network=signet').demo).toBe(true);
+    expect(readConfig({ VITE_DEMO_DEFAULT: '1' }, '?demo=0').demo).toBe(false);
+    expect(readConfig({ VITE_DEMO_DEFAULT: '0' }, '').demo).toBe(false);
+    expect(readConfig({}, '?demo=false').demo).toBe(false);
+  });
+
+  it('serves under a sub-path base (GitHub Pages /scribbit/): links and routes keep the prefix', async () => {
+    expect(readConfig({ BASE_URL: '/scribbit/' }, '').base).toBe('/scribbit/');
+    expect(readConfig({ BASE_URL: '/scribbit' }, '').base).toBe('/scribbit/');
+    expect(readConfig({}, '').base).toBe('/');
+    expect(withBase('/scribbit/', '/ordinals')).toBe('/scribbit/ordinals');
+    expect(withBase('/scribbit/', '/')).toBe('/scribbit/');
+    expect(withBase(undefined, '/counters')).toBe('/counters');
+    expect(routeOf('/scribbit/ordinals')).toBe('/ordinals');
+    expect(routeOf('/scribbit/')).toBe('/');
+    renderApp(fakes(), { app: testApp({ base: '/scribbit/' }) });
+    expect(screen.getAllByRole('link', { name: /\/ordinals/ })[0]).toHaveAttribute('href', '/scribbit/ordinals');
+    expect(screen.getByRole('link', { name: /write to Bitcoin/i })).toHaveAttribute('href', '/scribbit/');
   });
 
   it('home links to both pages and shows the demo ribbon', async () => {

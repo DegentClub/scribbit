@@ -115,6 +115,11 @@ stored. (`@bsh/scribbit-counters` also supports counters.fun's mint-generated `n
 | `VITE_COUNTERS_GALLERY_URL`, `VITE_COUNTERS_FUN_URL` | counters.gallery, counters.fun | Receipt links |
 | `VITE_SLIPSTREAM_URL` | slipstream.mara.com | Link for over-cap reveals |
 | `VITE_POLL_MS` | 5000 (800 in demo) | Commit status / content polling |
+| `VITE_DEMO_DEFAULT` | unset | `1`: demo mode without `?demo=1` (`?demo=0` still reaches live) and no Google Fonts links, so the page makes no third-party requests. Used by the GitHub Pages build |
+
+Sub-path hosting: build with `vite build --base /scribbit/`; links and `history.pushState` keep the prefix
+(`AppConfig.base`, from Vite's `BASE_URL`). Static hosts need an SPA fallback (`cp dist/index.html dist/404.html`
+on GitHub Pages).
 
 ## Demo mode (`?demo=1`)
 

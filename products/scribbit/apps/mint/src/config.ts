@@ -18,6 +18,11 @@ export interface AppConfig {
   demo: boolean;
   /** Networks the header switch offers (VITE_NETWORKS; demo: all three public ones). */
   networks: Network[];
+  /**
+   * Path the app is served under, always ending in `/` (Vite's `BASE_URL`: `/` normally, `/scribbit/` on
+   * GitHub Pages). Optional so hand-built configs in tests default to `/`.
+   */
+  base?: string;
 }
 
 const NETWORKS: readonly Network[] = ['mainnet', 'testnet', 'signet', 'regtest'];
@@ -60,13 +65,17 @@ export interface EnvLike {
   VITE_SLIPSTREAM_URL?: string;
   VITE_POLL_MS?: string;
   VITE_NETWORKS?: string;
+  /** `1`: demo mode unless the URL says `?demo=0` (the static GitHub Pages build has no server behind it). */
+  VITE_DEMO_DEFAULT?: string;
+  /** Set by Vite from `--base`. */
+  BASE_URL?: string;
   /** Per-network API bases: VITE_MINT_API_URL_MAINNET / _TESTNET / _SIGNET / _REGTEST. */
   [key: string]: string | undefined;
 }
 
 export function readConfig(env: EnvLike, search: string): AppConfig {
   const params = new URLSearchParams(search);
-  const demo = params.get('demo') === '1' || params.get('demo') === 'true';
+  const demo = demoFlag(params.get('demo'), env.VITE_DEMO_DEFAULT);
   const rawNet = (env.VITE_NETWORK ?? 'mainnet') as Network;
   const base: Network = NETWORKS.includes(rawNet) ? rawNet : 'mainnet';
   const listed = (env.VITE_NETWORKS ?? '').split(',').map((s) => s.trim()).filter((s): s is Network => NETWORKS.includes(s as Network));
@@ -86,7 +95,30 @@ export function readConfig(env: EnvLike, search: string): AppConfig {
     pollIntervalMs: Number.isFinite(poll) && poll > 0 ? poll : demo ? 800 : 5000,
     demo,
     networks,
+    base: normalizeBase(env.BASE_URL),
   };
+}
+
+const TRUE = new Set(['1', 'true']);
+const FALSE = new Set(['0', 'false']);
+
+/** `?demo=1|true` forces demo, `?demo=0|false` forces live, otherwise `VITE_DEMO_DEFAULT` decides (default: live). */
+export function demoFlag(param: string | null, envDefault: string | undefined): boolean {
+  if (param !== null && TRUE.has(param)) return true;
+  if (param !== null && FALSE.has(param)) return false;
+  return TRUE.has((envDefault ?? '').trim().toLowerCase());
+}
+
+/** `''`, `'./'`, `'/x'` → `/`, `/`, `/x/`: an absolute path prefix that ends in a slash. */
+export function normalizeBase(base: string | undefined): string {
+  const b = (base ?? '/').trim();
+  if (!b.startsWith('/')) return '/';
+  return b.endsWith('/') ? b : `${b}/`;
+}
+
+/** An app route (`/`, `/ordinals`) as a URL path under `base`. */
+export function withBase(base: string | undefined, route: string): string {
+  return `${normalizeBase(base)}${route.replace(/^\/+/, '')}`;
 }
 
 /** Human labels. `testnet` means testnet4 everywhere in this app. */
