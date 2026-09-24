@@ -1,5 +1,5 @@
 import { ConcurrencyError, LedgerError } from '../domain/errors.js';
-import type { Order, PaymentIntent, PaymentStatus, Refund } from '../domain/types.js';
+import type { Order, PayeeKind, PaymentIntent, PaymentStatus, Payout, Product, Refund } from '../domain/types.js';
 import type { IdempotencyRecord, OrderStore } from './order-store.js';
 
 const clone = <T>(v: T): T => structuredClone(v);
@@ -9,6 +9,7 @@ export class MemoryOrderStore implements OrderStore {
   private readonly orders = new Map<string, Order>();
   private readonly payments = new Map<string, PaymentIntent>();
   private readonly refunds = new Map<string, Refund>();
+  private readonly payouts = new Map<string, Payout>();
   private readonly idem = new Map<string, IdempotencyRecord>();
   private readonly deliveries = new Set<string>();
   private readonly indexes = new Map<string, number>();
@@ -76,6 +77,10 @@ export class MemoryOrderStore implements OrderStore {
     return p && clone(p);
   }
 
+  async findPaymentsByTxid(txid: string): Promise<PaymentIntent[]> {
+    return [...this.payments.values()].filter((p) => p.txid === txid).sort(byCreated).map(clone);
+  }
+
   async createRefund(refund: Refund, idem?: IdempotencyRecord): Promise<void> {
     if (this.refunds.has(refund.id)) throw new LedgerError(409, 'duplicate_id', `refund ${refund.id} exists`);
     this.putIdem(idem);
@@ -88,9 +93,12 @@ export class MemoryOrderStore implements OrderStore {
   }
 
   async updateRefund(refund: Refund): Promise<Refund> {
-    if (!this.refunds.has(refund.id)) throw new LedgerError(404, 'not_found', `refund ${refund.id} not found`);
-    this.refunds.set(refund.id, clone(refund));
-    return clone(refund);
+    const cur = this.refunds.get(refund.id);
+    if (!cur) throw new LedgerError(404, 'not_found', `refund ${refund.id} not found`);
+    if (cur.version !== refund.version) throw new ConcurrencyError('refund', refund.id);
+    const next = clone({ ...refund, version: refund.version + 1 });
+    this.refunds.set(refund.id, next);
+    return clone(next);
   }
 
   async listRefundsByPayment(paymentId: string): Promise<Refund[]> {
@@ -99,6 +107,44 @@ export class MemoryOrderStore implements OrderStore {
 
   async listRefundsByOrder(orderId: string): Promise<Refund[]> {
     return [...this.refunds.values()].filter((r) => r.orderId === orderId).sort(byCreated).map(clone);
+  }
+
+  async createPayout(payout: Payout): Promise<void> {
+    if (this.payouts.has(payout.id)) throw new LedgerError(409, 'duplicate_id', `payout ${payout.id} exists`);
+    for (const p of this.payouts.values())
+      if (p.paymentId === payout.paymentId && p.txid === payout.txid && p.vout === payout.vout)
+        throw new LedgerError(409, 'duplicate_payout', `payout for ${payout.txid}:${payout.vout} on ${payout.paymentId} already recorded`);
+    this.payouts.set(payout.id, clone(payout));
+  }
+
+  async getPayout(id: string): Promise<Payout | undefined> {
+    const p = this.payouts.get(id);
+    return p && clone(p);
+  }
+
+  async updatePayout(payout: Payout): Promise<Payout> {
+    const cur = this.payouts.get(payout.id);
+    if (!cur) throw new LedgerError(404, 'not_found', `payout ${payout.id} not found`);
+    if (cur.version !== payout.version) throw new ConcurrencyError('payout', payout.id);
+    const next = clone({ ...payout, version: payout.version + 1 });
+    this.payouts.set(payout.id, next);
+    return clone(next);
+  }
+
+  async listPayoutsByOrder(orderId: string): Promise<Payout[]> {
+    return [...this.payouts.values()].filter((p) => p.orderId === orderId).sort(byCreated).map(clone);
+  }
+
+  async listPayoutsByPayment(paymentId: string): Promise<Payout[]> {
+    return [...this.payouts.values()].filter((p) => p.paymentId === paymentId).sort(byCreated).map(clone);
+  }
+
+  async listPayoutsByPayee(ref: string, filter: { product?: Product; kind?: PayeeKind } = {}, limit = 1000): Promise<Payout[]> {
+    return [...this.payouts.values()]
+      .filter((p) => p.payee.ref === ref && (!filter.product || p.product === filter.product) && (!filter.kind || p.payee.kind === filter.kind))
+      .sort(byCreated)
+      .slice(0, limit)
+      .map(clone);
   }
 
   async findIdempotency(scope: string, key: string): Promise<IdempotencyRecord | undefined> {

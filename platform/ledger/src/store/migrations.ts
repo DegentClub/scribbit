@@ -91,4 +91,67 @@ CREATE TABLE address_indexes (
 );
 `,
   },
+  {
+    // 1.1: payees on line items (JSON blob in orders.line_items: no schema change), method 'psbt', refund
+    // versions, payout records. Applied with foreign keys OFF (see SqliteOrderStore.migrate) because the
+    // payments CHECK constraint can only be widened by rebuilding the table.
+    id: '0002_psbt_payees_payouts',
+    sql: `
+ALTER TABLE refunds ADD COLUMN version INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE payments_v2 (
+  id               TEXT PRIMARY KEY,
+  order_id         TEXT NOT NULL REFERENCES orders(id),
+  product          TEXT NOT NULL,
+  method           TEXT NOT NULL CHECK (method IN ('onchain','lightning','card','psbt')),
+  provider         TEXT NOT NULL,
+  provider_ref     TEXT NOT NULL,
+  amount_sats      INTEGER NOT NULL CHECK (amount_sats >= 0),
+  amount_paid_sats INTEGER NOT NULL DEFAULT 0 CHECK (amount_paid_sats >= 0),
+  refunded_sats    INTEGER NOT NULL DEFAULT 0 CHECK (refunded_sats >= 0),
+  status           TEXT NOT NULL CHECK (status IN ('created','pending','paid','underpaid','overpaid','expired','failed','refunded')),
+  checkout         TEXT NOT NULL DEFAULT '{}',
+  expires_at       TEXT,
+  paid_at          TEXT,
+  txid             TEXT,
+  preimage         TEXT,
+  provider_data    TEXT NOT NULL DEFAULT '{}',
+  version          INTEGER NOT NULL DEFAULT 0,
+  created_at       TEXT NOT NULL,
+  updated_at       TEXT NOT NULL,
+  UNIQUE (provider, provider_ref)
+);
+INSERT INTO payments_v2 (id, order_id, product, method, provider, provider_ref, amount_sats, amount_paid_sats, refunded_sats, status, checkout,
+  expires_at, paid_at, txid, preimage, provider_data, version, created_at, updated_at)
+  SELECT id, order_id, product, method, provider, provider_ref, amount_sats, amount_paid_sats, refunded_sats, status, checkout,
+  expires_at, paid_at, txid, preimage, provider_data, version, created_at, updated_at FROM payments;
+DROP TABLE payments;
+ALTER TABLE payments_v2 RENAME TO payments;
+CREATE INDEX payments_order ON payments (order_id);
+CREATE INDEX payments_status ON payments (status, created_at);
+CREATE INDEX payments_txid ON payments (txid);
+
+CREATE TABLE payouts (
+  id            TEXT PRIMARY KEY,
+  order_id      TEXT NOT NULL REFERENCES orders(id),
+  payment_id    TEXT NOT NULL REFERENCES payments(id),
+  product       TEXT NOT NULL CHECK (product IN ('blockspace','scribbit','degent')),
+  payee_kind    TEXT NOT NULL CHECK (payee_kind IN ('artist','club','platform','other')),
+  payee_ref     TEXT NOT NULL,
+  payee         TEXT NOT NULL,             -- JSON Payee (kind, ref, address?, scriptHex?)
+  amount_sats   INTEGER NOT NULL CHECK (amount_sats >= 0),
+  txid          TEXT NOT NULL,
+  vout          INTEGER NOT NULL CHECK (vout >= 0),
+  status        TEXT NOT NULL CHECK (status IN ('settled','pending','failed')),
+  settled_at    TEXT,
+  version       INTEGER NOT NULL DEFAULT 0,
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL,
+  UNIQUE (payment_id, txid, vout)
+);
+CREATE INDEX payouts_order ON payouts (order_id);
+CREATE INDEX payouts_payment ON payouts (payment_id);
+CREATE INDEX payouts_payee ON payouts (payee_ref, product, created_at);
+`,
+  },
 ];

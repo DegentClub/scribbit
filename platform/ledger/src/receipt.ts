@@ -1,4 +1,4 @@
-import type { Order, PaymentIntent, Refund } from './domain/types.js';
+import type { Order, Payee, PaymentIntent, Payout, Refund } from './domain/types.js';
 import { satsToBtc } from './money.js';
 
 export interface ReceiptPayment {
@@ -21,11 +21,23 @@ export interface Receipt {
   order: Pick<Order, 'id' | 'product' | 'customerRef' | 'status' | 'currency' | 'totalSats' | 'lineItems' | 'createdAt' | 'metadata'>;
   payments: ReceiptPayment[];
   refunds: Array<Pick<Refund, 'id' | 'paymentId' | 'amountSats' | 'status' | 'reason' | 'createdAt'>>;
+  /** Payee payouts found in the settling transaction(s) (psbt). */
+  payouts: ReceiptPayout[];
   totals: { totalSats: number; paidSats: number; refundedSats: number; dueSats: number };
 }
 
+export interface ReceiptPayout {
+  id: string;
+  paymentId: string;
+  payee: Payee;
+  amountSats: number;
+  txid: string;
+  vout: number;
+  status: Payout['status'];
+}
+
 /** Receipts are pure projections of ledger state: the same input always renders the same receipt. */
-export function buildReceipt(order: Order, payments: readonly PaymentIntent[], refunds: readonly Refund[], issuedAt: string): Receipt {
+export function buildReceipt(order: Order, payments: readonly PaymentIntent[], refunds: readonly Refund[], issuedAt: string, payouts: readonly Payout[] = []): Receipt {
   const paidSats = payments.reduce((s, p) => s + p.amountPaidSats, 0);
   const refundedSats = payments.reduce((s, p) => s + p.refundedSats, 0);
   return {
@@ -58,6 +70,7 @@ export function buildReceipt(order: Order, payments: readonly PaymentIntent[], r
       return r;
     }),
     refunds: refunds.map((r) => ({ id: r.id, paymentId: r.paymentId, amountSats: r.amountSats, status: r.status, reason: r.reason, createdAt: r.createdAt })),
+    payouts: payouts.map((p) => ({ id: p.id, paymentId: p.paymentId, payee: { ...p.payee }, amountSats: p.amountSats, txid: p.txid, vout: p.vout, status: p.status })),
     totals: { totalSats: order.totalSats, paidSats, refundedSats, dueSats: Math.max(0, order.totalSats - paidSats + refundedSats) },
   };
 }
@@ -85,6 +98,13 @@ export function renderReceiptText(r: Receipt): string {
   if (r.refunds.length) {
     out.push('', 'Refunds');
     for (const x of r.refunds) out.push(`  ${x.id}  ${x.status}  ${fmt(x.amountSats)}  ${x.reason}`);
+  }
+  if (r.payouts.length) {
+    out.push('', 'Payouts');
+    for (const x of r.payouts) {
+      out.push(`  ${x.id}  ${x.status}  ${fmt(x.amountSats)}  to ${x.payee.kind}:${x.payee.ref}`);
+      out.push(`    txid ${x.txid}:${x.vout}`);
+    }
   }
   out.push('', line, `Paid     ${fmt(r.totals.paidSats)}`, `Refunded ${fmt(r.totals.refundedSats)}`, `Due      ${fmt(r.totals.dueSats)}`, '');
   return out.join('\n');

@@ -1,22 +1,27 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
-import { ledgerOrderStatus, ledgerPaymentStatus, sourceFor, type EventBus, type EventEnvelope } from '@bsh/events';
+import { ledgerOrderStatus, ledgerPaymentStatus, ledgerPayoutStatus, sourceFor, type EventBus, type EventEnvelope } from '@bsh/events';
 import { ConcurrencyError, LedgerError, invalid, notFound } from './domain/errors.js';
 import { assertOrderTransition, assertPaymentTransition, assertRefundTransition, canOrderTransition, canPaymentTransition } from './domain/state.js';
 import {
+  PAYEE_KINDS,
   PAYMENT_METHODS,
   PRODUCTS,
+  TXID_CLAIMING_STATUSES,
   type LineItem,
   type Order,
   type OrderStatus,
+  type Payee,
+  type PayeeKind,
   type PaymentIntent,
   type PaymentMethod,
   type PaymentStatus,
+  type Payout,
   type Product,
   type Refund,
 } from './domain/types.js';
 import { assertSats } from './money.js';
-import { WebhookError, type PaymentProvider, type ProviderUpdate } from './providers/provider.js';
+import { WebhookError, type PaymentProvider, type PayoutSettlement, type ProviderUpdate } from './providers/provider.js';
 import type { IdempotencyRecord, OrderStore } from './store/order-store.js';
 
 export interface CreateOrderInput {
@@ -277,6 +282,14 @@ export class LedgerService {
     const changesStatus = next !== previous;
     if (changesStatus && !canPaymentTransition(previous, next)) return { payment, order, applied: false, reason: `illegal transition ${previous} -> ${next}` };
 
+    // psbt intents are matched by payee scripts, which several orders may share: one settling transaction
+    // credits at most one intent (the first to record its txid), whatever its outputs also satisfy.
+    if (payment.method === 'psbt' && update.txid && update.txid !== payment.txid && TXID_CLAIMING_STATUSES.has(next)) {
+      const mine = payment.id;
+      const other = (await this.store.findPaymentsByTxid(update.txid)).find((o) => o.id !== mine && TXID_CLAIMING_STATUSES.has(o.status));
+      if (other) return { payment, order, applied: false, reason: `txid ${update.txid} already settles ${other.id}` };
+    }
+
     const at = this.now().toISOString();
     const merged: PaymentIntent = { ...payment, status: next, updatedAt: at };
     if (update.amountPaidSats !== undefined) merged.amountPaidSats = assertSats(update.amountPaidSats, 'amountPaidSats');
@@ -291,9 +304,65 @@ export class LedgerService {
     payment = await this.store.updatePayment(merged);
     if (changesStatus) {
       await this.emitPayment(payment, previous, update.detail ?? detail);
+      if ((next === 'paid' || next === 'overpaid') && update.payouts?.length) await this.recordPayouts(payment, update.payouts);
       order = await this.deriveOrderStatus(order, payment, update.detail ?? detail);
     }
     return { payment, order, applied: changesStatus || amountsChanged };
+  }
+
+  // ------------------------------------------------------------------------------------ payouts
+
+  /**
+   * One `Payout` per payee output the settling transaction carried (psbt). Idempotent on (payment, txid, vout):
+   * a second evaluation of the same transaction records nothing new. Money moved in the customer's own
+   * transaction; the ledger only records that it did and tells the bus.
+   */
+  private async recordPayouts(payment: PaymentIntent, settlements: readonly PayoutSettlement[]): Promise<Payout[]> {
+    const existing = await this.store.listPayoutsByPayment(payment.id);
+    const out: Payout[] = [];
+    const at = this.now().toISOString();
+    for (const s of settlements) {
+      if (existing.some((p) => p.txid === s.txid && p.vout === s.vout)) continue;
+      const payout: Payout = {
+        id: `pyo_${this.newId()}`,
+        orderId: payment.orderId,
+        paymentId: payment.id,
+        product: payment.product,
+        payee: { ...s.payee },
+        amountSats: assertSats(s.amountSats, 'payout amountSats'),
+        txid: s.txid,
+        vout: s.vout,
+        status: 'settled',
+        settledAt: at,
+        version: 0,
+        createdAt: at,
+        updatedAt: at,
+      };
+      try {
+        await this.store.createPayout(payout);
+      } catch (e) {
+        if (e instanceof LedgerError && e.code === 'duplicate_payout') continue; // raced with another applier of the same tx
+        throw e;
+      }
+      out.push(payout);
+      await this.emitPayout(payout);
+    }
+    return out;
+  }
+
+  async listPayouts(orderId: string, ctx: CallerContext): Promise<Payout[]> {
+    await this.getOrder(orderId, ctx);
+    return this.store.listPayoutsByOrder(orderId);
+  }
+
+  /** Payouts to a payee ref across the caller's product (admin: every product); `kind` narrows. */
+  async listPayeePayouts(ref: string, filter: { kind?: string }, ctx: CallerContext): Promise<Payout[]> {
+    if (!isStr(ref, 128)) throw invalid('payee ref must be a string of 1..128 characters');
+    if (filter.kind !== undefined && !PAYEE_KINDS.includes(filter.kind as PayeeKind)) throw invalid(`kind must be one of ${PAYEE_KINDS.join(', ')}`);
+    const f: { product?: Product; kind?: PayeeKind } = {};
+    if (ctx.product) f.product = ctx.product;
+    if (filter.kind !== undefined) f.kind = filter.kind as PayeeKind;
+    return this.store.listPayoutsByPayee(ref, f);
   }
 
   /** Order status follows its payments: paid/overpaid settle it; a fully refunded payment refunds it. */
@@ -335,47 +404,71 @@ export class LedgerService {
 
   // ------------------------------------------------------------------------------------ refunds
 
+  /**
+   * Availability = credited − completed refunds − PENDING refunds: a refund that is still being paid out
+   * reserves its amount. Concurrent refund creations are serialised on the payment row: the caller bumps the
+   * payment's version (a compare-and-set) between computing availability and creating the refund, so two
+   * callers that both saw the same availability cannot both create — the loser re-reads and sees the winner's
+   * pending refund. (Both stores apply writes synchronously, so the winner's refund is visible to the loser's
+   * re-read; a store that commits asynchronously must make `updatePayment` + `createRefund` one transaction.)
+   */
   async refund(paymentId: string, input: RefundInput, ctx: CallerContext): Promise<{ refund: Refund; created: boolean }> {
     if (typeof input.reason !== 'string' || input.reason.trim().length === 0 || input.reason.length > MAX_STR) throw invalid('reason is required');
     if (input.destination !== undefined && (typeof input.destination !== 'string' || input.destination.length === 0 || input.destination.length > MAX_STR)) throw invalid('destination must be a non-empty string');
-    const payment = await this.getPayment(paymentId, ctx);
-    const scope = `refund:${payment.id}`;
-    if (ctx.idempotencyKey) {
-      // The fingerprint covers the caller's request as sent (not the computed amount) so a replay after the
-      // refund settled still matches.
-      const fp = fingerprint({ amountSats: input.amountSats ?? null, reason: input.reason, destination: input.destination ?? null });
-      const existing = await this.store.findIdempotency(scope, ctx.idempotencyKey);
-      if (existing) {
-        if (existing.fingerprint !== fp) throw new LedgerError(422, 'idempotency_conflict', 'Idempotency-Key reused with a different request');
-        const refund = await this.store.getRefund(existing.resourceId);
-        if (!refund) throw notFound('refund', existing.resourceId);
-        return { refund, created: false };
-      }
-    }
-    if (!['paid', 'overpaid', 'underpaid'].includes(payment.status)) throw new LedgerError(409, 'not_refundable', `payment is ${payment.status}`);
-    const available = payment.amountPaidSats - payment.refundedSats;
-    const defaultAmount = payment.status === 'overpaid' ? Math.min(available, payment.amountPaidSats - payment.amountSats) : available;
-    const amountSats = input.amountSats === undefined ? defaultAmount : assertSats(input.amountSats, 'amountSats');
-    if (amountSats <= 0) throw new LedgerError(409, 'nothing_to_refund', 'nothing left to refund');
-    if (amountSats > available) throw new LedgerError(409, 'refund_exceeds_paid', `at most ${available} sats can be refunded`);
+    // The fingerprint covers the caller's request as sent (not the computed amount) so a replay after the
+    // refund settled still matches.
     const fp = fingerprint({ amountSats: input.amountSats ?? null, reason: input.reason, destination: input.destination ?? null });
+    let payment!: PaymentIntent;
+    let refund!: Refund;
+    for (let attempt = 0; ; attempt++) {
+      payment = await this.getPayment(paymentId, ctx);
+      const scope = `refund:${payment.id}`;
+      if (ctx.idempotencyKey) {
+        const existing = await this.store.findIdempotency(scope, ctx.idempotencyKey);
+        if (existing) {
+          if (existing.fingerprint !== fp) throw new LedgerError(422, 'idempotency_conflict', 'Idempotency-Key reused with a different request');
+          const found = await this.store.getRefund(existing.resourceId);
+          if (!found) throw notFound('refund', existing.resourceId);
+          return { refund: found, created: false };
+        }
+      }
+      if (!['paid', 'overpaid', 'underpaid'].includes(payment.status)) throw new LedgerError(409, 'not_refundable', `payment is ${payment.status}`);
+      const pendingSats = (await this.store.listRefundsByPayment(payment.id)).filter((r) => r.status === 'pending').reduce((s, r) => s + r.amountSats, 0);
+      const available = payment.amountPaidSats - payment.refundedSats - pendingSats;
+      const defaultAmount = payment.status === 'overpaid' ? Math.min(available, payment.amountPaidSats - payment.amountSats) : available;
+      const amountSats = input.amountSats === undefined ? defaultAmount : assertSats(input.amountSats, 'amountSats');
+      if (amountSats <= 0) throw new LedgerError(409, 'nothing_to_refund', 'nothing left to refund');
+      if (amountSats > available) throw new LedgerError(409, 'refund_exceeds_paid', `at most ${available} sats can be refunded (${pendingSats} reserved by pending refunds)`);
+      const at = this.now().toISOString();
+      refund = {
+        id: `ref_${this.newId()}`,
+        paymentId: payment.id,
+        orderId: payment.orderId,
+        amountSats,
+        status: 'pending',
+        reason: input.reason,
+        providerRef: null,
+        destination: input.destination ?? null,
+        detail: null,
+        version: 0,
+        createdAt: at,
+        updatedAt: at,
+      };
+      try {
+        // Reserve: the compare-and-set on the payment version is what makes the availability check exclusive.
+        await this.store.updatePayment({ ...payment, updatedAt: at });
+      } catch (e) {
+        if (e instanceof ConcurrencyError && attempt < 3) continue;
+        throw e;
+      }
+      await this.store.createRefund(refund, ctx.idempotencyKey ? idemRecord(scope, ctx.idempotencyKey, fp, 'refund', refund.id) : undefined);
+      break;
+    }
     const provider = this.providers.get(payment.provider);
-    if (!provider) throw new LedgerError(503, 'provider_unavailable', `provider ${payment.provider} is not configured`);
-    const at = this.now().toISOString();
-    let refund: Refund = {
-      id: `ref_${this.newId()}`,
-      paymentId: payment.id,
-      orderId: payment.orderId,
-      amountSats,
-      status: 'pending',
-      reason: input.reason,
-      providerRef: null,
-      destination: input.destination ?? null,
-      detail: null,
-      createdAt: at,
-      updatedAt: at,
-    };
-    await this.store.createRefund(refund, ctx.idempotencyKey ? idemRecord(scope, ctx.idempotencyKey, fp, 'refund', refund.id) : undefined);
+    if (!provider) {
+      await this.settleRefund(refund, 'failed', `provider ${payment.provider} is not configured`);
+      throw new LedgerError(503, 'provider_unavailable', `provider ${payment.provider} is not configured`);
+    }
     const result = await provider.refund(payment, refund);
     refund = { ...refund, providerRef: result.providerRef, detail: result.detail ?? null };
     if (result.status === 'pending') {
@@ -495,6 +588,25 @@ export class LedgerService {
     return this.publish(ledgerOrderStatus.create({ source: this.source, params: { status: order.status }, subject: order.id, data }, { now: this.now }));
   }
 
+  private emitPayout(p: Payout): Promise<void> {
+    const payee: Payee = { kind: p.payee.kind, ref: p.payee.ref };
+    if (p.payee.address) payee.address = p.payee.address;
+    if (p.payee.scriptHex) payee.scriptHex = p.payee.scriptHex;
+    const data: Parameters<typeof ledgerPayoutStatus.create>[0]['data'] = {
+      payoutId: p.id,
+      orderId: p.orderId,
+      paymentId: p.paymentId,
+      product: p.product,
+      payee,
+      amountSats: p.amountSats,
+      txid: p.txid,
+      vout: p.vout,
+      status: p.status,
+      at: p.updatedAt,
+    };
+    return this.publish(ledgerPayoutStatus.create({ source: this.source, params: { status: p.status }, subject: p.orderId, data }, { now: this.now }));
+  }
+
   private emitPayment(p: PaymentIntent, previous: PaymentStatus | null, detail?: string): Promise<void> {
     const data: Parameters<typeof ledgerPaymentStatus.create>[0]['data'] = {
       paymentId: p.id,
@@ -540,7 +652,9 @@ export function validateOrderInput(input: unknown): CreateOrderInput {
     } catch (e) {
       throw invalid((e as Error).message);
     }
-    return { sku: li.sku, description: li.description, quantity: li.quantity, unitSats: li.unitSats as number };
+    const item: LineItem = { sku: li.sku, description: li.description, quantity: li.quantity, unitSats: li.unitSats as number };
+    if (li.payee !== undefined) item.payee = validatePayee(li.payee, `lineItems[${i}].payee`);
+    return item;
   });
   let metadata: Record<string, string> | undefined;
   if (o.metadata !== undefined) {
@@ -555,6 +669,28 @@ export function validateOrderInput(input: unknown): CreateOrderInput {
   }
   const out: CreateOrderInput = { product: o.product as Product, customerRef: o.customerRef, lineItems };
   if (metadata) out.metadata = metadata;
+  return out;
+}
+
+const SCRIPT_HEX = /^([0-9a-f]{2}){1,520}$/;
+
+/** `kind` from the enum, `ref` 1..128, and exactly one of `address` (1..128) / `scriptHex` (lowercase hex, ≤ 520 bytes). */
+export function validatePayee(raw: unknown, at = 'payee'): Payee {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw invalid(`${at} must be an object`);
+  const p = raw as Record<string, unknown>;
+  if (!PAYEE_KINDS.includes(p.kind as PayeeKind)) throw invalid(`${at}.kind must be one of ${PAYEE_KINDS.join(', ')}`);
+  if (!isStr(p.ref, 128)) throw invalid(`${at}.ref must be a string of 1..128 characters`);
+  const hasAddress = p.address !== undefined;
+  const hasScript = p.scriptHex !== undefined;
+  if (hasAddress === hasScript) throw invalid(`${at} needs exactly one of address / scriptHex`);
+  const out: Payee = { kind: p.kind as PayeeKind, ref: p.ref };
+  if (hasAddress) {
+    if (!isStr(p.address, 128) || /\s/.test(p.address)) throw invalid(`${at}.address must be a string of 1..128 characters`);
+    out.address = p.address;
+  } else {
+    if (typeof p.scriptHex !== 'string' || !SCRIPT_HEX.test(p.scriptHex.toLowerCase())) throw invalid(`${at}.scriptHex must be lowercase hex of 1..520 bytes`);
+    out.scriptHex = p.scriptHex.toLowerCase();
+  }
   return out;
 }
 

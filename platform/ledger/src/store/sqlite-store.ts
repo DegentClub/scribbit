@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { ConcurrencyError, LedgerError } from '../domain/errors.js';
-import type { Order, PaymentIntent, PaymentStatus, Refund } from '../domain/types.js';
+import type { Order, PayeeKind, PaymentIntent, PaymentStatus, Payout, Product, Refund } from '../domain/types.js';
 import { MIGRATIONS } from './migrations.js';
 import type { IdempotencyRecord, OrderStore } from './order-store.js';
 
@@ -24,20 +24,33 @@ export class SqliteOrderStore implements OrderStore {
     return (this.db.prepare('SELECT id FROM schema_migrations ORDER BY rowid').all() as Row[]).map((r) => r.id as string);
   }
 
+  /**
+   * Migrations run with foreign keys OFF (the documented SQLite procedure for rebuilding a table that other
+   * tables reference; the pragma is a no-op inside a transaction, so it is toggled around each one) and every
+   * migration is followed by `PRAGMA foreign_key_check`, which must be empty before the change is committed.
+   */
   private migrate(): void {
     this.db.exec('CREATE TABLE IF NOT EXISTS schema_migrations (id TEXT PRIMARY KEY, applied_at TEXT NOT NULL)');
     const applied = new Set(this.appliedMigrations());
-    for (const m of MIGRATIONS) {
-      if (applied.has(m.id)) continue;
-      this.db.exec('BEGIN');
-      try {
-        this.db.exec(m.sql);
-        this.db.prepare('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)').run(m.id, new Date().toISOString());
-        this.db.exec('COMMIT');
-      } catch (e) {
-        this.db.exec('ROLLBACK');
-        throw e;
+    const pending = MIGRATIONS.filter((m) => !applied.has(m.id));
+    if (pending.length === 0) return;
+    this.db.exec('PRAGMA foreign_keys = OFF');
+    try {
+      for (const m of pending) {
+        this.db.exec('BEGIN');
+        try {
+          this.db.exec(m.sql);
+          const violations = this.db.prepare('PRAGMA foreign_key_check').all() as Row[];
+          if (violations.length > 0) throw new Error(`migration ${m.id} leaves ${violations.length} foreign key violation(s)`);
+          this.db.prepare('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)').run(m.id, new Date().toISOString());
+          this.db.exec('COMMIT');
+        } catch (e) {
+          this.db.exec('ROLLBACK');
+          throw e;
+        }
       }
+    } finally {
+      this.db.exec('PRAGMA foreign_keys = ON');
     }
   }
 
@@ -155,6 +168,10 @@ export class SqliteOrderStore implements OrderStore {
     return r && rowToPayment(r);
   }
 
+  async findPaymentsByTxid(txid: string): Promise<PaymentIntent[]> {
+    return (this.db.prepare('SELECT * FROM payments WHERE txid = ? ORDER BY created_at, id').all(txid) as Row[]).map(rowToPayment);
+  }
+
   // ------------------------------------------------------------------ refunds
 
   async createRefund(r: Refund, idem?: IdempotencyRecord): Promise<void> {
@@ -163,10 +180,10 @@ export class SqliteOrderStore implements OrderStore {
       this.insertIdem(idem, r.createdAt);
       this.db
         .prepare(
-          `INSERT INTO refunds (id, payment_id, order_id, amount_sats, status, reason, provider_ref, destination, detail, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO refunds (id, payment_id, order_id, amount_sats, status, reason, provider_ref, destination, detail, version, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(r.id, r.paymentId, r.orderId, r.amountSats, r.status, r.reason, r.providerRef, r.destination, r.detail, r.createdAt, r.updatedAt);
+        .run(r.id, r.paymentId, r.orderId, r.amountSats, r.status, r.reason, r.providerRef, r.destination, r.detail, r.version, r.createdAt, r.updatedAt);
     });
   }
 
@@ -176,11 +193,16 @@ export class SqliteOrderStore implements OrderStore {
   }
 
   async updateRefund(r: Refund): Promise<Refund> {
-    const res = this.db
-      .prepare('UPDATE refunds SET status = ?, provider_ref = ?, destination = ?, detail = ?, updated_at = ? WHERE id = ?')
-      .run(r.status, r.providerRef, r.destination, r.detail, r.updatedAt, r.id);
-    if (res.changes === 0) throw new LedgerError(404, 'not_found', `refund ${r.id} not found`);
-    return structuredClone(r);
+    return this.tx(() => {
+      const res = this.db
+        .prepare('UPDATE refunds SET status = ?, provider_ref = ?, destination = ?, detail = ?, version = ?, updated_at = ? WHERE id = ? AND version = ?')
+        .run(r.status, r.providerRef, r.destination, r.detail, r.version + 1, r.updatedAt, r.id, r.version);
+      if (res.changes === 0) {
+        if (!this.db.prepare('SELECT 1 FROM refunds WHERE id = ?').get(r.id)) throw new LedgerError(404, 'not_found', `refund ${r.id} not found`);
+        throw new ConcurrencyError('refund', r.id);
+      }
+      return { ...structuredClone(r), version: r.version + 1 };
+    });
   }
 
   async listRefundsByPayment(paymentId: string): Promise<Refund[]> {
@@ -189,6 +211,62 @@ export class SqliteOrderStore implements OrderStore {
 
   async listRefundsByOrder(orderId: string): Promise<Refund[]> {
     return (this.db.prepare('SELECT * FROM refunds WHERE order_id = ? ORDER BY created_at, id').all(orderId) as Row[]).map(rowToRefund);
+  }
+
+  // ------------------------------------------------------------------ payouts
+
+  async createPayout(p: Payout): Promise<void> {
+    this.tx(() => {
+      if (this.db.prepare('SELECT 1 FROM payouts WHERE id = ?').get(p.id)) throw new LedgerError(409, 'duplicate_id', `payout ${p.id} exists`);
+      if (this.db.prepare('SELECT 1 FROM payouts WHERE payment_id = ? AND txid = ? AND vout = ?').get(p.paymentId, p.txid, p.vout))
+        throw new LedgerError(409, 'duplicate_payout', `payout for ${p.txid}:${p.vout} on ${p.paymentId} already recorded`);
+      this.db
+        .prepare(
+          `INSERT INTO payouts (id, order_id, payment_id, product, payee_kind, payee_ref, payee, amount_sats, txid, vout, status, settled_at, version, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(p.id, p.orderId, p.paymentId, p.product, p.payee.kind, p.payee.ref, JSON.stringify(p.payee), p.amountSats, p.txid, p.vout, p.status, p.settledAt, p.version, p.createdAt, p.updatedAt);
+    });
+  }
+
+  async getPayout(id: string): Promise<Payout | undefined> {
+    const r = this.db.prepare('SELECT * FROM payouts WHERE id = ?').get(id) as Row | undefined;
+    return r && rowToPayout(r);
+  }
+
+  async updatePayout(p: Payout): Promise<Payout> {
+    return this.tx(() => {
+      const res = this.db
+        .prepare('UPDATE payouts SET status = ?, settled_at = ?, txid = ?, vout = ?, version = ?, updated_at = ? WHERE id = ? AND version = ?')
+        .run(p.status, p.settledAt, p.txid, p.vout, p.version + 1, p.updatedAt, p.id, p.version);
+      if (res.changes === 0) {
+        if (!this.db.prepare('SELECT 1 FROM payouts WHERE id = ?').get(p.id)) throw new LedgerError(404, 'not_found', `payout ${p.id} not found`);
+        throw new ConcurrencyError('payout', p.id);
+      }
+      return { ...structuredClone(p), version: p.version + 1 };
+    });
+  }
+
+  async listPayoutsByOrder(orderId: string): Promise<Payout[]> {
+    return (this.db.prepare('SELECT * FROM payouts WHERE order_id = ? ORDER BY created_at, id').all(orderId) as Row[]).map(rowToPayout);
+  }
+
+  async listPayoutsByPayment(paymentId: string): Promise<Payout[]> {
+    return (this.db.prepare('SELECT * FROM payouts WHERE payment_id = ? ORDER BY created_at, id').all(paymentId) as Row[]).map(rowToPayout);
+  }
+
+  async listPayoutsByPayee(ref: string, filter: { product?: Product; kind?: PayeeKind } = {}, limit = 1000): Promise<Payout[]> {
+    const where = ['payee_ref = ?'];
+    const args: unknown[] = [ref];
+    if (filter.product) {
+      where.push('product = ?');
+      args.push(filter.product);
+    }
+    if (filter.kind) {
+      where.push('payee_kind = ?');
+      args.push(filter.kind);
+    }
+    return (this.db.prepare(`SELECT * FROM payouts WHERE ${where.join(' AND ')} ORDER BY created_at, id LIMIT ?`).all(...(args as never[]), limit) as Row[]).map(rowToPayout);
   }
 
   // ------------------------------------------------------------------ misc
@@ -273,6 +351,25 @@ function rowToRefund(r: Row): Refund {
     providerRef: optStr(r.provider_ref),
     destination: optStr(r.destination),
     detail: optStr(r.detail),
+    version: Number(r.version ?? 0),
+    createdAt: str(r.created_at),
+    updatedAt: str(r.updated_at),
+  };
+}
+
+function rowToPayout(r: Row): Payout {
+  return {
+    id: str(r.id),
+    orderId: str(r.order_id),
+    paymentId: str(r.payment_id),
+    product: r.product as Payout['product'],
+    payee: JSON.parse(str(r.payee)),
+    amountSats: Number(r.amount_sats),
+    txid: str(r.txid),
+    vout: Number(r.vout),
+    status: r.status as Payout['status'],
+    settledAt: optStr(r.settled_at),
+    version: Number(r.version),
     createdAt: str(r.created_at),
     updatedAt: str(r.updated_at),
   };

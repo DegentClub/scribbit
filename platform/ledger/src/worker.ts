@@ -44,7 +44,8 @@ export class LedgerWorker {
     const intents = await this.opts.store.listPaymentsByStatus(OPEN, this.opts.batch ?? 200);
     for (const intent of intents) {
       if (intent.status === 'expired') {
-        if (intent.method !== 'onchain' || !intent.expiresAt || now.getTime() - Date.parse(intent.expiresAt) > grace) continue;
+        // only chain-settled methods can still be paid late
+        if ((intent.method !== 'onchain' && intent.method !== 'psbt') || !intent.expiresAt || now.getTime() - Date.parse(intent.expiresAt) > grace) continue;
       }
       const provider = this.providers.get(intent.provider);
       if (!provider) continue;

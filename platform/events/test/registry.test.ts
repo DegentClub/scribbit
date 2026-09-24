@@ -75,6 +75,7 @@ describe('platform registry validation', () => {
       'degent.mint.order.{status}',
       'ledger.order.{status}',
       'ledger.payment.{status}',
+      'ledger.payout.{status}',
     ]);
   });
 

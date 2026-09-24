@@ -199,11 +199,36 @@ const rescue = ins.buildUnsignedRescuePsbt({ network: 'mainnet', leafPubkey, con
 const { hex: rawHex } = ins.finalizeWalletSignedReveal((await wallet.signPsbt(rescue.psbtBase64, { inputsToSign: [/* … */] })).psbtBase64);
 ```
 
+## Attribution metadata
+
+An open-studio mint records who made the art *inside* the inscription: `InscriptionContent.attribution`
+(`{ artist, artwork, edition?, studio? }`) is encoded as a **minimal canonical CBOR map** (RFC 8949 §4.2.1
+deterministic encoding, restricted to text strings, unsigned integers and text-keyed maps) and placed in
+envelope tag 5, which ord reads and displays as the inscription's metadata. It is a convenience over
+`metadata`: when both are given, the explicit `metadata` bytes win. The bytes are part of the tapleaf, so they
+count in `inscriptionScriptLength` / `estimateRevealWeight` / `commitAddress` like any other metadata, and
+being canonical the same attribution always yields the same bytes (browser and service agree on the commit).
+
+```ts
+import { encodeAttribution, decodeAttribution } from '@bsh/inscription';
+const attribution = { artist: 'bc1q…', artwork: 'moonrise-04', edition: 7, studio: 'open' };
+const content = { contentType: 'image/webp', body, attribution };          // tag 5 = encodeAttribution(attribution)
+decodeAttribution(encodeAttribution(attribution));                          // → the same object
+// keys in canonical order: artist, studio, artwork, edition
+// { artist: 'bc1qa', artwork: 'art-1' } → a2 66 617274697374 65 6263317161 67 617274776f726b 65 6172742d31
+```
+
+`artist` is a bitcoin address (14..100 alphanumerics, any network), `artwork` 1..128 characters, `edition` a
+non-negative integer, `studio` 1..64 characters. `decodeAttribution` (and the underlying `decodeCbor`) is
+strict: non-shortest integers, unsorted or duplicate keys, indefinite lengths, other major types and trailing
+bytes are rejected, unknown map keys are ignored.
+
 ## API
 
 | Export | Purpose |
 |---|---|
 | `LIMITS` | Policy/consensus constants (400k standard, 3.99M block lane, 520-byte push, dust, default postage) |
+| `encodeAttribution(a)` / `decodeAttribution(bytes)` * | Attribution ↔ canonical CBOR map for envelope tag 5 (`InscriptionContent.attribution`); `encodeCbor` / `decodeCbor` are the tiny strict codec underneath |
 | `buildInscriptionScript(pub, content)` | ord envelope tapscript, byte-for-byte as ord emits it |
 | `inscriptionScriptLength(content)` * | Length of that script without allocating it |
 | `encodeParentId(id)` | `txid` reversed + LE index, trailing zeros trimmed |
@@ -334,6 +359,7 @@ weight recomputed from the raw hex (`3 × stripped + total`), and btc-signer's
 | File | Covers |
 |---|---|
 | `envelope.test.ts` | Opcode-level decode of the envelope; 0/1/519/520/521/1040/1041-byte chunking; push opcodes; tags 1/3/5 order; parent id encoding for index 0/1/255/256/2³²−1 |
+| `attribution.test.ts` | Canonical CBOR: hand-computed byte vectors, integer/string length boundaries, key ordering, round trips, strict decoding (non-canonical, unsupported types, trailing bytes); attribution validation; the bytes land in tag 5 and are counted by `inscriptionScriptLength` / `estimateRevealWeight` |
 | `commit.test.ts` | NUMS key; frozen bc1p/tb1p/bcrt1p vectors cross-checked with btc-signer `p2tr` |
 | `weight.test.ts` | Exact weight vs real signed transactions, both layouts, both sighash modes (0x81 == 0x83), re-signed rescue; lanes and boundaries |
 | `signature.test.ts` | 0x83 and 0x81: equal BIP341 sighash in both layouts, Schnorr verification; tampering with the child output, commit amount, output order, nSequence or nVersion breaks it; 0x81 only: an extra output or a changed/dropped parent return breaks it |

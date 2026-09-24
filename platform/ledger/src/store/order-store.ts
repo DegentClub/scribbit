@@ -1,4 +1,4 @@
-import type { Order, PaymentIntent, PaymentStatus, Refund } from '../domain/types.js';
+import type { Order, PayeeKind, PaymentIntent, PaymentStatus, Payout, Product, Refund } from '../domain/types.js';
 
 /**
  * Idempotency record: `(scope, key)` → the resource created the first time. `fingerprint` is a hash of the
@@ -28,12 +28,22 @@ export interface OrderStore {
   listPaymentsByOrder(orderId: string): Promise<PaymentIntent[]>;
   listPaymentsByStatus(statuses: readonly PaymentStatus[], limit?: number): Promise<PaymentIntent[]>;
   findPaymentByProviderRef(provider: string, providerRef: string): Promise<PaymentIntent | undefined>;
+  /** Every intent carrying this settling txid (any provider). Used to stop one transaction settling two psbt intents. */
+  findPaymentsByTxid(txid: string): Promise<PaymentIntent[]>;
 
   createRefund(refund: Refund, idem?: IdempotencyRecord): Promise<void>;
   getRefund(id: string): Promise<Refund | undefined>;
   updateRefund(refund: Refund): Promise<Refund>;
   listRefundsByPayment(paymentId: string): Promise<Refund[]>;
   listRefundsByOrder(orderId: string): Promise<Refund[]>;
+
+  createPayout(payout: Payout): Promise<void>;
+  getPayout(id: string): Promise<Payout | undefined>;
+  updatePayout(payout: Payout): Promise<Payout>;
+  listPayoutsByOrder(orderId: string): Promise<Payout[]>;
+  listPayoutsByPayment(paymentId: string): Promise<Payout[]>;
+  /** Payouts to one payee ref, oldest first; `product` (API-key scope) and `kind` narrow the result. */
+  listPayoutsByPayee(ref: string, filter?: { product?: Product; kind?: PayeeKind }, limit?: number): Promise<Payout[]>;
 
   findIdempotency(scope: string, key: string): Promise<IdempotencyRecord | undefined>;
   /** Record a processed webhook delivery. Returns false when it was already recorded (replay). */

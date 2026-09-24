@@ -1,4 +1,4 @@
-import type { OrderStatus, PaymentStatus, RefundStatus } from './types.js';
+import type { OrderStatus, PaymentStatus, PayoutStatus, RefundStatus } from './types.js';
 import { LedgerError } from './errors.js';
 
 /**
@@ -33,6 +33,12 @@ export const REFUND_TRANSITIONS: Readonly<Record<RefundStatus, readonly RefundSt
   failed: [],
 };
 
+export const PAYOUT_TRANSITIONS: Readonly<Record<PayoutStatus, readonly PayoutStatus[]>> = {
+  pending: ['settled', 'failed'],
+  settled: [],
+  failed: [],
+};
+
 function assertTransition<S extends string>(table: Readonly<Record<S, readonly S[]>>, kind: string, from: S, to: S): void {
   const allowed = table[from];
   if (!allowed) throw new LedgerError(400, 'invalid_status', `${kind} status "${from}" is unknown`);
@@ -42,6 +48,7 @@ function assertTransition<S extends string>(table: Readonly<Record<S, readonly S
 export const assertOrderTransition = (from: OrderStatus, to: OrderStatus): void => assertTransition(ORDER_TRANSITIONS, 'order', from, to);
 export const assertPaymentTransition = (from: PaymentStatus, to: PaymentStatus): void => assertTransition(PAYMENT_TRANSITIONS, 'payment', from, to);
 export const assertRefundTransition = (from: RefundStatus, to: RefundStatus): void => assertTransition(REFUND_TRANSITIONS, 'refund', from, to);
+export const assertPayoutTransition = (from: PayoutStatus, to: PayoutStatus): void => assertTransition(PAYOUT_TRANSITIONS, 'payout', from, to);
 
 export const canOrderTransition = (from: OrderStatus, to: OrderStatus): boolean => ORDER_TRANSITIONS[from]?.includes(to) ?? false;
 export const canPaymentTransition = (from: PaymentStatus, to: PaymentStatus): boolean => PAYMENT_TRANSITIONS[from]?.includes(to) ?? false;

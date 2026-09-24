@@ -233,8 +233,14 @@ export type LedgerOrderStatus = (typeof LEDGER_ORDER_STATUSES)[number];
 export const LEDGER_PAYMENT_STATUSES = ['created', 'pending', 'paid', 'underpaid', 'overpaid', 'expired', 'failed', 'refunded'] as const;
 export type LedgerPaymentStatus = (typeof LEDGER_PAYMENT_STATUSES)[number];
 
-export const LEDGER_PAYMENT_METHODS = ['onchain', 'lightning', 'card'] as const;
+export const LEDGER_PAYMENT_METHODS = ['onchain', 'lightning', 'card', 'psbt'] as const;
 export type LedgerPaymentMethod = (typeof LEDGER_PAYMENT_METHODS)[number];
+
+export const LEDGER_PAYOUT_STATUSES = ['settled', 'pending', 'failed'] as const;
+export type LedgerPayoutStatus = (typeof LEDGER_PAYOUT_STATUSES)[number];
+
+export const LEDGER_PAYEE_KINDS = ['artist', 'club', 'platform', 'other'] as const;
+export type LedgerPayeeKind = (typeof LEDGER_PAYEE_KINDS)[number];
 
 const ledgerProduct = { type: 'string', enum: [...LEDGER_PRODUCTS] } satisfies JsonSchema;
 const sats = { type: 'integer', minimum: 0, maximum: 2100000000000000 } satisfies JsonSchema;
@@ -293,9 +299,10 @@ export interface LedgerPaymentStatusChanged {
 
 export const ledgerPaymentStatus = defineTopic<LedgerPaymentStatusChanged>({
   name: 'ledger.payment.{status}',
-  version: '1.0.0',
+  // 1.1.0: `method` gained `psbt` (additive: enum values may be added within a major).
+  version: '1.1.0',
   producer: 'ledger',
-  description: 'A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, or card). Amounts are integer satoshis.',
+  description: 'A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, card, or a product-built PSBT). Amounts are integer satoshis.',
   params: { status: { description: 'The status the payment moved to.', enum: LEDGER_PAYMENT_STATUSES } },
   dataschema: `${SCHEMA_BASE}LedgerPaymentStatusChanged`,
   schema: {
@@ -306,7 +313,7 @@ export const ledgerPaymentStatus = defineTopic<LedgerPaymentStatusChanged>({
       orderId: { type: 'string', minLength: 1 },
       product: ledgerProduct,
       method: { type: 'string', enum: [...LEDGER_PAYMENT_METHODS] },
-      provider: { type: 'string', minLength: 1, description: 'Provider adapter name (onchain, btcpay, card, fake).' },
+      provider: { type: 'string', minLength: 1, description: 'Provider adapter name (onchain, btcpay, card, psbt, fake).' },
       status: { type: 'string', enum: [...LEDGER_PAYMENT_STATUSES] },
       previousStatus: { type: ['string', 'null'], enum: [...LEDGER_PAYMENT_STATUSES, null] },
       amountSats: sats,
@@ -319,7 +326,63 @@ export const ledgerPaymentStatus = defineTopic<LedgerPaymentStatusChanged>({
   },
 });
 
-export const PLATFORM_TOPICS = [blockIndexed, collectionMinted, collectionCertified, degentMintOrder, batchStatus, ledgerOrderStatus, ledgerPaymentStatus] as const;
+// ------------------------------------------------------------------------------------ ledger.payout.{status}
+
+export interface LedgerPayee {
+  kind: LedgerPayeeKind;
+  ref: string;
+  address?: string;
+  scriptHex?: string;
+}
+
+export interface LedgerPayoutStatusChanged {
+  payoutId: string;
+  orderId: string;
+  paymentId: string;
+  product: LedgerProduct;
+  payee: LedgerPayee;
+  amountSats: number;
+  txid: string;
+  vout: number;
+  status: LedgerPayoutStatus;
+  at: string;
+}
+
+export const ledgerPayoutStatus = defineTopic<LedgerPayoutStatusChanged>({
+  name: 'ledger.payout.{status}',
+  version: '1.0.0',
+  producer: 'ledger',
+  description: 'Money reached a payee (artist, club, platform...) in the transaction settling a ledger payment; one event per payee output. Amounts are integer satoshis.',
+  params: { status: { description: 'The status of the payout.', enum: LEDGER_PAYOUT_STATUSES } },
+  dataschema: `${SCHEMA_BASE}LedgerPayoutStatusChanged`,
+  schema: {
+    type: 'object',
+    required: ['payoutId', 'orderId', 'paymentId', 'product', 'payee', 'amountSats', 'txid', 'vout', 'status', 'at'],
+    properties: {
+      payoutId: { type: 'string', minLength: 1 },
+      orderId: { type: 'string', minLength: 1 },
+      paymentId: { type: 'string', minLength: 1 },
+      product: ledgerProduct,
+      payee: {
+        type: 'object',
+        required: ['kind', 'ref'],
+        properties: {
+          kind: { type: 'string', enum: [...LEDGER_PAYEE_KINDS] },
+          ref: { type: 'string', minLength: 1, maxLength: 128, description: 'Opaque payee reference owned by the product; never PII.' },
+          address: { type: 'string', minLength: 1, maxLength: 128 },
+          scriptHex: { type: 'string', pattern: '^([0-9a-f]{2})+$', description: 'scriptPubKey the payout was matched on.' },
+        },
+      },
+      amountSats: sats,
+      txid: hex64,
+      vout: { type: 'integer', minimum: 0 },
+      status: { type: 'string', enum: [...LEDGER_PAYOUT_STATUSES] },
+      at: dateTime,
+    },
+  },
+});
+
+export const PLATFORM_TOPICS = [blockIndexed, collectionMinted, collectionCertified, degentMintOrder, batchStatus, ledgerOrderStatus, ledgerPaymentStatus, ledgerPayoutStatus] as const;
 
 /** Fresh registry pre-loaded with every platform topic. */
 export function platformRegistry(): TopicRegistry {

@@ -1,3 +1,4 @@
+import { encodeAttribution, type Attribution } from './attribution.js';
 import { assertBytes, utf8 } from './bytes.js';
 import { LIMITS } from './constants.js';
 
@@ -10,6 +11,11 @@ export interface InscriptionContent {
   parentId?: string;
   /** Optional CBOR metadata (tag 5, split into 520-byte chunks, one tag per chunk as ord does). */
   metadata?: Uint8Array;
+  /**
+   * Convenience: attribution (`artist`, `artwork`, `edition?`, `studio?`) encoded as canonical CBOR into
+   * `metadata` (tag 5) when `metadata` is not given. An explicit `metadata` always wins.
+   */
+  attribution?: Attribution;
 }
 
 // Opcodes
@@ -99,6 +105,8 @@ function prepare(content: InscriptionContent): Prepared {
   if (content.metadata !== undefined) {
     assertBytes(content.metadata, undefined, 'content.metadata');
     if (content.metadata.length > 0) metadata = content.metadata;
+  } else if (content.attribution !== undefined) {
+    metadata = encodeAttribution(content.attribution);
   }
   const parent = content.parentId !== undefined ? encodeParentId(content.parentId) : undefined;
   return { contentType, parent, metadata, body: content.body };

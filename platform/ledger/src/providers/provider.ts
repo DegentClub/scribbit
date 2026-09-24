@@ -1,4 +1,4 @@
-import type { CheckoutDetails, Order, PaymentIntent, PaymentMethod, PaymentStatus, Refund } from '../domain/types.js';
+import type { CheckoutDetails, Order, Payee, PaymentIntent, PaymentMethod, PaymentStatus, Refund } from '../domain/types.js';
 
 /** What a provider returns when an intent is created. */
 export interface ProviderIntent {
@@ -7,6 +7,15 @@ export interface ProviderIntent {
   /** ISO time; null = the provider imposes no expiry. */
   expiresAt: string | null;
   providerData?: Record<string, unknown>;
+}
+
+/** A payee output found in the settling transaction (psbt): what the service records as a `Payout`. */
+export interface PayoutSettlement {
+  payee: Payee;
+  scriptHex: string;
+  amountSats: number;
+  txid: string;
+  vout: number;
 }
 
 /** A provider's view of an intent, applied by the service through the payment state table. */
@@ -19,6 +28,8 @@ export interface ProviderUpdate {
   preimage?: string;
   providerData?: Record<string, unknown>;
   detail?: string;
+  /** Payee outputs satisfied by the settling transaction; recorded as payouts once the intent is paid/overpaid. */
+  payouts?: PayoutSettlement[];
 }
 
 export interface ProviderRefundResult {

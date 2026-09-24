@@ -9,6 +9,7 @@ export { MIGRATIONS, type Migration } from './store/migrations.js';
 export * from './providers/provider.js';
 export { FakeProvider } from './providers/fake.js';
 export * from './providers/onchain.js';
+export * from './providers/psbt.js';
 export * from './providers/btcpay.js';
 export * from './providers/card.js';
 export * from './service.js';

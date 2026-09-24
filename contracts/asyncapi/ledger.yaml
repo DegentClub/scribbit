@@ -5,9 +5,9 @@
 asyncapi: 3.0.0
 info:
   title: Blockspace ledger events
-  version: 1.0.0
+  version: 1.1.0
   description: |-
-    Status changes of orders and payment intents in the shared ledger. CloudEvents 1.0 structured mode on the
+    Status changes of orders, payment intents and (1.1) payee payouts in the shared ledger. CloudEvents 1.0 structured mode on the
     `bsh.events` topic exchange; `subject` is the order id. Delivery is at least once - de-duplicate on (source, id).
     Producer source: `urn:bsh:ledger`. Amounts are integer satoshis.
 defaultContentType: application/cloudevents+json
@@ -31,7 +31,7 @@ channels:
   ledgerPaymentStatus:
     address: ledger.payment.{status}
     title: ledger.payment.{status}
-    description: A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, or card). Amounts are integer satoshis.
+    description: A payment intent in the shared ledger changed status (on-chain, Lightning via BTCPay, card, or a product-built PSBT). Amounts are integer satoshis.
     parameters:
       status:
         description: The status the payment moved to.
@@ -39,6 +39,17 @@ channels:
     messages:
       LedgerPaymentStatusChanged:
         $ref: "#/components/messages/LedgerPaymentStatusChanged"
+  ledgerPayoutStatus:
+    address: ledger.payout.{status}
+    title: ledger.payout.{status}
+    description: Money reached a payee (artist, club, platform...) in the transaction settling a ledger payment; one event per payee output. Amounts are integer satoshis.
+    parameters:
+      status:
+        description: The status of the payout.
+        enum: [settled, pending, failed]
+    messages:
+      LedgerPayoutStatusChanged:
+        $ref: "#/components/messages/LedgerPayoutStatusChanged"
 operations:
   publishLedgerOrderStatus:
     action: send
@@ -52,6 +63,12 @@ operations:
       $ref: "#/channels/ledgerPaymentStatus"
     messages:
       - $ref: "#/channels/ledgerPaymentStatus/messages/LedgerPaymentStatusChanged"
+  publishLedgerPayoutStatus:
+    action: send
+    channel:
+      $ref: "#/channels/ledgerPayoutStatus"
+    messages:
+      - $ref: "#/channels/ledgerPayoutStatus/messages/LedgerPayoutStatusChanged"
 components:
   schemas:
     LedgerOrderStatusChanged:
@@ -74,8 +91,8 @@ components:
         paymentId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         product: { type: string, enum: [blockspace, scribbit, degent] }
-        method: { type: string, enum: [onchain, lightning, card] }
-        provider: { type: string, minLength: 1, description: "Provider adapter name (onchain, btcpay, card, fake)." }
+        method: { type: string, enum: [onchain, lightning, card, psbt] }
+        provider: { type: string, minLength: 1, description: "Provider adapter name (onchain, btcpay, card, psbt, fake)." }
         status: { type: string, enum: [created, pending, paid, underpaid, overpaid, expired, failed, refunded] }
         previousStatus: { type: [string, "null"], enum: [created, pending, paid, underpaid, overpaid, expired, failed, refunded, null] }
         amountSats: { type: integer, minimum: 0, maximum: 2100000000000000 }
@@ -84,6 +101,27 @@ components:
         paidAt: { type: string, format: date-time }
         txid: { type: string, pattern: "^[0-9a-f]{64}$" }
         detail: { type: string }
+    LedgerPayoutStatusChanged:
+      type: object
+      required: [payoutId, orderId, paymentId, product, payee, amountSats, txid, vout, status, at]
+      properties:
+        payoutId: { type: string, minLength: 1 }
+        orderId: { type: string, minLength: 1 }
+        paymentId: { type: string, minLength: 1 }
+        product: { type: string, enum: [blockspace, scribbit, degent] }
+        payee:
+          type: object
+          required: [kind, ref]
+          properties:
+            kind: { type: string, enum: [artist, club, platform, other] }
+            ref: { type: string, minLength: 1, maxLength: 128, description: "Opaque payee reference owned by the product; never PII." }
+            address: { type: string, minLength: 1, maxLength: 128 }
+            scriptHex: { type: string, pattern: "^([0-9a-f]{2})+$", description: "scriptPubKey the payout was matched on." }
+        amountSats: { type: integer, minimum: 0, maximum: 2100000000000000 }
+        txid: { type: string, pattern: "^[0-9a-f]{64}$" }
+        vout: { type: integer, minimum: 0 }
+        status: { type: string, enum: [settled, pending, failed] }
+        at: { type: string, format: date-time }
   messages:
     LedgerOrderStatusChanged:
       name: LedgerOrderStatusChanged
@@ -102,7 +140,7 @@ components:
       name: LedgerPaymentStatusChanged
       title: ledger.payment.{status}
       contentType: application/cloudevents+json
-      x-topic-version: 1.0.0
+      x-topic-version: 1.1.0
       x-producer: ledger
       payload:
         allOf:
@@ -111,3 +149,16 @@ components:
             properties:
               data:
                 $ref: "#/components/schemas/LedgerPaymentStatusChanged"
+    LedgerPayoutStatusChanged:
+      name: LedgerPayoutStatusChanged
+      title: ledger.payout.{status}
+      contentType: application/cloudevents+json
+      x-topic-version: 1.0.0
+      x-producer: ledger
+      payload:
+        allOf:
+          - $ref: "contracts/asyncapi/platform-events.yaml#/components/schemas/CloudEvent"
+          - type: object
+            properties:
+              data:
+                $ref: "#/components/schemas/LedgerPayoutStatusChanged"

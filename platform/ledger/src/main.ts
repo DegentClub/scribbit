@@ -10,6 +10,7 @@ import { BtcpayProvider } from './providers/btcpay.js';
 import { StripeLikeProvider, fixedRate } from './providers/card.js';
 import { FakeProvider } from './providers/fake.js';
 import { EsploraChain, OnchainAddressProvider, type AddressType, type BitcoinNetwork } from './providers/onchain.js';
+import { PsbtProvider } from './providers/psbt.js';
 import type { PaymentProvider } from './providers/provider.js';
 import { LedgerService } from './service.js';
 import { MemoryOrderStore } from './store/memory-store.js';
@@ -63,13 +64,26 @@ export async function main(): Promise<void> {
       }),
     );
   }
+  if (env.LEDGER_PSBT_PROVIDER === '1') {
+    // Non-custodial: no keys, no PSBT building. With an esplora backend the worker finds the settling transaction
+    // by the payee scripts; without one the product reports it through PsbtProvider.evaluate + applyUpdate.
+    providers.push(
+      new PsbtProvider({
+        network: (env.LEDGER_NETWORK ?? 'mainnet') as BitcoinNetwork,
+        ...(env.LEDGER_ESPLORA_URL ? { chain: new EsploraChain(env.LEDGER_ESPLORA_URL) } : {}),
+        store,
+        policy: { confirmations: num('LEDGER_CONFIRMATIONS', 1), overpaymentToleranceSats: num('LEDGER_OVERPAY_TOLERANCE_SATS', 0), underpaymentToleranceSats: num('LEDGER_UNDERPAY_TOLERANCE_SATS', 0) },
+        expiryMinutes: num('LEDGER_ONCHAIN_EXPIRY_MINUTES', 60),
+      }),
+    );
+  }
   if (env.LEDGER_FAKE_PROVIDER === '1') providers.push(new FakeProvider());
   if (providers.length === 0) throw new Error('no payment provider configured');
 
   // Production wires AmqpBusAdapter (see @bsh/events README); the in-memory bus keeps events local.
   const bus: EventBus = new InMemoryBus({ registry: platformRegistry() });
 
-  const defaultProvider: Partial<Record<'onchain' | 'lightning' | 'card', string>> = {};
+  const defaultProvider: Partial<Record<'onchain' | 'lightning' | 'card' | 'psbt', string>> = {};
   if (env.LEDGER_ONCHAIN_PROVIDER) defaultProvider.onchain = env.LEDGER_ONCHAIN_PROVIDER;
   const service = new LedgerService({ store, providers, bus, defaultProvider });
 

@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
-import { CONTRACT_PATH, ledgerOrderStatus, ledgerPaymentStatus, validate } from '@bsh/events';
-import { LEDGER_ORDER_STATUSES, LEDGER_PAYMENT_STATUSES } from '@bsh/events';
-import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES, PRODUCTS } from '../src/index.js';
+import { CONTRACT_PATH, ledgerOrderStatus, ledgerPaymentStatus, ledgerPayoutStatus, validate } from '@bsh/events';
+import { LEDGER_ORDER_STATUSES, LEDGER_PAYEE_KINDS, LEDGER_PAYMENT_STATUSES, LEDGER_PAYOUT_STATUSES } from '@bsh/events';
+import { ORDER_STATUSES, PAYEE_KINDS, PAYMENT_METHODS, PAYMENT_STATUSES, PAYOUT_STATUSES, PRODUCTS } from '../src/index.js';
 import { ASYNCAPI_PATH, asyncapi, repoRoot } from './contract.js';
 
 type Any = any;
 const platform: Any = parse(readFileSync(`${repoRoot}${CONTRACT_PATH}`, 'utf8'));
-const topics = [ledgerOrderStatus, ledgerPaymentStatus];
+const topics = [ledgerOrderStatus, ledgerPaymentStatus, ledgerPayoutStatus];
 
 describe(`${ASYNCAPI_PATH} ↔ platform-events.yaml ↔ @bsh/events registry`, () => {
   it('the ledger domain enums are the registry enums', () => {
@@ -16,6 +16,12 @@ describe(`${ASYNCAPI_PATH} ↔ platform-events.yaml ↔ @bsh/events registry`, (
     expect([...PAYMENT_STATUSES]).toEqual([...LEDGER_PAYMENT_STATUSES]);
     expect(ledgerPaymentStatus.schema.properties!.method!.enum).toEqual([...PAYMENT_METHODS]);
     expect(ledgerPaymentStatus.schema.properties!.product!.enum).toEqual([...PRODUCTS]);
+    expect([...PAYOUT_STATUSES]).toEqual([...LEDGER_PAYOUT_STATUSES]);
+    expect([...PAYEE_KINDS]).toEqual([...LEDGER_PAYEE_KINDS]);
+    expect(ledgerPayoutStatus.schema.properties!.payee!.properties!.kind!.enum).toEqual([...PAYEE_KINDS]);
+    // the method enum grew (psbt): a minor bump, same topic name
+    expect(ledgerPaymentStatus.version).toBe('1.1.0');
+    expect(ledgerPayoutStatus.version).toBe('1.0.0');
   });
 
   it.each(topics.map((t) => [t.name, t] as const))('%s: the ledger contract mirrors the canonical channel', (_n, topic) => {
@@ -41,5 +47,12 @@ describe(`${ASYNCAPI_PATH} ↔ platform-events.yaml ↔ @bsh/events registry`, (
     const payment = { paymentId: 'pay_1', orderId: 'ord_1', product: 'degent', method: 'card', provider: 'card', status: 'paid', previousStatus: null, amountSats: 5, amountPaidSats: 5, at: '2026-09-23T12:00:00Z' };
     expect(validate(asyncapi.components.schemas.LedgerPaymentStatusChanged, payment).valid).toBe(true);
     expect(validate(asyncapi.components.schemas.LedgerPaymentStatusChanged, { ...payment, amountSats: -1 }).valid).toBe(false);
+    expect(validate(asyncapi.components.schemas.LedgerPaymentStatusChanged, { ...payment, method: 'psbt', provider: 'psbt' }).valid).toBe(true);
+    const payout = { payoutId: 'pyo_1', orderId: 'ord_1', paymentId: 'pay_1', product: 'degent', payee: { kind: 'artist', ref: 'artist-9', address: 'bc1q…' }, amountSats: 1000, txid: 'a'.repeat(64), vout: 1, status: 'settled', at: '2026-09-23T12:00:00Z' };
+    expect(validate(asyncapi.components.schemas.LedgerPayoutStatusChanged, payout)).toEqual({ valid: true, errors: [] });
+    expect(validate(platform.components.schemas.LedgerPayoutStatusChanged, payout).valid).toBe(true);
+    expect(validate(asyncapi.components.schemas.LedgerPayoutStatusChanged, { ...payout, payee: { kind: 'sponsor', ref: 'x' } }).valid).toBe(false);
+    expect(validate(asyncapi.components.schemas.LedgerPayoutStatusChanged, { ...payout, txid: 'nope' }).valid).toBe(false);
+    expect(validate(asyncapi.components.schemas.LedgerPayoutStatusChanged, { ...payout, vout: -1 }).valid).toBe(false);
   });
 });

@@ -20,7 +20,7 @@ import { PRODUCTS, type Product } from './domain/types.js';
 import { buildReceipt, renderReceiptText } from './receipt.js';
 import { WebhookError, type CallerContext, type LedgerService } from './service.js';
 
-export const API_VERSION = '1.0.0';
+export const API_VERSION = '1.1.0';
 export const SCOPE_LEDGER = 'ledger';
 export const SCOPE_ADMIN = 'ledger:admin';
 
@@ -74,7 +74,7 @@ export function createLedgerApp(opts: LedgerAppOptions): Hono {
   // ---------------------------------------------------------------- product API (API keys)
   const auth = apiKeys({ store: opts.apiKeyStore, scopes: [SCOPE_LEDGER], ...(opts.environment ? { environment: opts.environment } : {}), now: () => now().getTime() });
   const keyLimit = rateLimit({ windowMs: rl.windowMs, max: Math.max(1, Math.floor(rl.max / 2)), key: 'apiKey', prefix: 'key', ...(rl.store ? { store: rl.store } : {}) });
-  for (const p of ['/v1/orders', '/v1/orders/*', '/v1/payments/*', '/v1/refunds/*']) {
+  for (const p of ['/v1/orders', '/v1/orders/*', '/v1/payments/*', '/v1/refunds/*', '/v1/payees/*']) {
     app.use(p, auth);
     app.use(p, keyLimit);
   }
@@ -131,12 +131,19 @@ export function createLedgerApp(opts: LedgerAppOptions): Hono {
 
   app.get('/v1/orders/:id/payments', async (c) => c.json({ payments: await service.listPayments(c.req.param('id'), caller(c)) }));
 
+  app.get('/v1/orders/:id/payouts', async (c) => c.json({ payouts: await service.listPayouts(c.req.param('id'), caller(c)) }));
+
+  app.get('/v1/payees/:ref/payouts', async (c) => {
+    const kind = c.req.query('kind');
+    return c.json({ payouts: await service.listPayeePayouts(c.req.param('ref'), kind !== undefined ? { kind } : {}, caller(c)) });
+  });
+
   app.get('/v1/orders/:id/receipt', async (c) => {
     const ctx = caller(c);
     const id = c.req.param('id');
     const order = await service.getOrder(id, ctx);
-    const [payments, refunds] = await Promise.all([service.listPayments(id, ctx), service.listRefunds(id, ctx)]);
-    const receipt = buildReceipt(order, payments, refunds, now().toISOString());
+    const [payments, refunds, payouts] = await Promise.all([service.listPayments(id, ctx), service.listRefunds(id, ctx), service.listPayouts(id, ctx)]);
+    const receipt = buildReceipt(order, payments, refunds, now().toISOString(), payouts);
     const wantsText = c.req.query('format') === 'text' || /^text\/plain\b/i.test(c.req.header('accept') ?? '');
     if (wantsText) return c.text(renderReceiptText(receipt), 200, { 'content-type': 'text/plain; charset=utf-8' });
     return c.json(receipt);

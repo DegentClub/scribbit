@@ -1,3 +1,5 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { HDKey } from '@scure/bip32';
 import * as btc from '@scure/btc-signer';
 import type { BTC_NETWORK } from '@scure/btc-signer/utils.js';
@@ -60,7 +62,7 @@ export function deriveAddress(account: HDKey, addressType: AddressType, network:
 export interface ChainTx {
   txid: string;
   vin: Array<{ sequence: number }>;
-  vout: Array<{ scriptpubkey_address?: string; value: number }>;
+  vout: Array<{ scriptpubkey_address?: string; scriptpubkey?: string; value: number }>;
   status: { confirmed: boolean; block_height?: number };
 }
 
@@ -70,7 +72,10 @@ export interface ChainPort {
   addressTxs(address: string): Promise<ChainTx[]>;
 }
 
-/** Esplora / mempool.space-compatible HTTP adapter (`/blocks/tip/height`, `/address/:a/txs`). */
+/** Esplora `scripthash`: SHA-256 of the scriptPubKey, hex in natural byte order (not Electrum's reversed form). */
+export const esploraScriptHash = (scriptHex: string): string => bytesToHex(sha256(hexToBytes(scriptHex)));
+
+/** Esplora / mempool.space-compatible HTTP adapter (`/blocks/tip/height`, `/address/:a/txs`, `/scripthash/:h/txs`). */
 export class EsploraChain implements ChainPort {
   constructor(
     private readonly baseUrl: string,
@@ -91,6 +96,11 @@ export class EsploraChain implements ChainPort {
 
   async addressTxs(address: string): Promise<ChainTx[]> {
     return this.get<ChainTx[]>(`/address/${encodeURIComponent(address)}/txs`);
+  }
+
+  /** Every transaction (mempool + chain) paying or spending the given scriptPubKey (psbt provider). */
+  async scriptTxs(scriptHex: string): Promise<ChainTx[]> {
+    return this.get<ChainTx[]>(`/scripthash/${esploraScriptHash(scriptHex)}/txs`);
   }
 }
 

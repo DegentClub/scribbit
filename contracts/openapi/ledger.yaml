@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Blockspace ledger
-  version: 1.0.0
-  summary: One order / payment ledger for block.space, scribb.it and degent.club - on-chain, Lightning (BTCPay) and card.
+  version: 1.1.0
+  summary: One order / payment ledger for block.space, scribb.it and degent.club - on-chain, Lightning (BTCPay), card and product-built PSBTs.
   description: |
     Provided by `ledger` (`@bsh/ledger`, platform/ledger). Amounts are integer satoshis everywhere
     (`currency: sat`); card payments are quoted to fiat at intent creation by the card provider adapter.
@@ -19,8 +19,16 @@ info:
     (`BTCPay-Sig` HMAC-SHA256, `Stripe-Signature` `t=…,v1=…` scheme) and de-duplicated per delivery id; they
     never accept API keys. A verified webhook is acknowledged with `200` even when it changes nothing.
 
+    Payees (1.1): a line item may name a `payee` (artist, club, platform, other) by address or scriptPubKey. With
+    `method: psbt` the customer pays by signing a PSBT the product builds; the ledger derives the expected outputs
+    (one per payee script, values summed) and credits the intent when a transaction carries every one of them at or
+    above its value. Each payee output found becomes a `Payout` record (`GET /v1/orders/{id}/payouts`,
+    `GET /v1/payees/{ref}/payouts`). Non-custodial: the ledger builds nothing and signs nothing.
+
+    Enums returned in responses that are marked `x-extensible-enum` are open sets: clients must tolerate new values.
+
     Errors use the platform edge body `{ "error": { "code", "message", "requestId" } }`.
-    Events: `ledger.order.{status}` and `ledger.payment.{status}` (contracts/asyncapi/ledger.yaml).
+    Events: `ledger.order.{status}`, `ledger.payment.{status}` and `ledger.payout.{status}` (contracts/asyncapi/ledger.yaml).
   license:
     name: Proprietary
 servers:
@@ -30,6 +38,7 @@ tags:
   - name: orders
   - name: payments
   - name: refunds
+  - name: payouts
   - name: webhooks
   - name: system
 security:
@@ -116,7 +125,9 @@ paths:
       description: |
         Exactly one intent may be `created`/`pending` per order at a time (`409 payment_active`). The intent
         amount is the order total. The response's `checkout` carries what the customer needs: an address,
-        a BOLT11 invoice, a hosted checkout URL, or a card `clientSecret` for the provider's browser SDK.
+        a BOLT11 invoice, a hosted checkout URL, a card `clientSecret` for the provider's browser SDK, or (`psbt`)
+        the `outputs` the product must place in the PSBT it builds. `psbt` requires every line item to carry a
+        `payee` (`409 payee_required`).
       parameters:
         - $ref: '#/components/parameters/OrderId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -180,6 +191,42 @@ paths:
             text/plain:
               schema: { type: string }
         '404': { $ref: '#/components/responses/NotFound' }
+  /v1/orders/{id}/payouts:
+    get:
+      tags: [payouts]
+      operationId: listOrderPayouts
+      summary: Payee payouts recorded for an order
+      description: One `Payout` per payee output found in the settling transaction of a `psbt` payment. Oldest first.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Payouts, oldest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/payees/{ref}/payouts:
+    get:
+      tags: [payouts]
+      operationId: listPayeePayouts
+      summary: Payouts to a payee across the caller's orders
+      description: Scoped to the caller's product (admin keys see every product). `kind` narrows to one payee kind.
+      parameters:
+        - $ref: '#/components/parameters/PayeeRef'
+        - name: kind
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/PayeeKind' }
+      responses:
+        '200':
+          description: Payouts, oldest first (empty when the payee is unknown).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PayoutList' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
   /v1/payments/{id}:
     get:
       tags: [payments]
@@ -352,6 +399,11 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/RefundId' }
+    PayeeRef:
+      name: ref
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 128 }
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -379,7 +431,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: State does not allow it (`illegal_transition`, `order_not_payable`, `payment_active`, `not_refundable`, `refund_exceeds_paid`, `nothing_to_refund`, `concurrent_update`).
+      description: State does not allow it (`illegal_transition`, `order_not_payable`, `payment_active`, `payee_required`, `not_refundable`, `refund_exceeds_paid`, `nothing_to_refund`, `concurrent_update`).
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -405,18 +457,44 @@ components:
     OrderId: { type: string, pattern: '^ord_[A-Za-z0-9-]+$' }
     PaymentId: { type: string, pattern: '^pay_[A-Za-z0-9-]+$' }
     RefundId: { type: string, pattern: '^ref_[A-Za-z0-9-]+$' }
+    PayoutId: { type: string, pattern: '^pyo_[A-Za-z0-9-]+$' }
     OrderStatus:
       type: string
       enum: [created, awaiting_payment, paid, expired, cancelled, refunded]
     PaymentMethod:
       type: string
-      enum: [onchain, lightning, card]
+      description: Method a product may request. `psbt` = the customer signs a PSBT built by the product (1.1).
+      enum: [onchain, lightning, card, psbt]
+    PaymentMethodValue:
+      type: string
+      description: Method of a recorded intent. Open set - clients must tolerate values they do not know.
+      x-extensible-enum: [onchain, lightning, card, psbt]
     PaymentStatus:
       type: string
       enum: [created, pending, paid, underpaid, overpaid, expired, failed, refunded]
     RefundStatus:
       type: string
       enum: [pending, completed, failed]
+    PayoutStatus:
+      type: string
+      enum: [settled, pending, failed]
+    PayeeKind:
+      type: string
+      enum: [artist, club, platform, other]
+    ScriptHex:
+      type: string
+      pattern: '^([0-9a-f]{2}){1,520}$'
+      description: scriptPubKey, lowercase hex.
+    Payee:
+      type: object
+      description: Who a line item's money goes to. Exactly one of `address` / `scriptHex`; the ledger matches outputs by script, never by address string.
+      required: [kind, ref]
+      additionalProperties: false
+      properties:
+        kind: { $ref: '#/components/schemas/PayeeKind' }
+        ref: { type: string, minLength: 1, maxLength: 128, description: Opaque payee reference owned by the product (artist id, club slug...). Never PII. }
+        address: { type: string, minLength: 1, maxLength: 128, description: Bitcoin address of the payee (decoded to a script at intent creation). }
+        scriptHex: { $ref: '#/components/schemas/ScriptHex' }
     LineItem:
       type: object
       required: [sku, description, quantity, unitSats]
@@ -426,6 +504,16 @@ components:
         description: { type: string, minLength: 1, maxLength: 512 }
         quantity: { type: integer, minimum: 1, maximum: 1000000 }
         unitSats: { $ref: '#/components/schemas/Sats' }
+        payee: { $ref: '#/components/schemas/Payee' }
+    ExpectedOutput:
+      type: object
+      description: An output the paying transaction must carry (`psbt`). Values are the sum of the line items paying this script.
+      required: [scriptHex, valueSats, payee]
+      properties:
+        scriptHex: { $ref: '#/components/schemas/ScriptHex' }
+        valueSats: { $ref: '#/components/schemas/Sats' }
+        address: { type: string, description: The payee address when one was given (informational; matching uses `scriptHex`). }
+        payee: { $ref: '#/components/schemas/Payee' }
     Metadata:
       type: object
       description: Up to 20 string values (64-char keys, 512-char values). Never PII, never secrets.
@@ -477,6 +565,10 @@ components:
         bolt11: { type: string, description: Lightning invoice. }
         checkoutUrl: { type: string, format: uri, description: Hosted checkout page. }
         clientSecret: { type: string, description: Card provider client token for the browser SDK. }
+        outputs:
+          type: array
+          description: "psbt: outputs the product's PSBT must carry (one per payee script)."
+          items: { $ref: '#/components/schemas/ExpectedOutput' }
     PaymentIntent:
       type: object
       required: [id, orderId, product, method, provider, providerRef, amountSats, amountPaidSats, refundedSats, status, checkout, expiresAt, paidAt, providerData, version, createdAt, updatedAt]
@@ -484,9 +576,9 @@ components:
         id: { $ref: '#/components/schemas/PaymentId' }
         orderId: { $ref: '#/components/schemas/OrderId' }
         product: { $ref: '#/components/schemas/Product' }
-        method: { $ref: '#/components/schemas/PaymentMethod' }
+        method: { $ref: '#/components/schemas/PaymentMethodValue' }
         provider: { type: string }
-        providerRef: { type: string, description: BTCPay invoice id, card intent id or the on-chain address. }
+        providerRef: { type: string, description: BTCPay invoice id, card intent id, the on-chain address, or (psbt) the intent id. }
         amountSats: { $ref: '#/components/schemas/Sats' }
         amountPaidSats: { $ref: '#/components/schemas/Sats' }
         refundedSats: { $ref: '#/components/schemas/Sats' }
@@ -521,8 +613,34 @@ components:
         providerRef: { type: [string, 'null'] }
         destination: { type: [string, 'null'] }
         detail: { type: [string, 'null'] }
+        version: { type: integer, minimum: 0, description: Optimistic-concurrency version (1.1). }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    Payout:
+      type: object
+      description: Money that reached a payee in the transaction settling a `psbt` payment (recorded, never moved, by the ledger).
+      required: [id, orderId, paymentId, product, payee, amountSats, txid, vout, status, settledAt, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/PayoutId' }
+        orderId: { $ref: '#/components/schemas/OrderId' }
+        paymentId: { $ref: '#/components/schemas/PaymentId' }
+        product: { $ref: '#/components/schemas/Product' }
+        payee: { $ref: '#/components/schemas/Payee' }
+        amountSats: { $ref: '#/components/schemas/Sats' }
+        txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+        vout: { type: integer, minimum: 0 }
+        status: { $ref: '#/components/schemas/PayoutStatus' }
+        settledAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PayoutList:
+      type: object
+      required: [payouts]
+      properties:
+        payouts:
+          type: array
+          items: { $ref: '#/components/schemas/Payout' }
     Receipt:
       type: object
       required: [receiptId, issuedAt, order, payments, refunds, totals]
@@ -551,7 +669,7 @@ components:
             required: [id, method, provider, status, amountSats, amountPaidSats, refundedSats, paidAt, reference]
             properties:
               id: { $ref: '#/components/schemas/PaymentId' }
-              method: { $ref: '#/components/schemas/PaymentMethod' }
+              method: { $ref: '#/components/schemas/PaymentMethodValue' }
               provider: { type: string }
               status: { $ref: '#/components/schemas/PaymentStatus' }
               amountSats: { $ref: '#/components/schemas/Sats' }
@@ -572,6 +690,20 @@ components:
               status: { $ref: '#/components/schemas/RefundStatus' }
               reason: { type: string }
               createdAt: { type: string, format: date-time }
+        payouts:
+          type: array
+          description: Payee payouts (1.1).
+          items:
+            type: object
+            required: [id, paymentId, payee, amountSats, txid, vout, status]
+            properties:
+              id: { $ref: '#/components/schemas/PayoutId' }
+              paymentId: { $ref: '#/components/schemas/PaymentId' }
+              payee: { $ref: '#/components/schemas/Payee' }
+              amountSats: { $ref: '#/components/schemas/Sats' }
+              txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+              vout: { type: integer, minimum: 0 }
+              status: { $ref: '#/components/schemas/PayoutStatus' }
         totals:
           type: object
           required: [totalSats, paidSats, refundedSats, dueSats]

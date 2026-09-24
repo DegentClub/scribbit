@@ -14,6 +14,8 @@ export {
 } from './constants.js';
 export type { Network } from './network.js';
 export { networkParams } from './network.js';
+export type { Attribution, CborMap, CborValue } from './attribution.js';
+export { decodeAttribution, decodeCbor, encodeAttribution, encodeCbor } from './attribution.js';
 export type { InscriptionContent } from './envelope.js';
 export { buildInscriptionScript, encodeParentId, inscriptionIdFromReveal, inscriptionScriptLength } from './envelope.js';
 export type { CommitInfo } from './commit.js';
