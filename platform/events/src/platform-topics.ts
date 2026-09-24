@@ -88,11 +88,19 @@ export interface CollectionMinted {
   orderId?: string;
   contentHash?: string;
   mintedAt: string;
+  /** Open Studio (degent ADR-0007): the artist's payout address carried in the inscription's attribution metadata. */
+  artist?: string;
+  /** Open Studio: the artwork id the inscription was minted from. */
+  artworkId?: string;
+  /** Open Studio: 1-based edition number of this mint of the artwork. */
+  edition?: number;
+  /** Open Studio: the artist royalty output in the minter's funding transaction. */
+  royalty?: { txid: string; vout: number; sats: number };
 }
 
 export const collectionMinted = defineTopic<CollectionMinted>({
   name: 'collection.minted',
-  version: '1.0.0',
+  version: '1.1.0',
   producer: 'degent-mint',
   description: 'An inscription belonging to a collection has been revealed on chain (confirmed).',
   dataschema: `${SCHEMA_BASE}CollectionMinted`,
@@ -108,6 +116,19 @@ export const collectionMinted = defineTopic<CollectionMinted>({
       orderId: { type: 'string', minLength: 1 },
       contentHash: { ...hex64, description: 'SHA-256 of the inscription content.' },
       mintedAt: dateTime,
+      artist: { type: 'string', minLength: 14, maxLength: 100, description: 'Open Studio: artist payout address from the attribution metadata.' },
+      artworkId: { type: 'string', minLength: 1, maxLength: 128, description: 'Open Studio: the artwork the inscription was minted from.' },
+      edition: { type: 'integer', minimum: 1, description: 'Open Studio: 1-based edition number of this mint.' },
+      royalty: {
+        type: 'object',
+        required: ['txid', 'vout', 'sats'],
+        properties: {
+          txid: hex64,
+          vout: { type: 'integer', minimum: 0 },
+          sats: { type: 'integer', minimum: 0, maximum: 2100000000000000 },
+        },
+        description: 'Open Studio: the artist royalty output in the funding transaction the minter signed.',
+      },
     },
   },
 });

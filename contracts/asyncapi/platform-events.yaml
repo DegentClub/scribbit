@@ -327,6 +327,36 @@ components:
         mintedAt: &a4
           type: string
           format: date-time
+        artist:
+          type: string
+          minLength: 14
+          maxLength: 100
+          description: "Open Studio: artist payout address from the attribution metadata."
+        artworkId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: "Open Studio: the artwork the inscription was minted from."
+        edition:
+          type: integer
+          minimum: 1
+          description: "Open Studio: 1-based edition number of this mint."
+        royalty:
+          type: object
+          required:
+            - txid
+            - vout
+            - sats
+          properties:
+            txid: *a1
+            vout:
+              type: integer
+              minimum: 0
+            sats:
+              type: integer
+              minimum: 0
+              maximum: 2100000000000000
+          description: "Open Studio: the artist royalty output in the funding transaction the minter signed."
     CollectionCertified:
       type: object
       required:
@@ -709,7 +739,7 @@ components:
       title: collection.minted
       summary: An inscription belonging to a collection has been revealed on chain (confirmed).
       contentType: application/cloudevents+json
-      x-topic-version: 1.0.0
+      x-topic-version: 1.1.0
       x-producer: degent-mint
       payload:
         allOf:
