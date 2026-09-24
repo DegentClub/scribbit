@@ -117,5 +117,5 @@ Topic versions follow `x-topic-version` in the contract; the contract's own `inf
 
 | Contract | Topic | Change |
 |---|---|---|
-| 1.1.0 | `degent.mint.order.{status}` 1.1.0 | Additive: statuses `confirming` (commit tx seen, unconfirmed), `member_review` (commit confirmed; existing club members vote) and `declined` (reject quorum; self-rescue offered) inserted after `paid`, for member approval of the mint (degent ADR-0005). Non-breaking; consumers already tolerate new enum values |
+| 1.1.0 | `degent.mint.order.{status}` 1.1.0 | Additive: statuses `confirming` (commit tx seen, unconfirmed), `member_review` (commit confirmed; existing club members vote) and `declined` (reject quorum; self-rescue offered) inserted after `paid`, for member approval of the mint (degent ADR-0007). Non-breaking; consumers already tolerate new enum values |
 | 1.0.0 | all | Initial contract |
