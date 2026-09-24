@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.degentclub/scribbit-mcp",
+  "name": "io.github.DegentClub/scribbit-mcp",
   "title": "scribb.it: write to Bitcoin",
   "description": "Exact Bitcoin inscription quotes, commit addresses, envelope and lane facts, fees and 0x83 rescue.",
   "version": "0.1.0",

@@ -201,7 +201,6 @@ Submission (not done yet):
 
 | Field | Why |
 |---|---|
-| `name` (`io.github.degentclub/scribbit-mcp`) | The registry compares the name to the granted namespace **case-sensitively**, and GitHub OIDC grants `io.github.<repository_owner>/*` with the owner's exact login (`DegentClub`). As written, the lower-case name would likely be refused; either rename to `io.github.DegentClub/scribbit-mcp` (and `mcpName` with it) or confirm the registry normalises case. |
 | `$schema` | Must be a schema version the registry still accepts; `2025-12-11` was current when written. |
 | `packages[0].identifier` / `version` | `@bsh/scribbit-mcp` is not on npm yet; the scope may change with the `@blockspace` rename. `mcpName` must be in the *published* `package.json`. |
 | `remotes[0].url` | `https://mcp.scribb.it/mcp` must be live and reachable before listing it. |

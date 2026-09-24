@@ -2,7 +2,7 @@
   "name": "@bsh/scribbit-mcp",
   "version": "0.1.0",
   "license": "Apache-2.0",
-  "mcpName": "io.github.degentclub/scribbit-mcp",
+  "mcpName": "io.github.DegentClub/scribbit-mcp",
   "private": true,
   "type": "module",
   "bin": {
