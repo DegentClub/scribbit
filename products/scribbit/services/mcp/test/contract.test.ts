@@ -4,7 +4,7 @@ import { Ajv2020 } from 'ajv/dist/2020.js';
 import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
 import { generateApiKey, InMemoryApiKeyStore } from '@bsh/edge';
-import { createApp, MCP_SCOPE } from '../src/index.js';
+import { AGENT_CARD_PATH, createApp, MCP_MANIFEST_PATH, MCP_SCOPE, toolNames } from '../src/index.js';
 import { b64, bytes } from './helpers.js';
 
 const contractPath = fileURLToPath(new URL('../../../../../contracts/openapi/scribbit-mcp.yaml', import.meta.url));
@@ -31,7 +31,7 @@ const MCP_HEADERS = { 'content-type': 'application/json', accept: 'application/j
 
 describe('HTTP surface (contracts/openapi/scribbit-mcp.yaml)', () => {
   it('declares exactly the routes the app serves', () => {
-    expect(Object.keys(contract.paths).sort()).toEqual(['/', '/healthz', '/mcp', '/v1/keys/me']);
+    expect(Object.keys(contract.paths).sort()).toEqual(['/', AGENT_CARD_PATH, MCP_MANIFEST_PATH, '/healthz', '/mcp', '/v1/keys/me'].sort());
     expect(Object.keys(contract.paths['/mcp']).sort()).toEqual(['delete', 'get', 'post']);
   });
 
@@ -42,8 +42,35 @@ describe('HTTP surface (contracts/openapi/scribbit-mcp.yaml)', () => {
     const body = await res.json();
     expectValid('Index', body);
     expect(body.mcp.endpoint).toBe('https://mcp.scribb.it/mcp');
-    expect(body.mcp.tools).toEqual(['get_fees', 'quote_inscription', 'build_envelope', 'commit_address', 'explain_lanes', 'rescue_tx']);
+    expect(body.mcp.tools).toEqual(toolNames());
+    expect(body.mcp.tools).toEqual(['get_fees', 'quote_inscription', 'build_envelope', 'commit_address', 'explain_lanes', 'rescue_tx', 'create_order', 'get_order', 'report_funding', 'get_receipt']);
     expect(body.networks).toEqual(['mainnet', 'signet']);
+    expect(body.mcp.auth.scope).toBe(MCP_SCOPE);
+  });
+
+  it('GET /.well-known/agent.json matches AgentCard', async () => {
+    const { app } = makeApp();
+    const res = await app.request(AGENT_CARD_PATH);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expectValid('AgentCard', body);
+    expect(body.skills.map((s: { id: string }) => s.id)).toEqual(toolNames());
+    expect(body['x-flashyos']).toEqual({ charter: '/.well-known/flashyos-charter.json', frontdoor: '/.well-known/frontdoor.json' });
+  });
+
+  it('GET /.well-known/mcp.json matches McpManifest', async () => {
+    const { app } = makeApp();
+    const res = await app.request(MCP_MANIFEST_PATH);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expectValid('McpManifest', body);
+    expect(body.tools.map((t: { name: string }) => t.name)).toEqual(toolNames());
+    expect(body.endpoint).toBe('https://mcp.scribb.it/mcp');
+  });
+
+  it('the Scope enum in the contract is the scope list the server understands', () => {
+    const schema = validator('Scope').schema as { enum: string[] };
+    expect(schema.enum).toEqual(['mcp', 'mcp:quote', 'mcp:order', 'mcp:settle']);
   });
 
   it('GET /healthz matches Health', async () => {
@@ -103,7 +130,7 @@ describe('HTTP surface (contracts/openapi/scribbit-mcp.yaml)', () => {
   it('ToolError enum covers every code the tools emit', () => {
     const schema = validator('ToolError').schema as { properties: { error: { properties: { code: { enum: string[] } } } } };
     expect(schema.properties.error.properties.code.enum.sort()).toEqual(
-      ['invalid_input', 'content_too_large', 'content_hash_mismatch', 'too_large', 'invalid_psbt', 'fees_unavailable', 'fee_rate_required', 'unsupported_network', 'internal'].sort(),
+      ['invalid_input', 'content_too_large', 'content_hash_mismatch', 'too_large', 'invalid_psbt', 'fees_unavailable', 'fee_rate_required', 'unsupported_network', 'forbidden_scope', 'ledger_unavailable', 'ledger_rejected', 'order_not_found', 'internal'].sort(),
     );
   });
 });

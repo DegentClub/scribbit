@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: scribb.it MCP server
-  version: 1.0.0
+  version: 1.1.0
   summary: 'HTTP surface around the scribb.it MCP endpoint ("scribb.it: write to Bitcoin").'
   description: |
     Provided by `scribbit-mcp` (`@bsh/scribbit-mcp`, products/scribbit/services/mcp).
@@ -13,10 +13,23 @@ info:
 
     **Authentication.** Every `/mcp` and `/v1/*` request carries an API key: `Authorization: Bearer bsh_live_…`
     (or `X-API-Key`). Keys are minted by the operator (`pnpm --filter @bsh/scribbit-mcp mint-key`), stored only as
-    SHA-256 hashes, and need the `mcp` scope. Missing key: 401 `missing_api_key`; unknown / revoked / expired /
-    wrong-environment key: 401 `invalid_api_key` (indistinguishable on purpose); missing scope: 403
-    `insufficient_scope`; per-key quota exhausted: 429 `quota_exceeded`. OAuth 2.1 (resource-server mode with
-    `WWW-Authenticate: Bearer resource_metadata=…`) is planned as an alternative and is NOT implemented.
+    SHA-256 hashes, and need one of the MCP scopes. Missing key: 401 `missing_api_key`; unknown / revoked / expired /
+    wrong-environment key: 401 `invalid_api_key` (indistinguishable on purpose); no MCP scope, or a key that holds
+    both `mcp:order` and `mcp:settle`: 403 `insufficient_scope`; per-key quota exhausted: 429 `quota_exceeded`.
+    OAuth 2.1 (resource-server mode with `WWW-Authenticate: Bearer resource_metadata=…`) is planned as an
+    alternative and is NOT implemented.
+
+    **Scopes (1.1).** `mcp` = the read-only calculators (backwards compatible). `mcp:quote` = calculators + read
+    orders and receipts. `mcp:order` = quote + create orders + report funding (the proposing side). `mcp:settle` =
+    quote + report funding, never create (the settling side). `mcp:order` and `mcp:settle` are never issued on one
+    key. Every tool declares the scopes that may call it (`GET /` `mcp.toolScopes`, the agent card's skills); a
+    call without one is an MCP result with `isError: true` and code `forbidden_scope`.
+
+    **Discovery (1.1).** `GET /.well-known/agent.json` is an A2A-style agent card (provider, capabilities, skills
+    = tools with scopes, `x-flashyos` links to the charter and frontdoor documents) and `GET /.well-known/mcp.json`
+    describes the MCP endpoint (transport, protocol versions, auth scheme, tools with scopes). Both are
+    unauthenticated and cacheable (`Cache-Control: public, max-age=300`). The tool lists in all three discovery
+    documents are derived from the server's tool registry, never hand-written.
 
     **Rate limits.** Token bucket per client IP on every route (`RateLimit-*` headers, 429 with `Retry-After`)
     and a second bucket per API key on `/mcp`.
@@ -25,9 +38,11 @@ info:
     JSON body (`application/json`), never a long-lived SSE stream. `GET /mcp` (server-initiated stream) is
     therefore not offered and returns 405.
 
-    **Tools** (all read-only; nothing is signed, stored or broadcast): `get_fees`, `quote_inscription`,
-    `build_envelope`, `commit_address`, `explain_lanes`, `rescue_tx`. Tool errors are MCP results with
-    `isError: true` and `structuredContent: { error: { code, message, details? } }`; the codes are listed under
+    **Tools.** Read-only calculators (nothing is signed, stored or broadcast): `get_fees`, `quote_inscription`,
+    `build_envelope`, `commit_address`, `explain_lanes`, `rescue_tx`. Order tools over the platform ledger
+    (`contracts/openapi/ledger.yaml`; the server is a ledger client, still non-custodial): `create_order`,
+    `get_order`, `report_funding`, `get_receipt`. Tool errors are MCP results with `isError: true` and
+    `structuredContent: { error: { code, message, details? } }`; the codes are listed under
     `components/schemas/ToolError`.
   license:
     name: Proprietary
@@ -36,6 +51,7 @@ servers:
     description: Local (`pnpm --filter @bsh/scribbit-mcp dev`)
 tags:
   - name: mcp
+  - name: discovery
   - name: keys
   - name: ops
 paths:
@@ -51,6 +67,38 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Index' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /.well-known/agent.json:
+    get:
+      tags: [discovery]
+      operationId: getAgentCard
+      summary: Agent card (A2A-style)
+      description: Who this agent is, how to reach and authenticate to it, and its skills (the tools, each with the scopes it needs). Unauthenticated, cacheable.
+      responses:
+        '200':
+          description: The agent card.
+          headers:
+            Cache-Control: { schema: { type: string, example: 'public, max-age=300' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentCard' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /.well-known/mcp.json:
+    get:
+      tags: [discovery]
+      operationId: getMcpManifest
+      summary: MCP endpoint manifest
+      description: Transport, endpoint, protocol versions, auth scheme and the tool list with scopes. Unauthenticated, cacheable.
+      responses:
+        '200':
+          description: The manifest.
+          headers:
+            Cache-Control: { schema: { type: string, example: 'public, max-age=300' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/McpManifest' }
         '429':
           $ref: '#/components/responses/RateLimited'
   /healthz:
@@ -200,7 +248,7 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
           example: { error: { code: invalid_api_key, message: Invalid API key, requestId: 6f1c0f1e-3f6b-4d3e-9f1a-1a2b3c4d5e6f } }
     Forbidden:
-      description: The key lacks the `mcp` scope.
+      description: The key holds no MCP scope, or holds both `mcp:order` and `mcp:settle`.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -244,6 +292,119 @@ components:
         networks:
           type: array
           items: { $ref: '#/components/schemas/Network' }
+        orders: { type: boolean, description: A ledger is configured (order tools available). }
+    Scope:
+      type: string
+      enum: [mcp, 'mcp:quote', 'mcp:order', 'mcp:settle']
+    ToolScopes:
+      type: object
+      description: Tool name -> scopes, any one of which may call it.
+      additionalProperties:
+        type: array
+        minItems: 1
+        items: { $ref: '#/components/schemas/Scope' }
+    AgentCard:
+      type: object
+      description: A2A-style agent card. Skills are the MCP tools; `x-flashyos` links the FlashyOS charter and frontdoor documents served beside it.
+      required: [name, description, url, provider, version, capabilities, skills, x-flashyos, x-mcp]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        url: { type: string, description: 'The MCP endpoint (absolute when MCP_PUBLIC_URL is set).' }
+        provider:
+          type: object
+          required: [organization, url]
+          properties:
+            organization: { type: string, const: Blockspace Holdings }
+            url: { type: string, format: uri }
+        version: { type: string }
+        documentationUrl: { type: string }
+        capabilities:
+          type: object
+          required: [streaming]
+          properties:
+            streaming: { type: boolean, const: false }
+            pushNotifications: { type: boolean, const: false }
+            stateTransitionHistory: { type: boolean, const: false }
+        defaultInputModes: { type: array, items: { type: string } }
+        defaultOutputModes: { type: array, items: { type: string } }
+        securitySchemes: { type: object }
+        security: { type: array, items: { type: object } }
+        skills:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [id, name, description, scopes]
+            properties:
+              id: { type: string, description: The tool name. }
+              name: { type: string }
+              description: { type: string }
+              tags: { type: array, items: { type: string } }
+              scopes:
+                type: array
+                minItems: 1
+                items: { $ref: '#/components/schemas/Scope' }
+              inputModes: { type: array, items: { type: string } }
+              outputModes: { type: array, items: { type: string } }
+        x-flashyos:
+          type: object
+          required: [charter, frontdoor]
+          properties:
+            charter: { type: string, const: /.well-known/flashyos-charter.json }
+            frontdoor: { type: string, const: /.well-known/frontdoor.json }
+        x-mcp:
+          type: object
+          required: [endpoint, transport, manifest, protocolVersions]
+          properties:
+            endpoint: { type: string }
+            transport: { type: string, const: streamable-http }
+            manifest: { type: string }
+            protocolVersions: { type: array, items: { type: string } }
+        x-scribbit:
+          type: object
+          properties:
+            networks: { type: array, items: { $ref: '#/components/schemas/Network' } }
+            orders: { type: boolean }
+            resources: { type: array, items: { type: string, format: uri } }
+            prompts: { type: array, items: { type: string } }
+    McpManifest:
+      type: object
+      required: [name, title, version, transport, endpoint, protocolVersions, stateless, auth, tools, resources, prompts, agentCard]
+      properties:
+        name: { type: string, const: scribbit }
+        title: { type: string }
+        version: { type: string }
+        transport: { type: string, const: streamable-http }
+        endpoint: { type: string }
+        protocolVersions: { type: array, items: { type: string } }
+        stateless: { type: boolean, const: true }
+        auth:
+          type: object
+          required: [scheme, header, keyPrefix, scopes]
+          properties:
+            scheme: { type: string, const: bearer }
+            header: { type: string, const: Authorization }
+            alternateHeader: { type: string, const: X-API-Key }
+            keyPrefix: { type: string, enum: [bsh_live_, bsh_test_] }
+            scope: { type: string, const: mcp }
+            scopes: { type: array, items: { $ref: '#/components/schemas/Scope' } }
+        tools:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [name, scopes, readOnly]
+            properties:
+              name: { type: string }
+              title: { type: string }
+              scopes: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Scope' } }
+              readOnly: { type: boolean }
+        resources: { type: array, items: { type: string, format: uri } }
+        prompts: { type: array, items: { type: string } }
+        networks: { type: array, items: { $ref: '#/components/schemas/Network' } }
+        orders: { type: boolean }
+        agentCard: { type: string }
     Network:
       type: string
       enum: [mainnet, testnet, signet, regtest]
@@ -267,11 +428,23 @@ components:
               properties:
                 scheme: { type: string, const: bearer }
                 keyPrefix: { type: string, enum: [bsh_live_, bsh_test_] }
-                scope: { type: string, const: mcp }
+                scope: { type: string, const: mcp, description: The base scope (1.0); see `scopes` for all of them. }
+                scopes: { type: array, items: { $ref: '#/components/schemas/Scope' }, description: Every scope the server understands (1.1). }
                 header: { type: string, const: Authorization }
-            tools: { type: array, items: { type: string } }
+            tools: { type: array, items: { type: string }, description: Derived from the tool registry (same list as tools/list). }
+            toolScopes: { $ref: '#/components/schemas/ToolScopes' }
             resources: { type: array, items: { type: string, format: uri } }
             prompts: { type: array, items: { type: string } }
+        wellKnown:
+          type: object
+          description: Where the discovery documents live (1.1).
+          required: [agentCard, mcp, charter, frontdoor]
+          properties:
+            agentCard: { type: string }
+            mcp: { type: string }
+            charter: { type: string }
+            frontdoor: { type: string }
+        orders: { type: boolean, description: A ledger is configured, so the order tools work. }
         networks:
           type: array
           items: { $ref: '#/components/schemas/Network' }
@@ -290,6 +463,7 @@ components:
         id: { type: string }
         env: { type: string, enum: [live, test] }
         scopes: { type: array, items: { type: string } }
+        mcpScopes: { type: array, items: { $ref: '#/components/schemas/Scope' }, description: The MCP scopes among `scopes` (1.1). }
         ownerId: { type: string }
     ToolError:
       type: object
@@ -302,7 +476,7 @@ components:
           properties:
             code:
               type: string
-              enum: [invalid_input, content_too_large, content_hash_mismatch, too_large, invalid_psbt, fees_unavailable, fee_rate_required, unsupported_network, internal]
+              enum: [invalid_input, content_too_large, content_hash_mismatch, too_large, invalid_psbt, fees_unavailable, fee_rate_required, unsupported_network, forbidden_scope, ledger_unavailable, ledger_rejected, order_not_found, internal]
             message: { type: string }
             details: {}
     JsonRpcRequest:

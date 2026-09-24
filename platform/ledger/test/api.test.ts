@@ -17,6 +17,7 @@ describe('contract file', () => {
         '/v1/orders/{id}/receipt',
         '/v1/payees/{ref}/payouts',
         '/v1/payments/{id}',
+        '/v1/payments/{id}/observations',
         '/v1/payments/{id}/refund',
         '/v1/refunds/{id}',
         '/v1/refunds/{id}/settle',

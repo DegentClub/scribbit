@@ -70,10 +70,19 @@ the provider's state (`poll`) and applies that; the webhook body is only used wh
 
 `createLedgerApp({ service, apiKeyStore, environment })` - see the OpenAPI file for the full surface:
 `POST /v1/orders`, `GET /v1/orders/{id}`, `POST /v1/orders/{id}/payments`, `GET /v1/payments/{id}`,
-`POST /v1/payments/{id}/refund`, `GET /v1/orders/{id}/receipt` (JSON, or text with `Accept: text/plain` /
-`?format=text`; includes payouts), `GET /v1/orders/{id}/payouts`, `GET /v1/payees/{ref}/payouts[?kind=]`
-(scoped to the key's product; admin sees all), `POST /v1/webhooks/{btcpay,card}`, `GET /v1/health`, plus
-cancel, list payments, get/settle refund. Contract note: `PaymentIntent.method` in responses is an
+`POST /v1/payments/{id}/refund`, `POST /v1/payments/{id}/observations` (1.2, below),
+`GET /v1/orders/{id}/receipt` (JSON, or text with `Accept: text/plain` / `?format=text`; includes payouts),
+`GET /v1/orders/{id}/payouts`, `GET /v1/payees/{ref}/payouts[?kind=]` (scoped to the key's product; admin sees
+all), `POST /v1/webhooks/{btcpay,card}`, `GET /v1/health`, plus cancel, list payments, get/settle refund.
+
+**Observations (1.2).** A product that saw its customer's funding transaction reports it instead of waiting for
+the worker: `POST /v1/payments/{id}/observations` with `{ txid, outputs: [{ scriptHex, valueSats }], confirmations?,
+rbfSignalled? }` (every output of the transaction, in vout order). The route is `service.observe`: the intent's
+provider must implement the optional `evaluate` port (`PsbtProvider` does; other methods answer `409
+not_observable`), the evaluation is applied through `applyUpdate` like a worker poll, and the response carries the
+intent, its order, `applied` (+ `reason` when nothing changed: not the intent's transaction, txid claimed by another
+intent, illegal transition) and every payout recorded so far. Reporting the same transaction twice is harmless.
+This is how `@bsh/scribbit-mcp`'s `report_funding` tool feeds the ledger. Contract note: `PaymentIntent.method` in responses is an
 `x-extensible-enum` (open set) - CI's `oasdiff breaking` locks closed enums in responses, so new methods are
 added to the request-side `PaymentMethod` enum and clients must tolerate unknown values in responses.
 Edge stack from `@bsh/edge`: request ids, uniform errors, security headers, 64 KiB body limit, per-IP

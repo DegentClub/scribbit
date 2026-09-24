@@ -4,13 +4,13 @@ package: "@bsh/scribbit-mcp"
 kind: service
 product: scribbit
 owner: team-scribbit
-summary: MCP server "scribb.it - write to Bitcoin" for AI agents - exact inscription quotes, commit addresses, envelope/lane facts, fees and 0x83 self-rescue over Streamable HTTP (API keys) or stdio.
+summary: MCP server "scribb.it - write to Bitcoin" for AI agents - exact quotes, commit addresses, lane facts, fees, and non-custodial orders over the platform ledger with per-tool scopes.
 lifecycle: experimental
 depends_on: ["@bsh/inscription", "@bsh/scribbit-fee-oracle", "@bsh/edge"]
 provides: [contracts/openapi/scribbit-mcp.yaml]
-consumes: [contracts/openapi/scribbit-fees.yaml]
+consumes: [contracts/openapi/scribbit-fees.yaml, contracts/openapi/ledger.yaml]
 stores: ["memory:api_keys", "memory:rate_limits"]
-secrets: ["services/scribbit-mcp/api-key-hashes"]
+secrets: ["services/scribbit-mcp/api-key-hashes", "services/scribbit-mcp/ledger-api-key"]
 env_schema: ./env.schema.json
 runbook: ./RUNBOOK.md
 docs: ./README.md

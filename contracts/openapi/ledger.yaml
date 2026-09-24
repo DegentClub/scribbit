@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Blockspace ledger
-  version: 1.1.0
+  version: 1.2.0
   summary: One order / payment ledger for block.space, scribb.it and degent.club - on-chain, Lightning (BTCPay), card and product-built PSBTs.
   description: |
     Provided by `ledger` (`@bsh/ledger`, platform/ledger). Amounts are integer satoshis everywhere
@@ -24,6 +24,11 @@ info:
     (one per payee script, values summed) and credits the intent when a transaction carries every one of them at or
     above its value. Each payee output found becomes a `Payout` record (`GET /v1/orders/{id}/payouts`,
     `GET /v1/payees/{ref}/payouts`). Non-custodial: the ledger builds nothing and signs nothing.
+
+    Observations (1.2): a product that saw its customer's transaction on the network reports it with
+    `POST /v1/payments/{id}/observations` (txid + every output's scriptPubKey and value); the `psbt` provider evaluates
+    it exactly as a worker poll would and the same state rules apply (one transaction settles one intent, payouts are
+    recorded once). Intents of other methods answer `409 not_observable`.
 
     Enums returned in responses that are marked `x-extensible-enum` are open sets: clients must tolerate new values.
 
@@ -241,6 +246,37 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentIntent' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /v1/payments/{id}/observations:
+    post:
+      tags: [payments]
+      operationId: observePayment
+      summary: Report a transaction observed for a psbt intent (1.2)
+      description: |
+        The product (or its agent) saw the customer's funding transaction and reports it: txid, every output as
+        `{ scriptHex, valueSats }` in vout order, how deep it is and whether it still signals RBF. The provider
+        evaluates it against the intent's expected outputs (scripts, never addresses) and the result is applied
+        through the payment state table: `pending` while replaceable or shallow, `paid` / `overpaid` / `underpaid`
+        at the confirmation depth; payouts are recorded once the intent is paid. A transaction that pays none of the
+        expected outputs, an illegal transition, or a txid already claimed by another intent is answered `200` with
+        `applied: false` and a `reason`. Not idempotency-keyed: reporting the same transaction again is harmless.
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ObservationRequest' }
+      responses:
+        '200':
+          description: The evaluation result, with the intent, its order and every payout recorded so far.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ObservationResult' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
   /v1/payments/{id}/refund:
     post:
       tags: [refunds]
@@ -431,7 +467,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Conflict:
-      description: State does not allow it (`illegal_transition`, `order_not_payable`, `payment_active`, `payee_required`, `not_refundable`, `refund_exceeds_paid`, `nothing_to_refund`, `concurrent_update`).
+      description: State does not allow it (`illegal_transition`, `order_not_payable`, `payment_active`, `payee_required`, `not_observable`, `not_refundable`, `refund_exceeds_paid`, `nothing_to_refund`, `concurrent_update`).
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -592,6 +628,39 @@ components:
         version: { type: integer, minimum: 0 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    ObservedOutput:
+      type: object
+      required: [scriptHex, valueSats]
+      additionalProperties: false
+      properties:
+        scriptHex: { type: string, pattern: '^([0-9a-fA-F]{2}){1,520}$', description: scriptPubKey of the output (hex; compared case-insensitively). }
+        valueSats: { $ref: '#/components/schemas/Sats' }
+    ObservationRequest:
+      type: object
+      description: A transaction as the product observed it (1.2). Outputs in vout order, every output of the transaction, not only the expected ones.
+      required: [txid, outputs]
+      additionalProperties: false
+      properties:
+        txid: { type: string, pattern: '^[0-9a-fA-F]{64}$' }
+        outputs:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { $ref: '#/components/schemas/ObservedOutput' }
+        confirmations: { type: integer, minimum: 0, default: 0 }
+        rbfSignalled: { type: boolean, default: false, description: BIP125 signalling while unconfirmed. Ignored once mined. }
+    ObservationResult:
+      type: object
+      required: [payment, order, applied, payouts]
+      properties:
+        payment: { $ref: '#/components/schemas/PaymentIntent' }
+        order: { $ref: '#/components/schemas/Order' }
+        applied: { type: boolean, description: A state or amount change resulted. }
+        reason: { type: string, description: Why nothing was applied (not the intent's transaction, illegal transition, txid claimed by another intent, no change). }
+        payouts:
+          type: array
+          description: Every payout recorded for the payment so far (empty until it is paid).
+          items: { $ref: '#/components/schemas/Payout' }
     RefundRequest:
       type: object
       required: [reason]

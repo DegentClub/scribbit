@@ -10,11 +10,12 @@ describe('tool list', () => {
   beforeAll(async () => (h = await connect()));
   afterAll(() => h.close());
 
-  it('exposes exactly the six documented tools, all read-only', async () => {
+  it('exposes exactly the ten documented tools; the six calculators are read-only', async () => {
     const { tools } = await h.client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(['build_envelope', 'commit_address', 'explain_lanes', 'get_fees', 'quote_inscription', 'rescue_tx']);
+    expect(tools.map((t) => t.name).sort()).toEqual(['build_envelope', 'commit_address', 'create_order', 'explain_lanes', 'get_fees', 'get_order', 'get_receipt', 'quote_inscription', 'report_funding', 'rescue_tx']);
+    const calculators = ['build_envelope', 'commit_address', 'explain_lanes', 'get_fees', 'quote_inscription', 'rescue_tx'];
     for (const t of tools) {
-      expect(t.annotations?.readOnlyHint, t.name).toBe(true);
+      expect(t.annotations?.readOnlyHint, t.name).toBe(calculators.includes(t.name) || t.name.startsWith('get_'));
       expect(t.inputSchema.type).toBe('object');
       expect(t.description?.length ?? 0).toBeGreaterThan(40);
     }

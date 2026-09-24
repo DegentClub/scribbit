@@ -21,7 +21,7 @@ import {
   type Refund,
 } from './domain/types.js';
 import { assertSats } from './money.js';
-import { WebhookError, type PaymentProvider, type PayoutSettlement, type ProviderUpdate } from './providers/provider.js';
+import { WebhookError, type ObservedTransactionInput, type PaymentProvider, type PayoutSettlement, type ProviderUpdate } from './providers/provider.js';
 import type { IdempotencyRecord, OrderStore } from './store/order-store.js';
 
 export interface CreateOrderInput {
@@ -59,6 +59,21 @@ export interface ApplyResult {
   /** False when the update was a no-op or an illegal transition that was ignored. */
   applied: boolean;
   reason?: string;
+}
+
+/** `POST /v1/payments/{id}/observations`: what a product saw on the network after its customer broadcast. */
+export interface ObservationInput {
+  txid: string;
+  outputs: Array<{ scriptHex: string; valueSats: number }>;
+  /** Default 0 (unconfirmed). */
+  confirmations?: number;
+  /** Default false. */
+  rbfSignalled?: boolean;
+}
+
+export interface ObservationResult extends ApplyResult {
+  /** Every payout recorded for the payment so far (empty until it is paid). */
+  payouts: Payout[];
 }
 
 export interface WebhookResult {
@@ -308,6 +323,27 @@ export class LedgerService {
       order = await this.deriveOrderStatus(order, payment, update.detail ?? detail);
     }
     return { payment, order, applied: changesStatus || amountsChanged };
+  }
+
+  /**
+   * A product reports a transaction it observed for a `psbt` intent (the ledger has no chain backend, or the product
+   * saw it first). The provider evaluates it exactly as the worker would; the result goes through `applyUpdate`, so
+   * every rule holds (one txid settles one intent, illegal transitions are ignored, payouts recorded once).
+   */
+  async observe(paymentId: string, input: ObservationInput, ctx: CallerContext): Promise<ObservationResult> {
+    const tx = validateObservation(input);
+    const payment = await this.getPayment(paymentId, ctx);
+    const provider = this.providers.get(payment.provider);
+    if (!provider) throw new LedgerError(503, 'provider_unavailable', `provider ${payment.provider} is not configured`);
+    if (!provider.evaluate) throw new LedgerError(409, 'not_observable', `${payment.method} payments are settled by the ${payment.provider} provider, not by observation`);
+    const update = provider.evaluate(payment, tx, this.now());
+    if (!update) {
+      const order = await this.store.getOrder(payment.orderId);
+      if (!order) throw notFound('order', payment.orderId);
+      return { payment, order, applied: false, reason: `transaction ${tx.txid} pays none of the expected outputs`, payouts: await this.store.listPayoutsByPayment(payment.id) };
+    }
+    const res = await this.applyUpdate(payment.id, update, 'product observation');
+    return { ...res, payouts: await this.store.listPayoutsByPayment(payment.id) };
   }
 
   // ------------------------------------------------------------------------------------ payouts
@@ -673,6 +709,31 @@ export function validateOrderInput(input: unknown): CreateOrderInput {
 }
 
 const SCRIPT_HEX = /^([0-9a-f]{2}){1,520}$/;
+const MAX_OBSERVED_OUTPUTS = 1000;
+
+/** `txid` 64 hex, 1..1000 outputs of `{ scriptHex, valueSats }`, optional `confirmations` (int >= 0) and `rbfSignalled`. */
+export function validateObservation(raw: unknown): ObservedTransactionInput {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw invalid('body must be an object');
+  const o = raw as Record<string, unknown>;
+  if (typeof o.txid !== 'string' || !/^[0-9a-fA-F]{64}$/.test(o.txid)) throw invalid('txid must be 64 hex characters');
+  if (!Array.isArray(o.outputs) || o.outputs.length === 0 || o.outputs.length > MAX_OBSERVED_OUTPUTS) throw invalid(`outputs must hold 1..${MAX_OBSERVED_OUTPUTS} entries`);
+  const outputs = o.outputs.map((raw, i) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw invalid(`outputs[${i}] must be an object`);
+    const out = raw as Record<string, unknown>;
+    if (typeof out.scriptHex !== 'string' || !SCRIPT_HEX.test(out.scriptHex.toLowerCase())) throw invalid(`outputs[${i}].scriptHex must be hex of 1..520 bytes`);
+    try {
+      assertSats(out.valueSats, `outputs[${i}].valueSats`);
+    } catch (e) {
+      throw invalid((e as Error).message);
+    }
+    return { scriptHex: out.scriptHex.toLowerCase(), valueSats: out.valueSats as number };
+  });
+  const confirmations = o.confirmations === undefined ? 0 : o.confirmations;
+  if (typeof confirmations !== 'number' || !Number.isInteger(confirmations) || confirmations < 0) throw invalid('confirmations must be a non-negative integer');
+  const rbfSignalled = o.rbfSignalled === undefined ? false : o.rbfSignalled;
+  if (typeof rbfSignalled !== 'boolean') throw invalid('rbfSignalled must be a boolean');
+  return { txid: o.txid.toLowerCase(), outputs, confirmations, rbfSignalled };
+}
 
 /** `kind` from the enum, `ref` 1..128, and exactly one of `address` (1..128) / `scriptHex` (lowercase hex, ≤ 520 bytes). */
 export function validatePayee(raw: unknown, at = 'payee'): Payee {

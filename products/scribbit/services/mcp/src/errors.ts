@@ -10,6 +10,10 @@ export type ToolErrorCode =
   | 'fees_unavailable'
   | 'fee_rate_required'
   | 'unsupported_network'
+  | 'forbidden_scope'
+  | 'ledger_unavailable'
+  | 'ledger_rejected'
+  | 'order_not_found'
   | 'internal';
 
 export interface ToolErrorBody {

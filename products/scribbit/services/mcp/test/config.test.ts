@@ -10,6 +10,20 @@ describe('loadServerConfig', () => {
     const cfg = loadServerConfig({ MCP_API_KEYS_JSON: JSON.stringify([rec()]) });
     expect(cfg).toMatchObject({ port: 3050, host: '0.0.0.0', networks: ['mainnet'], keyEnv: 'live', requireApiKey: true, rateLimit: { ipPerMinute: 600, keyPerMinute: 120 }, maxBodyBytes: 8 * 1024 * 1024, feeUrls: {} });
     expect(cfg.keys).toHaveLength(1);
+    expect(cfg.ledger).toBeUndefined();
+  });
+
+  it('ledger: URL and key together, http(s) only, never one without the other', () => {
+    const env = { MCP_REQUIRE_API_KEY: 'false' };
+    expect(loadServerConfig({ ...env, MCP_LEDGER_URL: 'http://ledger.internal:3050/', MCP_LEDGER_API_KEY: 'bsh_live_x' }).ledger).toEqual({ url: 'http://ledger.internal:3050/', apiKey: 'bsh_live_x' });
+    expect(() => loadServerConfig({ ...env, MCP_LEDGER_URL: 'http://ledger.internal' })).toThrow(/MCP_LEDGER_API_KEY is required/);
+    expect(() => loadServerConfig({ ...env, MCP_LEDGER_API_KEY: 'k' })).toThrow(/MCP_LEDGER_URL is not/);
+    expect(() => loadServerConfig({ ...env, MCP_LEDGER_URL: 'not a url', MCP_LEDGER_API_KEY: 'k' })).toThrow(/MCP_LEDGER_URL/);
+    expect(() => loadServerConfig({ ...env, MCP_LEDGER_URL: 'ftp://x', MCP_LEDGER_API_KEY: 'k' })).toThrow(/http\(s\)/);
+  });
+
+  it('refuses a key that both proposes and settles', () => {
+    expect(() => loadServerConfig({ MCP_API_KEYS_JSON: JSON.stringify([rec({ scopes: ['mcp:order', 'mcp:settle'] })]) })).toThrow(/API key k1: scopes mcp:order and mcp:settle/);
   });
 
   it('refuses to start without keys unless MCP_REQUIRE_API_KEY=false', () => {

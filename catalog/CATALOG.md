@@ -29,7 +29,7 @@ Machine-readable source: [`catalog.json`](./catalog.json). 16 components, 7 cont
 | scribbit-cli | `@bsh/scribbit-cli` | tool | scribbit | team-scribbit | beta | `products/scribbit/apps/cli` | `@bsh/inscription`, `@bsh/scribbit-fee-oracle`, `@bsh/mesh` | Developer CLI `scribbit` - exact inscription quotes, envelope dumps, commit addresses, self-rescue transactions and checkpoint anchors (a mesh head as an inscription), with --json everywhere. |
 | scribbit-counters | `@bsh/scribbit-counters` | library | scribbit | team-scribbit | experimental | `products/scribbit/packages/counters-mint` |  | Bitcoin Counters mint engine - Counterparty taproot commit/reveal with a re-keyed envelope, exact fee maths, fairminter presets, resumable pending mints and a Slipstream route. |
 | scribbit-fee-oracle | `@bsh/scribbit-fee-oracle` | library | scribbit | team-scribbit | beta | `products/scribbit/packages/scribbit-fee-oracle` |  | Multi-source Bitcoin fee oracle (mempool.space, Esplora, bitcoind, Libre Relay block lane) with median aggregation, TTL cache and optional Hono server. |
-| scribbit-mcp | `@bsh/scribbit-mcp` | service | scribbit | team-scribbit | experimental | `products/scribbit/services/mcp` | `@bsh/inscription`, `@bsh/scribbit-fee-oracle`, `@bsh/edge` | MCP server "scribb.it - write to Bitcoin" for AI agents - exact inscription quotes, commit addresses, envelope/lane facts, fees and 0x83 self-rescue over Streamable HTTP (API keys) or stdio. |
+| scribbit-mcp | `@bsh/scribbit-mcp` | service | scribbit | team-scribbit | experimental | `products/scribbit/services/mcp` | `@bsh/inscription`, `@bsh/scribbit-fee-oracle`, `@bsh/edge` | MCP server "scribb.it - write to Bitcoin" for AI agents - exact quotes, commit addresses, lane facts, fees, and non-custodial orders over the platform ledger with per-tool scopes. |
 | scribbit-mint | `@bsh/scribbit-mint` | app | scribbit | team-scribbit | experimental | `products/scribbit/apps/mint` | `@bsh/inscription`, `@bsh/wallet-kit`, `@bsh/scribbit-counters` | scribb.it retail mint - /ordinals inscribes any file, /counters mints a Bitcoin Counter; PSBTs only, the wallet signs every transaction, the site never holds a key. |
 | scribbit-mint-api | `@bsh/scribbit-mint-api` | service | scribbit | team-scribbit | experimental | `products/scribbit/services/mint-api` | `@bsh/edge`, `@bsh/scribbit-fee-oracle` | Edge for the scribb.it retail mint - fee snapshot, Esplora UTXO/tx/broadcast proxy and an allowlisted Counterparty v2 proxy behind @bsh/edge. Stateless, no keys, no storage. |
 | signer | `@bsh/signer` | service | platform | team-platform | experimental | `platform/signer` | `@bsh/edge` | Remote, policy-constrained BIP340 signing service (taproot key-path PSBT inputs, purpose-gated attestations) so product services never hold keys. |
@@ -41,7 +41,7 @@ Machine-readable source: [`catalog.json`](./catalog.json). 16 components, 7 cont
 |---|---|---|---|---|
 | `contracts/asyncapi/ledger.yaml` | asyncapi | yes | ledger |  |
 | `contracts/asyncapi/platform-events.yaml` | asyncapi | yes | events |  |
-| `contracts/openapi/ledger.yaml` | openapi | yes | ledger |  |
+| `contracts/openapi/ledger.yaml` | openapi | yes | ledger | scribbit-mcp |
 | `contracts/openapi/scribbit-fees.yaml` | openapi | yes | scribbit-fee-oracle | scribbit-cli, scribbit-mcp, scribbit-mint-api |
 | `contracts/openapi/scribbit-mcp.yaml` | openapi | yes | scribbit-mcp |  |
 | `contracts/openapi/scribbit-mint-api.yaml` | openapi | yes | scribbit-mint-api | scribbit-mint |

@@ -8,6 +8,7 @@ import type { Network } from '@bsh/inscription';
 import { InMemoryApiKeyStore, type ApiKeyEnv, type ApiKeyRecord } from '@bsh/edge';
 import { isNetwork, NETWORKS } from './content.js';
 import { DEFAULT_MAX_BODY_BYTES } from './limits.js';
+import { scopeConflict } from './scopes.js';
 
 export class ConfigError extends Error {
   constructor(message: string) {
@@ -30,6 +31,8 @@ export interface ServerConfig {
   corsOrigins: string[];
   rateLimit: { ipPerMinute: number; keyPerMinute: number };
   maxBodyBytes: number;
+  /** The platform ledger (order tools). Undefined = orders disabled (`ledger_unavailable`). The key is a secret: never logged. */
+  ledger: { url: string; apiKey: string } | undefined;
 }
 
 type Env = Record<string, string | undefined>;
@@ -68,6 +71,8 @@ export function parseKeyRecord(raw: unknown, i: number): ApiKeyRecord {
   if (r.env !== 'live' && r.env !== 'test') throw new ConfigError(`API key ${r.id}: "env" must be live or test`);
   const scopes = Array.isArray(r.scopes) && r.scopes.every((s) => typeof s === 'string') ? (r.scopes as string[]) : undefined;
   if (!scopes) throw new ConfigError(`API key ${r.id}: "scopes" must be a string array`);
+  const conflict = scopeConflict(scopes);
+  if (conflict) throw new ConfigError(`API key ${r.id}: ${conflict}`);
   const rec: ApiKeyRecord = { id: r.id, hash: r.hash, env: r.env, scopes };
   if (typeof r.ownerId === 'string') rec.ownerId = r.ownerId;
   if (typeof r.name === 'string') rec.name = r.name;
@@ -142,6 +147,23 @@ export function loadServerConfig(env: Env = process.env, readFile: (p: string) =
     feeUrls[n] = raw.toLowerCase() === 'off' ? 'off' : raw;
   }
 
+  const ledgerUrl = env.MCP_LEDGER_URL?.trim();
+  const ledgerKey = env.MCP_LEDGER_API_KEY?.trim();
+  let ledger: ServerConfig['ledger'];
+  if (ledgerUrl) {
+    let u: URL;
+    try {
+      u = new URL(ledgerUrl);
+    } catch {
+      throw new ConfigError(`MCP_LEDGER_URL: not a URL ("${ledgerUrl}")`);
+    }
+    if (!/^https?:$/.test(u.protocol)) throw new ConfigError('MCP_LEDGER_URL must be http(s)');
+    if (!ledgerKey) throw new ConfigError('MCP_LEDGER_API_KEY is required when MCP_LEDGER_URL is set (secret path services/scribbit-mcp/ledger-api-key)');
+    ledger = { url: ledgerUrl, apiKey: ledgerKey };
+  } else if (ledgerKey) {
+    throw new ConfigError('MCP_LEDGER_API_KEY is set but MCP_LEDGER_URL is not');
+  }
+
   return {
     port: intEnv(env, 'PORT', 3050),
     host: env.HOST?.trim() || '0.0.0.0',
@@ -155,5 +177,6 @@ export function loadServerConfig(env: Env = process.env, readFile: (p: string) =
     corsOrigins: listEnv(env, 'MCP_CORS_ORIGINS'),
     rateLimit: { ipPerMinute: intEnv(env, 'MCP_RATE_LIMIT_IP_PER_MIN', 600), keyPerMinute: intEnv(env, 'MCP_RATE_LIMIT_KEY_PER_MIN', 120) },
     maxBodyBytes: intEnv(env, 'MCP_MAX_BODY_BYTES', DEFAULT_MAX_BODY_BYTES, 1024),
+    ledger,
   };
 }

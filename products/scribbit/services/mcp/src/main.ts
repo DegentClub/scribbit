@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { ConfigError, keyStoreFrom, loadServerConfig } from './config.js';
 import { feeProviders } from './fees.js';
+import { createLedgerClient } from './ledger-client.js';
 
 function main(): void {
   let cfg;
@@ -12,8 +13,9 @@ function main(): void {
     console.error(e instanceof ConfigError ? e.message : e);
     process.exit(2);
   }
+  const ledger = cfg.ledger ? createLedgerClient({ baseUrl: cfg.ledger.url, apiKey: cfg.ledger.apiKey }) : undefined;
   const app = createApp({
-    ports: { fees: feeProviders(cfg.networks, cfg.feeUrls) },
+    ports: { fees: feeProviders(cfg.networks, cfg.feeUrls), ...(ledger ? { ledger } : {}) },
     keys: keyStoreFrom(cfg.keys),
     keyEnv: cfg.keyEnv,
     requireApiKey: cfg.requireApiKey,
@@ -35,6 +37,7 @@ function main(): void {
         keyEnv: cfg.keyEnv,
         requireApiKey: cfg.requireApiKey,
         keys: cfg.keys.length,
+        ledger: cfg.ledger ? cfg.ledger.url : null,
       }),
     );
   });

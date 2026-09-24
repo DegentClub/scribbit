@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-24T01:46:22.292Z",
+  "generatedAt": "2026-09-24T01:52:02.616Z",
   "schema": "schemas/component.schema.json",
   "components": [
     {
@@ -380,7 +380,7 @@
       "kind": "service",
       "product": "scribbit",
       "owner": "team-scribbit",
-      "summary": "MCP server \"scribb.it - write to Bitcoin\" for AI agents - exact inscription quotes, commit addresses, envelope/lane facts, fees and 0x83 self-rescue over Streamable HTTP (API keys) or stdio.",
+      "summary": "MCP server \"scribb.it - write to Bitcoin\" for AI agents - exact quotes, commit addresses, lane facts, fees, and non-custodial orders over the platform ledger with per-tool scopes.",
       "lifecycle": "experimental",
       "depends_on": [
         "@bsh/inscription",
@@ -391,14 +391,16 @@
         "contracts/openapi/scribbit-mcp.yaml"
       ],
       "consumes": [
-        "contracts/openapi/scribbit-fees.yaml"
+        "contracts/openapi/scribbit-fees.yaml",
+        "contracts/openapi/ledger.yaml"
       ],
       "stores": [
         "memory:api_keys",
         "memory:rate_limits"
       ],
       "secrets": [
-        "services/scribbit-mcp/api-key-hashes"
+        "services/scribbit-mcp/api-key-hashes",
+        "services/scribbit-mcp/ledger-api-key"
       ],
       "env_schema": "./env.schema.json",
       "slo": {
@@ -688,7 +690,9 @@
       "providers": [
         "ledger"
       ],
-      "consumers": []
+      "consumers": [
+        "scribbit-mcp"
+      ]
     },
     {
       "path": "contracts/openapi/scribbit-fees.yaml",
@@ -737,6 +741,11 @@
     {
       "from": "scribbit-cli",
       "to": "contracts/openapi/scribbit-fees.yaml",
+      "type": "consumes"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "contracts/openapi/ledger.yaml",
       "type": "consumes"
     },
     {

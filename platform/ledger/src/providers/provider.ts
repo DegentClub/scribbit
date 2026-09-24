@@ -60,6 +60,18 @@ export class WebhookError extends Error {
   }
 }
 
+/**
+ * A transaction as a product observed it after broadcast (psbt): every output in vout order with its scriptPubKey
+ * (lowercase hex) and value. What `POST /v1/payments/{id}/observations` carries.
+ */
+export interface ObservedTransactionInput {
+  txid: string;
+  outputs: Array<{ scriptHex: string; valueSats: number }>;
+  confirmations: number;
+  /** BIP125: unconfirmed and replaceable. */
+  rbfSignalled: boolean;
+}
+
 export interface CreateIntentInput {
   intentId: string;
   order: Order;
@@ -82,6 +94,11 @@ export interface PaymentProvider {
   poll(intent: PaymentIntent, now: Date): Promise<ProviderUpdate | undefined>;
   refund(intent: PaymentIntent, refund: Refund): Promise<ProviderRefundResult>;
   parseWebhook?(rawBody: string, headers: Headers, now: Date): Promise<ProviderWebhook>;
+  /**
+   * Providers that settle on a transaction the product observed (psbt): evaluate it against the intent. Undefined
+   * when the transaction is not the intent's (pays none of its expected outputs). Served by `service.observe`.
+   */
+  evaluate?(intent: PaymentIntent, tx: ObservedTransactionInput, now: Date): ProviderUpdate | undefined;
 }
 
 /** Card providers never see card data on our side; the browser talks to the provider with `clientSecret`. */

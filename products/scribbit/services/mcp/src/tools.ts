@@ -34,12 +34,19 @@ import {
   type ContentInput,
 } from './content.js';
 import { invalid, ToolError } from './errors.js';
+import type { LedgerClient } from './ledger-client.js';
 import { MAX_CONTENT_BYTES } from './limits.js';
 
-/** Injected ports. Everything is optional: without a fee provider the tools are fully offline. */
+/** Injected ports. Everything is optional: without a fee provider the tools are fully offline, without a ledger the order tools fail with `ledger_unavailable`. */
 export interface ScribbitMcpPorts {
   /** Fee provider per network. Missing network => `get_fees` fails with `fees_unavailable`, quotes need `feeRate`. */
   fees?: Partial<Record<Network, FeeProvider>>;
+  /** The platform ledger (orders, psbt payment intents, payouts, receipts). Missing => order tools fail with `ledger_unavailable`. */
+  ledger?: LedgerClient;
+  /** Scopes of the caller (the API key's). Undefined = unrestricted local caller (stdio, or anonymous local dev). */
+  scopes?: readonly string[];
+  /** Clock (quote expiry stamps). Default `new Date()`. */
+  now?: () => Date;
   /** Called for unexpected (non-ToolError) failures, with the tool name; nothing else is logged. */
   onUnexpected?: (tool: string, error: unknown) => void;
 }

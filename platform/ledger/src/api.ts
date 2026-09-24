@@ -20,7 +20,7 @@ import { PRODUCTS, type Product } from './domain/types.js';
 import { buildReceipt, renderReceiptText } from './receipt.js';
 import { WebhookError, type CallerContext, type LedgerService } from './service.js';
 
-export const API_VERSION = '1.1.0';
+export const API_VERSION = '1.2.0';
 export const SCOPE_LEDGER = 'ledger';
 export const SCOPE_ADMIN = 'ledger:admin';
 
@@ -159,6 +159,14 @@ export function createLedgerApp(opts: LedgerAppOptions): Hono {
     if (typeof body.destination === 'string') input.destination = body.destination;
     const { refund, created } = await service.refund(c.req.param('id'), input, ctx);
     return c.json(refund, created ? 201 : 200);
+  });
+
+  /** A product reports the transaction it saw settle a `psbt` intent (1.2): evaluated exactly like a worker poll. */
+  app.post('/v1/payments/:id/observations', async (c) => {
+    const ctx = caller(c);
+    const body = await jsonBody(c);
+    const res = await service.observe(c.req.param('id'), body as never, ctx);
+    return c.json({ payment: res.payment, order: res.order, applied: res.applied, ...(res.reason !== undefined ? { reason: res.reason } : {}), payouts: res.payouts }, 200);
   });
 
   app.get('/v1/refunds/:id', async (c) => c.json(await service.getRefund(c.req.param('id'), caller(c))));

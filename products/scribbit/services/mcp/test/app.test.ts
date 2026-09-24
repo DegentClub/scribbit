@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateApiKey, InMemoryApiKeyStore, InMemoryRateLimitStore } from '@bsh/edge';
 import * as ins from '@bsh/inscription';
-import { createApp, MCP_SCOPE, type AppOptions } from '../src/index.js';
+import { AGENT_CARD_PATH, createApp, MCP_MANIFEST_PATH, MCP_SCOPE, TOOLS, WELL_KNOWN_CACHE_CONTROL, type AppOptions } from '../src/index.js';
 import { b64, bytes, fakeProvider, PARENT_ID, PUB_HEX } from './helpers.js';
 
 function setup(opts: Partial<AppOptions> = {}) {
@@ -75,7 +75,7 @@ describe('auth on /mcp and /v1/*', () => {
     const res = await rpc(app, noScope.key, initialize);
     expect(res.status).toBe(403);
     expect((await res.json()).error.code).toBe('insufficient_scope');
-    expect(res.headers.get('www-authenticate')).toContain(`scope="${MCP_SCOPE}"`);
+    expect(res.headers.get('www-authenticate')).toContain(`scope="${MCP_SCOPE} mcp:quote mcp:order mcp:settle"`);
   });
 
   it('test keys work when the server runs in the test environment', async () => {
@@ -107,7 +107,7 @@ describe('auth on /mcp and /v1/*', () => {
     const res = await app.request('/v1/keys/me', { headers: { authorization: `Bearer ${live.key}` } });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ id: 'key_live', env: 'live', scopes: [MCP_SCOPE], ownerId: 'acct_1' });
+    expect(body).toEqual({ id: 'key_live', env: 'live', scopes: [MCP_SCOPE], mcpScopes: [MCP_SCOPE], ownerId: 'acct_1' });
     expect(JSON.stringify(body)).not.toContain(live.key.slice(9));
     expect(JSON.stringify(body)).not.toContain(live.hash);
   });
@@ -132,7 +132,7 @@ describe('MCP over Streamable HTTP (stateless, JSON responses)', () => {
     const { app, live } = setup();
     const list = await rpc(app, live.key, { jsonrpc: '2.0', id: 2, method: 'tools/list' });
     expect(list.status).toBe(200);
-    expect((await list.json()).result.tools.map((t: { name: string }) => t.name)).toHaveLength(6);
+    expect((await list.json()).result.tools.map((t: { name: string }) => t.name)).toHaveLength(TOOLS.length);
     const commit = await rpc(app, live.key, callTool(3, 'commit_address', { network: 'signet', revealPubkey: PUB_HEX, contentType: 'text/plain', contentBase64: b64(bytes(9)) }));
     const c = (await commit.json()).result.structuredContent;
     expect(c.address).toBe(ins.commitAddress(Buffer.from(PUB_HEX, 'hex'), { contentType: 'text/plain', body: bytes(9) }, 'signet').address);
@@ -182,6 +182,63 @@ describe('MCP over Streamable HTTP (stateless, JSON responses)', () => {
     expect(res.status).toBe(200);
     const j = await res.json();
     expect(j.result.structuredContent.bodyBytes).toBe(4 * 1024 * 1024);
+  });
+});
+
+describe('discovery derived from the tool registry', () => {
+  it('GET / lists exactly what tools/list answers, with scopes per tool', async () => {
+    const { app, live } = setup({ publicUrl: 'https://mcp.scribb.it' });
+    const index = await (await app.request('/')).json();
+    const list = await (await rpc(app, live.key, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
+    const listed = list.result.tools.map((t: { name: string }) => t.name);
+    expect(index.mcp.tools).toEqual(listed);
+    expect(index.mcp.tools).toEqual(TOOLS.map((t) => t.name));
+    expect(Object.keys(index.mcp.toolScopes)).toEqual(listed);
+    expect(index.mcp.auth.scopes).toEqual(['mcp', 'mcp:quote', 'mcp:order', 'mcp:settle']);
+    expect(index.wellKnown).toEqual({ agentCard: `https://mcp.scribb.it${AGENT_CARD_PATH}`, mcp: `https://mcp.scribb.it${MCP_MANIFEST_PATH}`, charter: '/.well-known/flashyos-charter.json', frontdoor: '/.well-known/frontdoor.json' });
+    expect(index.orders).toBe(false);
+    const prompts = await (await rpc(app, live.key, { jsonrpc: '2.0', id: 3, method: 'prompts/list' })).json();
+    expect(index.mcp.prompts).toEqual(prompts.result.prompts.map((p: { name: string }) => p.name));
+    const resources = await (await rpc(app, live.key, { jsonrpc: '2.0', id: 4, method: 'resources/list' })).json();
+    expect(index.mcp.resources).toEqual(resources.result.resources.map((r: { uri: string }) => r.uri));
+  });
+
+  it('the agent card and mcp.json are unauthenticated, cacheable, and list the same tools with scopes', async () => {
+    const { app, live } = setup({ publicUrl: 'https://mcp.scribb.it', networks: ['mainnet', 'signet'] });
+    const card = await app.request(AGENT_CARD_PATH);
+    expect(card.status).toBe(200);
+    expect(card.headers.get('cache-control')).toBe(WELL_KNOWN_CACHE_CONTROL);
+    expect(card.headers.get('content-type')).toMatch(/application\/json/);
+    const c = await card.json();
+    expect(c.url).toBe('https://mcp.scribb.it/mcp');
+    expect(c.provider).toEqual({ organization: 'Blockspace Holdings', url: 'https://blockspace.holdings' });
+    expect(c.capabilities.streaming).toBe(false);
+    expect(c.skills.map((s: { id: string }) => s.id)).toEqual(TOOLS.map((t) => t.name));
+    expect(c.skills.find((s: { id: string }) => s.id === 'create_order').scopes).toEqual(['mcp:order']);
+    expect(c.skills.find((s: { id: string }) => s.id === 'create_order').tags).toContain('scope:mcp:order');
+    expect(c['x-flashyos']).toEqual({ charter: '/.well-known/flashyos-charter.json', frontdoor: '/.well-known/frontdoor.json' });
+    expect(c['x-mcp'].manifest).toBe(`https://mcp.scribb.it${MCP_MANIFEST_PATH}`);
+    expect(c['x-scribbit'].networks).toEqual(['mainnet', 'signet']);
+    const manifest = await app.request(MCP_MANIFEST_PATH);
+    expect(manifest.status).toBe(200);
+    expect(manifest.headers.get('cache-control')).toBe(WELL_KNOWN_CACHE_CONTROL);
+    const m = await manifest.json();
+    expect(m).toMatchObject({ transport: 'streamable-http', endpoint: 'https://mcp.scribb.it/mcp', stateless: true, auth: { scheme: 'bearer', header: 'Authorization', keyPrefix: 'bsh_live_' } });
+    expect(m.tools.map((t: { name: string }) => t.name)).toEqual(TOOLS.map((t) => t.name));
+    const list = await (await rpc(app, live.key, { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
+    expect(m.tools.map((t: { name: string }) => t.name)).toEqual(list.result.tools.map((t: { name: string }) => t.name));
+    expect(m.agentCard).toBe(`https://mcp.scribb.it${AGENT_CARD_PATH}`);
+    // relative when no public URL is configured
+    const bare = setup();
+    expect((await (await bare.app.request(AGENT_CARD_PATH)).json()).url).toBe('/mcp');
+    expect((await (await bare.app.request(MCP_MANIFEST_PATH)).json()).endpoint).toBe('/mcp');
+  });
+
+  it('well-known documents still sit behind the per-IP bucket', async () => {
+    const { app } = setup({ rateLimit: { ipPerMinute: 2 } });
+    expect((await app.request(AGENT_CARD_PATH)).status).toBe(200);
+    expect((await app.request(MCP_MANIFEST_PATH)).status).toBe(200);
+    expect((await app.request(AGENT_CARD_PATH)).status).toBe(429);
   });
 });
 

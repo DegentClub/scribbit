@@ -1,8 +1,11 @@
 /**
- * `pnpm --filter @bsh/scribbit-mcp mint-key -- [--env live|test] [--id <id>] [--owner <ownerId>] [--scopes mcp]`
+ * `pnpm --filter @bsh/scribbit-mcp mint-key -- [--env live|test] [--id <id>] [--owner <ownerId>] [--scopes mcp,mcp:order]
+ * Scopes: mcp (read-only calculators), mcp:quote (+ read orders), mcp:order (+ create orders, report funding),
+ * mcp:settle (report funding + read, never create). mcp:order and mcp:settle are refused on one key.`
  * Prints the key ONCE (stderr, for the human) and the record to configure (stdout, hash only).
  */
 import { generateApiKey, type ApiKeyRecord } from '@bsh/edge';
+import { assertScopeSet } from './scopes.js';
 
 export function mintKey(argv: readonly string[]): { key: string; hint: string; record: ApiKeyRecord } {
   const flags = new Map<string, string>();
@@ -19,6 +22,8 @@ export function mintKey(argv: readonly string[]): { key: string; hint: string; r
   const id = flags.get('id') ?? `key_${Date.now().toString(36)}`;
   if (!/^[A-Za-z0-9._:-]{1,64}$/.test(id)) throw new Error('--id must be a short identifier');
   const scopes = (flags.get('scopes') ?? 'mcp').split(',').map((s) => s.trim()).filter(Boolean);
+  if (scopes.length === 0) throw new Error('--scopes must name at least one scope');
+  assertScopeSet(scopes, '--scopes');
   const k = generateApiKey(env);
   const record: ApiKeyRecord = { id, hash: k.hash, env, scopes };
   const owner = flags.get('owner');

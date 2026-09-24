@@ -254,6 +254,60 @@ describe('psbt payments end to end: order with payees → checkout outputs → o
     expect(refund).toMatchObject({ status: 'pending', version: 1 });
   });
 
+  it('POST /v1/payments/{id}/observations: the product reports the transaction over HTTP (1.2)', async () => {
+    const clock = fakeClock();
+    const psbt = new PsbtProvider({ network: 'mainnet', policy: { confirmations: 1 } });
+    const h = harness({ providers: [psbt, new FakeProvider()], clock });
+    await h.ready;
+    const order = (await (await h.req('/v1/orders', { method: 'POST', key: h.keys.degent, json: orderBody({ product: 'degent', customerRef: 'minter-2', lineItems: mintLineItems }) })).json()) as Order;
+    const p = (await (await h.req(`/v1/orders/${order.id}/payments`, { method: 'POST', key: h.keys.degent, json: { method: 'psbt' } })).json()) as PaymentIntent;
+    const path = '/v1/payments/{id}/observations';
+    const url = `/v1/payments/${p.id}/observations`;
+    const outputs = [
+      { scriptHex: COMMIT_SCRIPT.toUpperCase(), valueSats: 8_400 },
+      { scriptHex: '0014' + '77'.repeat(20), valueSats: 40_000 },
+      { scriptHex: ARTIST_SCRIPT, valueSats: 1_000 },
+      { scriptHex: CLUB_SCRIPT, valueSats: 600 },
+    ];
+
+    // unconfirmed: pending, applied, no payouts yet
+    const seen = (await expectContract(await h.req(url, { method: 'POST', key: h.keys.degent, json: { txid: TXID.toUpperCase(), outputs } }), path, 'post', 200)) as { payment: PaymentIntent; order: Order; applied: boolean; payouts: Payout[] };
+    expect(seen).toMatchObject({ applied: true, payouts: [], payment: { id: p.id, status: 'pending', txid: TXID }, order: { id: order.id, status: 'awaiting_payment' } });
+
+    // a transaction paying none of the expected scripts is not ours: 200, applied false, reason
+    const foreign = (await expectContract(await h.req(url, { method: 'POST', key: h.keys.degent, json: { txid: 'd'.repeat(64), outputs: [{ scriptHex: '0014' + '99'.repeat(20), valueSats: 5 }], confirmations: 3 } }), path, 'post', 200)) as { applied: boolean; reason?: string; payment: PaymentIntent };
+    expect(foreign.applied).toBe(false);
+    expect(foreign.reason).toMatch(/none of the expected outputs/);
+    expect(foreign.payment.status).toBe('pending');
+
+    // at depth: paid, one payout per payee output, order paid; reporting again changes nothing
+    const paid = (await expectContract(await h.req(url, { method: 'POST', key: h.keys.degent, json: { txid: TXID, outputs, confirmations: 1, rbfSignalled: true } }), path, 'post', 200)) as { payment: PaymentIntent; order: Order; applied: boolean; payouts: Payout[] };
+    expect(paid.payment).toMatchObject({ status: 'paid', amountPaidSats: MINT_TOTAL, txid: TXID });
+    expect(paid.order.status).toBe('paid');
+    expect(paid.payouts.map((x) => [x.payee.ref, x.amountSats, x.vout, x.status])).toEqual([
+      ['artist-7', 1_000, 2, 'settled'],
+      ['degent-club', 600, 3, 'settled'],
+      ['commit', 8_400, 0, 'settled'],
+    ]);
+    const again = (await (await h.req(url, { method: 'POST', key: h.keys.degent, json: { txid: TXID, outputs, confirmations: 4 } })).json()) as { applied: boolean; payouts: Payout[] };
+    expect(again.payouts).toHaveLength(3);
+    expect((await h.service.listPayouts(order.id, ctxDegent)).length).toBe(3);
+
+    // validation, scoping, and non-psbt intents
+    for (const body of [{ txid: 'nope', outputs }, { txid: TXID }, { txid: TXID, outputs: [] }, { txid: TXID, outputs: [{ scriptHex: 'zz', valueSats: 1 }] }, { txid: TXID, outputs, confirmations: -1 }, { txid: TXID, outputs, rbfSignalled: 'yes' }]) {
+      const bad = await h.req(url, { method: 'POST', key: h.keys.degent, json: body });
+      expect(bad.status, JSON.stringify(body)).toBe(400);
+      expect((await bad.json()).error.code).toBe('invalid_request');
+    }
+    expect((await h.req(url, { method: 'POST', key: h.keys.scribbit, json: { txid: TXID, outputs } })).status).toBe(404);
+    expect((await h.req(url, { method: 'POST', json: { txid: TXID, outputs } })).status).toBe(401);
+    const card = (await (await h.req('/v1/orders', { method: 'POST', key: h.keys.degent, json: orderBody({ product: 'degent' }) })).json()) as Order;
+    const cardPay = (await (await h.req(`/v1/orders/${card.id}/payments`, { method: 'POST', key: h.keys.degent, json: { method: 'card' } })).json()) as PaymentIntent;
+    const notObservable = await h.req(`/v1/payments/${cardPay.id}/observations`, { method: 'POST', key: h.keys.degent, json: { txid: TXID, outputs } });
+    expect(notObservable.status).toBe(409);
+    expect((await notObservable.json()).error.code).toBe('not_observable');
+  });
+
   it('underpaid stays underpaid; a second, complete transaction settles it and records payouts once', async () => {
     const clock = fakeClock();
     const psbt = new PsbtProvider({ network: 'mainnet', policy: { confirmations: 1 } });

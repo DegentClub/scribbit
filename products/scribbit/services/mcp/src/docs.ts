@@ -7,16 +7,25 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
-const FALLBACK = `# @bsh/inscription security model (summary)
+export const FALLBACK_SECURITY_MODEL = `# @bsh/inscription security model (summary)
 
-The reveal's commit input is signed with SIGHASH_SINGLE | SIGHASH_ANYONECANPAY (0x83): the signature covers
-the commit outpoint, amount and script, the child output (recipient + postage) and the inscription tapleaf,
-and nothing else. A service can therefore insert a parent input and parent-return output at index 0 without
-touching the signature, and the half-signed PSBT is itself the self-rescue transaction (no parent).
+Two sighash modes, both SIGHASH_ANYONECANPAY on the commit input so the service can add the parent input later.
 
-Known limitation of 0x83: whoever holds the half-signed PSBT can add outputs at index >= 2 (fee skimming) or
-put their own input at index 0 with a mismatched output 0 (inscription re-targeting). Keep the PSBT
-confidential until broadcast, and broadcast promptly.`;
+**0x81 (SIGHASH_ALL | ANYONECANPAY, the default since ADR-0005).** The half-signed reveal is
+[commit] -> [parent return, child]: the signature covers the commit outpoint, amount and script, the inscription
+tapleaf and EVERY output. Nobody holding the PSBT can add an output, change output 0, swap outputs or drop the
+parent return, so the 0x83 fee-skimming and re-targeting vectors are closed by construction. The service may only
+insert the parent input (and refuses one whose value differs from output 0). Because output 0 is unfunded without
+the parent, the half-signed PSBT is NOT broadcastable on its own: self-rescue is a fresh transaction, re-signed
+with the ephemeral key K_e (buildResignedRescue: [commit] -> [child], SIGHASH_DEFAULT). Keep K_e, the content, the
+commit outpoint and value, the recipient and the postage in the recovery bundle; the rescue lands without on-chain
+parent provenance, and whichever of reveal / rescue confirms first wins.
+
+**0x83 (SIGHASH_SINGLE | ANYONECANPAY, legacy).** The signature covers the commit input and only the output at its
+own index, so the same signature validates with and without the parent and the half-signed PSBT itself is the
+rescue transaction (buildRescueReveal; the rescue_tx tool). Known limitation: whoever holds it can add outputs at
+index >= 2 (fee skimming) or put their own input at index 0 with a mismatched output 0 (inscription re-targeting).
+If you still use 0x83, keep the PSBT confidential until broadcast and broadcast promptly.`;
 
 export interface SecurityModelDoc {
   text: string;
@@ -62,7 +71,7 @@ export function securityModelDoc(): Promise<SecurityModelDoc> {
         /* fall through */
       }
     }
-    return { text: FALLBACK, source: 'embedded-summary' as const };
+    return { text: FALLBACK_SECURITY_MODEL, source: 'embedded-summary' as const };
   })();
   return cached;
 }
