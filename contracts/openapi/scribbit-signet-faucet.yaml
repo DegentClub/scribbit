@@ -1,0 +1,323 @@
+openapi: 3.1.0
+info:
+  title: scribb.it signet faucet
+  version: 1.0.0
+  summary: 'Small, fixed drips of SIGNET sats for the Signet Playground, behind a proof-of-work challenge.'
+  description: |
+    Provided by `scribbit-signet-faucet` (`@bsh/scribbit-signet-faucet`, products/scribbit/services/signet-faucet)
+    and consumed by the Signet Playground (`@bsh/scribbit-playground`). Decision record: ADR-0009.
+
+    **Signet only.** The faucet pays signet addresses (`tb1…`, bech32/bech32m). A mainnet address (`bc1…`, or a
+    base58 address starting with `1` or `3`) is refused with `mainnet_address_refused` before anything else happens;
+    a regtest address (`bcrt1…`) with `wrong_network`. A `tb1` address is valid on testnet and signet alike (they
+    share the prefix), so the faucet cannot tell them apart: coins sent to a testnet wallet's address simply appear
+    on signet. The bitcoind adapter refuses to start unless its node reports `chain: signet`.
+
+    **Flow.** `GET /v1/challenge` returns a single-use `nonce` and a `difficulty`. The client searches for a decimal
+    `solution` such that
+
+        SHA-256( UTF-8( "scribbit-faucet-pow/v1:" + nonce + ":" + address + ":" + solution ) )
+
+    has at least `difficulty` leading zero bits (expected work: 2^difficulty hashes), then calls `POST /v1/drip`
+    with `{ address, nonce, solution }`. The nonce is consumed by the first drip attempt that names it, valid or
+    not (`challenge_used` afterwards) and expires after `ttlSeconds` (`challenge_expired`). The work is bound to the
+    address: a solution for one address is useless for another.
+
+    **Limits.** Per-address and per-IP token buckets (default 1 and 3 drips per day), a daily global budget in sats
+    (resets at 00:00 UTC; `budget_exhausted` with `Retry-After` until then), per-IP request buckets on every route
+    (`RateLimit-*` headers, 429 `rate_limited`) and a tighter one on challenges. Limits are refunded when the
+    wallet fails to send.
+
+    **Wallet.** A port: a bitcoind RPC adapter (`sendtoaddress` on a signet wallet) or an in-memory fake; disabled
+    by default (`faucet_disabled`). The service never holds a user key; the only key is the faucet wallet's own,
+    inside bitcoind.
+
+    **Edge.** Every response carries `X-Request-Id`; errors are `{ error: { code, message, requestId } }` with the
+    stable codes of `Error.error.code`; CORS is a default-deny allowlist.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: http://localhost:3070
+    description: Local (`pnpm --filter @bsh/scribbit-signet-faucet dev`)
+  - url: https://faucet.scribbit.internal.example
+    description: Placeholder for a deployment (not a live host)
+tags:
+  - name: faucet
+  - name: ops
+paths:
+  /:
+    get:
+      tags: [ops]
+      operationId: getIndex
+      summary: Discovery document
+      responses:
+        '200':
+          description: What this instance serves, its limits and the proof-of-work rule.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Index' }
+  /healthz:
+    get:
+      tags: [ops]
+      operationId: getHealth
+      summary: Liveness
+      responses:
+        '200':
+          description: The process is up (the wallet is not probed).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /metrics:
+    get:
+      tags: [ops]
+      operationId: getMetrics
+      summary: Prometheus metrics (text exposition format 0.0.4)
+      description: |
+        Counters and gauges, no labels that identify a person: `faucet_challenges_issued_total`,
+        `faucet_drips_total{result}`, `faucet_sats_sent_total`, `faucet_budget_remaining_sats`,
+        `faucet_budget_limit_sats`, `faucet_wallet_enabled`.
+      responses:
+        '200':
+          description: Metrics.
+          content:
+            text/plain:
+              schema: { type: string }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/status:
+    get:
+      tags: [faucet]
+      operationId: getStatus
+      summary: Is the faucet open, how much is left today
+      responses:
+        '200':
+          description: Current state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Status' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/challenge:
+    get:
+      tags: [faucet]
+      operationId: getChallenge
+      summary: A single-use proof-of-work challenge
+      responses:
+        '200':
+          description: Solve it for the address you will ask to fund.
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Challenge' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/drip:
+    post:
+      tags: [faucet]
+      operationId: postDrip
+      summary: Send a fixed drip of signet sats to an address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DripRequest' }
+      responses:
+        '200':
+          description: The faucet broadcast a transaction paying `amountSats` to `address` (unconfirmed).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Drip' }
+        '400':
+          description: '`bad_request`, `invalid_address`, `mainnet_address_refused`, `wrong_network`, `challenge_unknown`, `pow_invalid`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: '`challenge_used`: this nonce was already spent on a drip attempt.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '410':
+          description: '`challenge_expired`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413':
+          description: '`payload_too_large`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '415':
+          description: '`unsupported_media_type`: send application/json.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: '`address_rate_limited`, `ip_rate_limited` or `rate_limited`; `Retry-After` says when to try again.'
+          headers:
+            Retry-After: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: '`wallet_unavailable`: the faucet wallet did not answer or refused. Nothing was sent; limits were refunded.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '503':
+          description: '`faucet_disabled`, `faucet_empty` (the wallet ran dry) or `budget_exhausted` (with `Retry-After`).'
+          headers:
+            Retry-After: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  responses:
+    RateLimited:
+      description: '`rate_limited`.'
+      headers:
+        Retry-After: { schema: { type: string } }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Network:
+      type: string
+      const: signet
+    Index:
+      type: object
+      additionalProperties: false
+      required: [name, title, version, network, wallet, endpoints, drip, pow, limits]
+      properties:
+        name: { type: string, const: scribbit-signet-faucet }
+        title: { type: string }
+        version: { type: string }
+        network: { $ref: '#/components/schemas/Network' }
+        wallet: { $ref: '#/components/schemas/WalletKind' }
+        publicUrl: { type: string, format: uri }
+        endpoints:
+          type: object
+          additionalProperties: false
+          required: [challenge, drip, status, metrics]
+          properties:
+            challenge: { type: string }
+            drip: { type: string }
+            status: { type: string }
+            metrics: { type: string }
+        drip:
+          type: object
+          additionalProperties: false
+          required: [amountSats]
+          properties:
+            amountSats: { type: integer, minimum: 330 }
+        pow: { $ref: '#/components/schemas/PowRule' }
+        limits: { $ref: '#/components/schemas/Limits' }
+    WalletKind:
+      type: string
+      enum: [off, bitcoind, fake]
+      description: '`off`: drips answer 503 `faucet_disabled`.'
+    PowRule:
+      type: object
+      additionalProperties: false
+      required: [algorithm, message, difficulty, ttlSeconds]
+      properties:
+        algorithm: { type: string, const: sha256-leading-zero-bits/v1 }
+        message: { type: string, description: 'The hashed message, as a template.' }
+        difficulty: { type: integer, minimum: 1, maximum: 32 }
+        ttlSeconds: { type: integer, minimum: 1 }
+    Limits:
+      type: object
+      additionalProperties: false
+      required: [addressDripsPerDay, ipDripsPerDay, dailyBudgetSats]
+      properties:
+        addressDripsPerDay: { type: integer, minimum: 1 }
+        ipDripsPerDay: { type: integer, minimum: 1 }
+        dailyBudgetSats: { type: integer, minimum: 330 }
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, service, version, network, wallet]
+      properties:
+        status: { type: string, const: ok }
+        service: { type: string, const: scribbit-signet-faucet }
+        version: { type: string }
+        network: { $ref: '#/components/schemas/Network' }
+        wallet: { $ref: '#/components/schemas/WalletKind' }
+    Status:
+      type: object
+      additionalProperties: false
+      required: [network, open, reason, amountSats, budgetRemainingSats, budgetLimitSats, budgetResetsAt]
+      properties:
+        network: { $ref: '#/components/schemas/Network' }
+        open: { type: boolean, description: 'true when a drip could be served right now (wallet enabled, budget left).' }
+        reason:
+          type: [string, 'null']
+          enum: [faucet_disabled, budget_exhausted, null]
+        amountSats: { type: integer, minimum: 330 }
+        budgetRemainingSats: { type: integer, minimum: 0 }
+        budgetLimitSats: { type: integer, minimum: 330 }
+        budgetResetsAt: { type: string, format: date-time }
+    Challenge:
+      type: object
+      additionalProperties: false
+      required: [algorithm, nonce, difficulty, expiresAt, ttlSeconds, message]
+      properties:
+        algorithm: { type: string, const: sha256-leading-zero-bits/v1 }
+        nonce: { type: string, pattern: '^[0-9a-f]{32}$' }
+        difficulty: { type: integer, minimum: 1, maximum: 32 }
+        expiresAt: { type: string, format: date-time }
+        ttlSeconds: { type: integer, minimum: 1 }
+        message: { type: string, description: 'The message to hash, with {address} and {solution} to fill in.' }
+    DripRequest:
+      type: object
+      additionalProperties: false
+      required: [address, nonce, solution]
+      properties:
+        address: { type: string, minLength: 14, maxLength: 90, description: 'A signet (tb1…) address.' }
+        nonce: { type: string, pattern: '^[0-9a-f]{32}$' }
+        solution: { type: string, pattern: '^(0|[1-9][0-9]{0,19})$' }
+    Drip:
+      type: object
+      additionalProperties: false
+      required: [network, address, amountSats, txid]
+      properties:
+        network: { $ref: '#/components/schemas/Network' }
+        address: { type: string }
+        amountSats: { type: integer, minimum: 330 }
+        txid: { type: string, pattern: '^[0-9a-f]{64}$' }
+        explorerUrl: { type: string, format: uri }
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - bad_request
+                - invalid_address
+                - mainnet_address_refused
+                - wrong_network
+                - challenge_unknown
+                - challenge_expired
+                - challenge_used
+                - pow_invalid
+                - address_rate_limited
+                - ip_rate_limited
+                - rate_limited
+                - budget_exhausted
+                - faucet_disabled
+                - faucet_empty
+                - wallet_unavailable
+                - unsupported_media_type
+                - payload_too_large
+                - not_found
+                - method_not_allowed
+                - forbidden
+                - internal_error
+            message: { type: string }
+            requestId: { type: [string, 'null'] }
