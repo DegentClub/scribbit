@@ -171,6 +171,43 @@ server, answer 401 with `WWW-Authenticate: Bearer resource_metadata="…"`, and 
 `aud` = this server) in place of API keys. `apiKeys` already ignores non-`bsh_` bearer tokens, so the two can
 coexist behind one `Authorization` header. Until then, API keys are the only credential.
 
+## Listing
+
+[`server.json`](./server.json) is the listing for the official [MCP Registry](https://registry.modelcontextprotocol.io),
+written against the registry schema `2025-12-11` (vendored in `test/fixtures/` for the test). It describes the
+stdio server as the npm package `@bsh/scribbit-mcp` (`npx`) and the hosted server as a Streamable HTTP remote at
+`https://mcp.scribb.it/mcp` with a secret `Authorization` header. The tool, resource and prompt names ride in
+`_meta["io.modelcontextprotocol.registry/publisher-provided"]` (the only `_meta` key the registry keeps).
+`test/registry.test.ts` validates it against the schema and fails when its version, `mcpName`, or tool,
+resource or prompt lists drift from `package.json` and from what `createScribbitMcpServer()` registers.
+
+Submission (not done yet):
+
+1. Publish the npm package first: remove `"private": true`, give it a build or keep the `tsx` loader in `bin/`,
+   and `npm publish --access public` with provenance. The registry verifies npm ownership by reading
+   `mcpName` from the published `package.json`, which must equal `server.json` `name`.
+2. Install the publisher CLI: `brew install mcp-publisher`, or the release binary from
+   `https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_<os>_<arch>.tar.gz`.
+3. Authenticate with the GitHub namespace. In CI (recommended): a workflow with `permissions: id-token: write`
+   runs `mcp-publisher login github-oidc`; the registry grants `io.github.<repository owner>/*`. Locally:
+   `mcp-publisher login github` (device flow); publishing under an organisation namespace requires an **Owner**
+   of the organisation.
+4. From this directory: `mcp-publisher publish` (it reads `./server.json`). Check with
+   `curl "https://registry.modelcontextprotocol.io/v0/servers?search=scribbit-mcp"`.
+5. Every release bumps `version` in `package.json`, `SERVER_VERSION` and `server.json` together (the test
+   enforces it) and republishes; registry versions are immutable.
+
+**Check against the live schema and registry before submitting** (the registry is in preview and changes):
+
+| Field | Why |
+|---|---|
+| `name` (`io.github.degentclub/scribbit-mcp`) | The registry compares the name to the granted namespace **case-sensitively**, and GitHub OIDC grants `io.github.<repository_owner>/*` with the owner's exact login (`DegentClub`). As written, the lower-case name would likely be refused; either rename to `io.github.DegentClub/scribbit-mcp` (and `mcpName` with it) or confirm the registry normalises case. |
+| `$schema` | Must be a schema version the registry still accepts; `2025-12-11` was current when written. |
+| `packages[0].identifier` / `version` | `@bsh/scribbit-mcp` is not on npm yet; the scope may change with the `@blockspace` rename. `mcpName` must be in the *published* `package.json`. |
+| `remotes[0].url` | `https://mcp.scribb.it/mcp` must be live and reachable before listing it. |
+| `repository` | Optionally add `id` (`gh api repos/DegentClub/scribbit --jq .id`) to guard against repository resurrection. |
+| `description` | At most 100 characters (tested). |
+
 ## Configuration
 
 See [`env.schema.json`](./env.schema.json). Minimal hosted setup:

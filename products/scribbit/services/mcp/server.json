@@ -1,0 +1,93 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.degentclub/scribbit-mcp",
+  "title": "scribb.it: write to Bitcoin",
+  "description": "Exact Bitcoin inscription quotes, commit addresses, envelope and lane facts, fees and 0x83 rescue.",
+  "version": "0.1.0",
+  "websiteUrl": "https://github.com/DegentClub/scribbit/tree/main/products/scribbit/services/mcp",
+  "repository": {
+    "url": "https://github.com/DegentClub/scribbit",
+    "source": "github",
+    "subfolder": "products/scribbit/services/mcp"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@bsh/scribbit-mcp",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "MCP_NETWORKS",
+          "description": "Comma-separated networks the tools serve (mainnet, testnet, signet, regtest). Default: all four.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_FEE_URL_MAINNET",
+          "description": "Mainnet fee source: a scribb.it fee server URL ending in /v1/fees or a mempool.space-compatible base URL (default https://mempool.space). \"off\" disables it; quotes then need feeRate.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_FEE_URL_TESTNET",
+          "description": "Testnet4 fee source (default https://mempool.space/testnet4); \"off\" disables it.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_FEE_URL_SIGNET",
+          "description": "Signet fee source (default https://mempool.space/signet); \"off\" disables it.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.scribb.it/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer followed by a scribb.it API key (bsh_live_...).",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "it.scribb/server": {
+        "tools": [
+          "get_fees",
+          "quote_inscription",
+          "build_envelope",
+          "commit_address",
+          "explain_lanes",
+          "rescue_tx"
+        ],
+        "resources": [
+          "scribbit://docs/lanes",
+          "scribbit://docs/security-model"
+        ],
+        "prompts": [
+          "inscribe_this"
+        ],
+        "readOnly": true,
+        "custody": "none: signs, stores and broadcasts nothing"
+      }
+    }
+  }
+}

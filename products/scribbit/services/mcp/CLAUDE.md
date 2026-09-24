@@ -13,3 +13,5 @@ Read the root `CLAUDE.md` first. Local rules:
 - Numbers must match `@bsh/inscription` exactly; tests assert against the library directly (including the README size
   table), so a drift in the library shows up here.
 - Verify with `pnpm --filter @bsh/scribbit-mcp test` and `typecheck`, then `pnpm validate && pnpm lint:boundaries`.
+- `server.json` is the MCP Registry listing. Adding or renaming a tool, resource or prompt, or bumping the version,
+  means updating it too (`test/registry.test.ts` fails otherwise); see README "Listing" before submitting it.
