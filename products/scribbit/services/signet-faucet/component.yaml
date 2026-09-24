@@ -1,0 +1,17 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: scribbit-signet-faucet
+package: "@bsh/scribbit-signet-faucet"
+kind: service
+product: scribbit
+owner: team-scribbit
+summary: Signet-only faucet for the Signet Playground - fixed drips behind a SHA-256 proof-of-work challenge, per-address/per-IP buckets and a daily budget; bitcoind wallet port, off by default.
+lifecycle: experimental
+depends_on: ["@bsh/edge", "@bsh/scribbit-playground-kit"]
+provides: [contracts/openapi/scribbit-signet-faucet.yaml]
+stores: ["memory:pow_challenges", "memory:rate_limits", "memory:daily_budget"]
+secrets: ["services/scribbit-signet-faucet/bitcoind-rpc-user", "services/scribbit-signet-faucet/bitcoind-rpc-password"]
+env_schema: ./env.schema.json
+runbook: ./RUNBOOK.md
+docs: ./README.md
+slo: { availability: "99.0", p95_ms: 800 }
+commands: { dev: dev, test: test, typecheck: typecheck }

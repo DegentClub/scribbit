@@ -1,0 +1,11 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: scribbit-playground-kit
+package: "@bsh/scribbit-playground-kit"
+kind: library
+product: scribbit
+owner: team-scribbit
+summary: Signet Playground shared kit - the five step explanations, glossary and quiz (one source for the app and the MCP server) plus the faucet's SHA-256 proof-of-work rule.
+lifecycle: experimental
+depends_on: []
+docs: ./README.md
+commands: { test: test, typecheck: typecheck }

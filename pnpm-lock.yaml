@@ -365,6 +365,22 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@types/node@22.20.4)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  products/scribbit/packages/playground-kit:
+    dependencies:
+      '@noble/hashes':
+        specifier: ^2.4.0
+        version: 2.4.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.4
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@22.20.4)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
   products/scribbit/packages/scribbit-fee-oracle:
     dependencies:
       '@hono/node-server':
@@ -460,6 +476,49 @@ importers:
         specifier: ^4.23.15
         version: 4.23.15
     devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.4
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@22.20.4)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
+
+  products/scribbit/services/signet-faucet:
+    dependencies:
+      '@bsh/edge':
+        specifier: workspace:*
+        version: link:../../../../platform/edge
+      '@bsh/scribbit-playground-kit':
+        specifier: workspace:*
+        version: link:../../packages/playground-kit
+      '@hono/node-server':
+        specifier: ^2.1.1
+        version: 2.1.1(hono@4.13.8)
+      '@noble/hashes':
+        specifier: ^2.4.0
+        version: 2.4.0
+      '@scure/btc-signer':
+        specifier: ^2.4.1
+        version: 2.4.1
+      hono:
+        specifier: ^4.13.8
+        version: 4.13.8
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+    devDependencies:
+      '@noble/curves':
+        specifier: ^2.4.0
+        version: 2.4.0
       '@types/node':
         specifier: ^22
         version: 22.20.4
