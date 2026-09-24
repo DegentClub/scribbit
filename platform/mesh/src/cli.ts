@@ -8,7 +8,9 @@
 //   mesh emit-directory <charter> <out> [--config <file>]
 //   mesh checkpoint <fragments...> --origin <id-or-url> --out <file> [--sign <key.pem>] [--at <iso>]
 //   mesh keygen --out <dir> [--bip340]
-//   mesh emit <dir>        regenerate every published file under <dir>/public from <dir>/*.json
+//   mesh emit <dir> [--frozen] [--rev <rev>]
+//                          regenerate every published file under <dir>/public from <dir>/*.json;
+//                          with shiplog.config.json present, append the records from git (--frozen: from the committed fragment only)
 //   mesh check <dir>       validate them, and fail if any is stale against its source
 //
 // Exit 0 ok · 1 findings (errors) · 2 fatal (usage, missing file, bad JSON). `--json` for machines.
@@ -22,6 +24,8 @@ import { type Finding, finding, hasErrors, isRecord } from './common.ts';
 import { type DirectoryOptions, directoryFromCharter, directorySummary, SURFACE_PATHS, validateDirectory } from './directory.ts';
 import { emitFrontdoor, type FrontdoorConfig, frontdoorSummary, validateFrontdoor } from './frontdoor.ts';
 import { generateKeyPair } from './keys.ts';
+import { CHECKPOINT_KEY_ENV, deriveRecords, gitLog, projectShiplog, readRecordsConfig, RECORD_PATHS, type RecordFiles, recordsHead, recordsSummary, repoRootOf, validateRecords } from './records.ts';
+import { type DevlogFragment, devlogFragment, type ShippedFragment, validateDevlog, validateShipped } from './shipped.ts';
 
 export const EXIT_OK = 0;
 export const EXIT_FINDINGS = 1;
@@ -32,6 +36,8 @@ export interface CliIo {
   stderr: (text: string) => void;
   /** Paths resolve against this; default process.cwd(). */
   cwd?: string;
+  /** Environment (MESH_CHECKPOINT_KEY); default process.env. */
+  env?: Record<string, string | undefined>;
 }
 
 export interface CliResult {
@@ -46,7 +52,7 @@ export interface CliResult {
 
 class Fatal extends Error {}
 
-const VALUE_FLAGS = new Set(['externals', 'config', 'origin', 'out', 'sign', 'at']);
+const VALUE_FLAGS = new Set(['externals', 'config', 'origin', 'out', 'sign', 'at', 'rev']);
 
 export function parseArgv(argv: readonly string[]): { command: string; positionals: string[]; flags: Record<string, string | true> } {
   const positionals: string[] = [];
@@ -78,8 +84,12 @@ const USAGE = `mesh — FlashyOS AAO formats and money documents (@bsh/mesh)
   mesh emit-directory <charter> <out> [--config <file>]
   mesh checkpoint <fragments...> --origin <id-or-url> --out <file> [--sign <key.pem>] [--at <iso>]
   mesh keygen --out <dir> [--bip340]
-  mesh emit <dir>       regenerate <dir>/public/** from <dir>/charter.json, frontdoor.config.json, directory.config.json
-  mesh check <dir>      validate them and fail on anything stale
+  mesh emit <dir>       regenerate <dir>/public/** from <dir>/charter.json, frontdoor.config.json, directory.config.json;
+                        with <dir>/shiplog.config.json: append shipped/1 + devlog/1 from git log --first-parent and
+                        write the checkpoint/1 head (signed too when $MESH_CHECKPOINT_KEY names a key)
+    --frozen            do not read git: rebuild the served projections from the committed shiplog.fragment.json (CI)
+    --rev <rev>         the revision git walks (default HEAD, or "rev" in the config)
+  mesh check <dir>      validate them and fail on anything stale (records: every seal, the projection, the head)
 
   --json    machine-readable output
   exit 0 ok · 1 findings · 2 fatal
@@ -317,10 +327,61 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
             written.push(rel(out));
           }
         }
+        // Records: the sealed log is APPENDED to (committed entries are history and kept byte for
+        // byte), the served files are projections of it. They are written before the directory so
+        // the fragment can declare the surfaces this run creates.
+        const recCfgFile = path.join(dir, RECORD_PATHS.config);
+        const records = existsSync(recCfgFile) ? readRecordsConfig(readJson(recCfgFile)) : undefined;
+        const extra: Record<string, unknown> = {};
+        let shiplog: ShippedFragment | undefined;
+        const servedByRecords: string[] = [];
+        if (records) {
+          const fragFile = path.join(dir, RECORD_PATHS.fragment);
+          const devlogFile = path.join(dir, RECORD_PATHS.devlog);
+          const existingFragment = existsSync(fragFile) ? readJson(fragFile) : undefined;
+          if (existingFragment !== undefined && !(isRecord(existingFragment) && Array.isArray(existingFragment.entries))) throw new Fatal(`${rel(fragFile)} is not a shipped/1 fragment`);
+          const existingDevlog = existsSync(devlogFile) ? readJson(devlogFile) : undefined;
+          if (existingDevlog !== undefined && !(isRecord(existingDevlog) && Array.isArray(existingDevlog.entries))) throw new Fatal(`${rel(devlogFile)} is not a devlog/1 fragment`);
+          let fragment: ShippedFragment;
+          let devlog: DevlogFragment;
+          const rFindings: Finding[] = [];
+          if (flags.frozen === true) {
+            if (existingFragment === undefined) throw new Fatal(`--frozen rebuilds the served files from ${rel(fragFile)}, and there is none yet - run \`mesh emit ${rel(dir)}\` without --frozen first`);
+            fragment = existingFragment as unknown as ShippedFragment;
+            devlog = (existingDevlog as unknown as DevlogFragment | undefined) ?? devlogFragment(records, [], fragment.generated);
+            shiplog = projectShiplog(records, fragment);
+            extra.appended = [];
+          } else {
+            const repoRoot = repoRootOf(dir);
+            const derived = deriveRecords(gitLog(repoRoot, flag('rev') ?? records.rev), records, {
+              fragment: existingFragment as unknown as ShippedFragment | undefined,
+              devlog: existingDevlog as unknown as DevlogFragment | undefined,
+            });
+            ({ fragment, devlog, shiplog } = derived);
+            extra.appended = derived.appended;
+            extra.repoRoot = rel(repoRoot);
+            for (const email of derived.unmapped) rFindings.push(finding('unmapped-author', RECORD_PATHS.config, `${email} is not in "authors" - attributed to ${records.defaultAuthor} (a person) or agent/unattributed (a machine)`, 'warning'));
+            for (const [sha, kind] of derived.badKinds) rFindings.push(finding('bad-recorded-kind', `${RECORD_PATHS.config}#kinds.${sha}`, `"${kind}" is not a shipped/1 kind`));
+          }
+          rFindings.push(...validateShipped(fragment), ...validateShipped(shiplog), ...validateDevlog(devlog));
+          findings.push(...rFindings);
+          if (hasErrors(rFindings)) shiplog = undefined;
+          else {
+            writeJson(fragFile, fragment);
+            writeJson(path.join(dir, RECORD_PATHS.shiplog), shiplog);
+            writeJson(devlogFile, devlog);
+            written.push(rel(fragFile), rel(path.join(dir, RECORD_PATHS.shiplog)), rel(devlogFile));
+            servedByRecords.push(RECORD_PATHS.shiplog, RECORD_PATHS.checkpoint);
+            extra.sealed = fragment.entries.length;
+          }
+        }
         const dirCfgFile = path.join(dir, PUBLISHED.directoryConfig);
+        let directoryDoc: unknown;
         if (existsSync(dirCfgFile)) {
           const cfg = readJson(dirCfgFile);
-          const { fragment, externals } = directoryFromCharter(charter, directoryOptionsFrom(cfg, dir));
+          const opts = directoryOptionsFrom(cfg, dir);
+          opts.served = [...new Set([...(opts.served ?? []), ...servedByRecords])];
+          const { fragment, externals } = directoryFromCharter(charter, opts);
           const dFindings = validateDirectory(fragment, externals.ids);
           findings.push(...dFindings);
           if (!hasErrors(dFindings)) {
@@ -328,9 +389,29 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
             writeJson(path.join(dir, PUBLISHED.directory), fragment);
             writeJson(extOut, externals);
             written.push(rel(path.join(dir, PUBLISHED.directory)), rel(extOut));
+            directoryDoc = fragment;
           }
         }
-        return done(result(findings, `${charter.name} — ${written.length} file(s) written · ${findings.length} problem(s)`, { written }));
+        if (records && shiplog) {
+          // The head commits to what is SERVED (the public log and the fragment), so a reader with
+          // only the URLs can recompute it. FlashyOS's head is unsigned; ours is too, and the signed
+          // copy beside it is written only when the operator points at a key.
+          const head = recordsHead(shiplog, directoryDoc, records.origin ?? records.source);
+          writeJson(path.join(dir, RECORD_PATHS.checkpoint), head);
+          written.push(rel(path.join(dir, RECORD_PATHS.checkpoint)));
+          extra.head = head;
+          const keyPath = (io.env ?? process.env)[CHECKPOINT_KEY_ENV];
+          if (keyPath) {
+            if (!existsSync(at(keyPath))) throw new Fatal(`${CHECKPOINT_KEY_ENV}=${keyPath}: no such file`);
+            const signed = signCheckpointHead(head, readFileSync(at(keyPath), 'utf8'));
+            writeJson(path.join(dir, RECORD_PATHS.checkpointSigned), signed);
+            written.push(rel(path.join(dir, RECORD_PATHS.checkpointSigned)));
+            extra.kid = signed['x-signature'].kid;
+          }
+          extra.records = recordsSummary(shiplog, head);
+        }
+        const account = typeof extra.records === 'string' ? ` · records: ${extra.records}${Array.isArray(extra.appended) ? `, ${extra.appended.length} appended` : ''}` : '';
+        return done(result(findings, `${charter.name} — ${written.length} file(s) written · ${findings.length} problem(s)${account}`, { written, ...extra }));
       }
 
       case 'check': {
@@ -376,8 +457,36 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
             if (!sameJson(fragment, expected.fragment)) findings.push(finding('directory-stale', rel(fragFile), 'the written fragment differs from the charter and directory.config.json — run `mesh emit`'));
           }
         }
+        // Records: every seal recomputed, the served log proved to be the fragment's public
+        // projection, the head recomputed from the served files, the signed copy (if any) verified.
+        // git is not consulted: the committed log may lag HEAD (a commit cannot carry its own entry).
+        const recCfgFile = path.join(dir, RECORD_PATHS.config);
+        let records: string | undefined;
+        if (existsSync(recCfgFile)) {
+          const config = readRecordsConfig(readJson(recCfgFile));
+          checked.push(rel(recCfgFile));
+          const optional = (p: string, count = true): unknown => {
+            const file = path.join(dir, p);
+            const present = existsSync(file);
+            if (present || count) checked.push(rel(file));
+            return present ? readJson(file) : undefined;
+          };
+          const files: RecordFiles = {
+            config,
+            fragment: optional(RECORD_PATHS.fragment),
+            shiplog: optional(RECORD_PATHS.shiplog),
+            devlog: optional(RECORD_PATHS.devlog),
+            checkpoint: optional(RECORD_PATHS.checkpoint),
+            checkpointSigned: optional(RECORD_PATHS.checkpointSigned, false),
+          };
+          const dirFrag = path.join(dir, PUBLISHED.directory);
+          if (existsSync(dirFrag)) files.directory = readJson(dirFrag);
+          findings.push(...validateRecords(files));
+          const head = isRecord(files.checkpoint) && typeof files.checkpoint.root === 'string' ? (files.checkpoint as unknown as Parameters<typeof recordsSummary>[1]) : undefined;
+          records = recordsSummary(isRecord(files.fragment) && Array.isArray(files.fragment.entries) ? (files.fragment as unknown as ShippedFragment) : undefined, head);
+        }
         const name = isRecord(charterDoc) && typeof charterDoc.name === 'string' ? charterDoc.name : rel(dir);
-        return done(result(findings, `${name} — ${checked.length} file(s) checked · ${findings.length} problem(s)`, { checked }));
+        return done(result(findings, `${name} — ${checked.length} file(s) checked · ${findings.length} problem(s)${records ? ` · records: ${records}` : ''}`, { checked, ...(records ? { records } : {}) }));
       }
 
       default:

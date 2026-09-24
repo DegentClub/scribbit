@@ -1,0 +1,23 @@
+{
+  "//": "Source for shipped/1, devlog/1 and checkpoint/1 (@bsh/mesh records). `pnpm mesh:emit` derives entries from `git log --first-parent` at the repo root, seals them and APPENDS to shiplog.fragment.json (committed entries are kept byte for byte); public/.well-known/shiplog.json is the public projection, checkpoint.json the head over it and the directory fragment. CI runs `mesh emit --frozen` (no git) and diffs. defaultAuthor is the same placeholder as directory.config.json's assertedBy; every commit here so far is authored by noreply@anthropic.com, which the authors map files under agent/unattributed, never a person.",
+  "source": "repo/scribbit",
+  "org": "org/scribbit",
+  "assertedBy": "agent/scribbit-records",
+  "defaultAuthor": "person/bsh-accountable",
+  "authors": {
+    "noreply@anthropic.com": "agent/unattributed"
+  },
+  "lexicon": {
+    "feature": ["feat", "feature"],
+    "fix": ["fix"],
+    "security": ["security"],
+    "perf": ["perf"],
+    "docs": ["docs"],
+    "infra": ["ci", "infra", "build"],
+    "spec": ["spec", "contract", "adr"],
+    "release": ["release"]
+  },
+  "visibility": "public",
+  "prBase": "https://github.com/DegentClub/scribbit/pull/",
+  "origin": "https://scribb.it"
+}

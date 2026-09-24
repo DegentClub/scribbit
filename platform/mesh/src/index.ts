@@ -13,6 +13,7 @@ export * from './frontdoor.ts';
 export * from './directory.ts';
 export * from './shipped.ts';
 export * from './checkpoint.ts';
+export * from './records.ts';
 export * from './bech32.ts';
 export {
   AMOUNT_RE,

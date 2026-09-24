@@ -41,11 +41,14 @@ jobs:
         run: pnpm lint:boundaries
 
       # flashy/public/** (the FlashyOS well-known files this repo publishes) is generated from
-      # flashy/charter.json, frontdoor.config.json and directory.config.json by @bsh/mesh. A diff
-      # after re-emitting means someone edited the output instead of its source.
+      # flashy/charter.json, frontdoor.config.json, directory.config.json and shiplog.config.json by
+      # @bsh/mesh. A diff after re-emitting means someone edited the output instead of its source.
+      # The records (shipped/1, devlog/1, checkpoint/1) are re-projected from the COMMITTED
+      # flashy/shiplog.fragment.json (`--frozen`), not from git: a commit cannot carry its own
+      # sealed entry, so the log lags HEAD by design and is appended locally with `pnpm mesh:emit`.
       - name: FlashyOS well-known files are generated from their sources
         run: |
-          pnpm mesh:emit
+          pnpm mesh:records
           git diff --exit-code -- flashy/
 
       - name: FlashyOS well-known files conform

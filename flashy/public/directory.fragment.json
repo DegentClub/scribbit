@@ -38,6 +38,16 @@
       "assertedBy": "person/bsh-accountable",
       "expires": "2027-09-24",
       "visibility": "public",
+      "id": "agent/scribbit-records",
+      "kind": "Agent",
+      "name": "Record emitter",
+      "description": "The `mesh emit` run that derives this repository's record from git, seals each shipped/1 entry as agent/scribbit-records, writes the devlog beside it and the checkpoint/1 head over what is served."
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
       "id": "agent/scribbit-settlement",
       "kind": "Agent",
       "name": "settlement",
@@ -78,6 +88,28 @@
       "name": "aao/0.1 — scribbit",
       "url": "https://scribb.it/.well-known/flashyos-charter.json",
       "description": "The aao/0.1 surface this organisation serves."
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "src/scribbit-checkpoint-1",
+      "kind": "Source",
+      "name": "checkpoint/1 — scribbit",
+      "url": "https://scribb.it/.well-known/checkpoint.json",
+      "description": "The checkpoint/1 surface this organisation serves."
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "id": "src/scribbit-shipped-1",
+      "kind": "Source",
+      "name": "shipped/1 — scribbit",
+      "url": "https://scribb.it/.well-known/shiplog.json",
+      "description": "The shipped/1 surface this organisation serves."
     }
   ],
   "edges": [
@@ -154,6 +186,38 @@
       "assertedBy": "person/bsh-accountable",
       "expires": "2027-09-24",
       "visibility": "public",
+      "type": "declares",
+      "from": "org/scribbit",
+      "to": "src/scribbit-checkpoint-1"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "declares",
+      "from": "org/scribbit",
+      "to": "src/scribbit-shipped-1"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "operates",
+      "from": "org/scribbit",
+      "to": "agent/scribbit-records",
+      "scope": [
+        "shipped/1",
+        "devlog/1",
+        "checkpoint/1"
+      ]
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
       "type": "operates",
       "from": "org/scribbit",
       "to": "prop/scribb.it"
@@ -172,9 +236,41 @@
       "assertedBy": "person/bsh-accountable",
       "expires": "2027-09-24",
       "visibility": "public",
+      "type": "delegatedTo",
+      "from": "person/bsh-accountable",
+      "to": "agent/scribbit-records",
+      "scope": [
+        "shipped/1",
+        "devlog/1",
+        "checkpoint/1"
+      ]
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
       "type": "cites",
       "from": "src/scribbit-aao-0-1",
       "to": "std/aao-0-1"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "cites",
+      "from": "src/scribbit-checkpoint-1",
+      "to": "std/checkpoint-1"
+    },
+    {
+      "asserted": "2026-09-24",
+      "assertedBy": "person/bsh-accountable",
+      "expires": "2027-09-24",
+      "visibility": "public",
+      "type": "cites",
+      "from": "src/scribbit-shipped-1",
+      "to": "std/shipped-1"
     }
   ]
 }

@@ -4,9 +4,9 @@ package: "@bsh/scribbit-cli"
 kind: tool
 product: scribbit
 owner: team-scribbit
-summary: Developer CLI `scribbit` - exact inscription quotes, envelope dumps, commit addresses and self-rescue transactions, with --json everywhere.
+summary: Developer CLI `scribbit` - exact inscription quotes, envelope dumps, commit addresses, self-rescue transactions and checkpoint anchors (a mesh head as an inscription), with --json everywhere.
 lifecycle: beta
-depends_on: ["@bsh/inscription", "@bsh/scribbit-fee-oracle"]
+depends_on: ["@bsh/inscription", "@bsh/scribbit-fee-oracle", "@bsh/mesh"]
 consumes: [contracts/openapi/scribbit-fees.yaml]
 docs: ./README.md
 commands: { dev: dev, test: test, typecheck: typecheck }

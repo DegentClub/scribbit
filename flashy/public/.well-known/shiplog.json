@@ -1,0 +1,386 @@
+{
+  "shipped": "1",
+  "source": "repo/scribbit",
+  "org": "org/scribbit",
+  "generated": "2026-09-24T01:33:26.000Z",
+  "entries": [
+    {
+      "id": "ship/scribbit/20d819511d2a",
+      "repo": "repo/scribbit",
+      "at": "2026-09-24T01:33:26+00:00",
+      "kind": "other",
+      "title": "events: collection.minted 1.1.0 carries Open Studio attribution (artist, artworkId, edition, royalty output)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Additive optional fields so degent-mint can publish who made the piece,\nwhich artwork and edition it is, and the artist royalty output in the\nminter's funding transaction; block.space certification consumes them\n(blockspace ADR-0008). Mirrored in code and contract.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KYgtf9xAFaFAsDvSGpYAog",
+      "refs": {
+        "commit": "20d819511d2ab4c6d6e57475b3040c17ae96d7fd"
+      },
+      "digest": "3aeec8072b4cd890562d07973538ed29666ffccba982fd300c516ce77f2dbc0e"
+    },
+    {
+      "id": "ship/scribbit/367c7efa09e9",
+      "repo": "repo/scribbit",
+      "at": "2026-09-24T01:26:00+00:00",
+      "kind": "other",
+      "title": "mesh: @bsh/mesh implements the FlashyOS AAO accountability formats and money documents; scribb.it publishes its charter, front door and dire",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Typed validators and emitters for the aao 0.1 charter, directory fragments,\nfrontdoor/1, shipped/1 and devlog/1 (sealed digests), checkpoint/1 (RFC 6962),\nplus SignedInvoice/SignedReceipt v1 (Ed25519 over canonical JSON), key\ngeneration and fingerprints, a plane document, an Ed25519-to-BIP340 key\nbinding, a btc chain family with bech32/bech32m checks, and a CLI\n(mesh check | emit | keygen). Conformance is proven against FlashyLabs'\nown published files: zero findings, byte-identical re-derivation of their\nfront door and directory, all 88 shipped seals recomputed, their checkpoint\nroot reproduced. 113 tests.\n\nflashy/ holds scribb.it's charter (roles inscription-engine, fee-oracle,\nagent-gateway, settlement), front door and directory with the generated\nwell-known files; CI regenerates, fails on diff and validates. Catalog and\nCODEOWNERS regenerated (16 components); CI passes --org DegentClub.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KYgtf9xAFaFAsDvSGpYAog",
+      "refs": {
+        "commit": "367c7efa09e9e7ff8285322b9b99e98cdcee869f"
+      },
+      "digest": "1dac20039d0a1d86025602e22fc1826ef4b6c7aa6115f7ea3b757b27fb1b2a9e"
+    },
+    {
+      "id": "ship/scribbit/d9ae543bcb36",
+      "repo": "repo/scribbit",
+      "at": "2026-09-24T01:23:30+00:00",
+      "kind": "other",
+      "title": "ledger: payees on line items, psbt payment method, payout records and events; inscription: attribution metadata (ADR-0009)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "LineItem.payee {kind, ref, address xor scriptHex}; PsbtProvider derives the\nexpected outputs per payee script, evaluates an observed funding transaction\nby scripts and values (paid/overpaid/underpaid/pending), polls Esplora by\nscripthash, and refuses to let one txid settle two intents. Payout records\nare created settled per payee output, listed per order and per payee, shown\non receipts and published as ledger.payout.{status}. Refund availability\nreserves pending refunds and refund writes are version-checked. Response\nenums become extensible so the contract stays additive (oasdiff clean);\nAPI 1.1.0. SQLite migration 0002 rebuilds payments and adds payouts.\n\n@bsh/inscription gains encodeAttribution/decodeAttribution: deterministic\nCBOR {artist, artwork, edition?, studio?} placed in ord metadata (tag 5),\naccounted exactly in script length and reveal weight.\n\nledger 104 -> 126 tests, inscription 140 -> 150, events 101 -> 102.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01KYgtf9xAFaFAsDvSGpYAog",
+      "refs": {
+        "commit": "d9ae543bcb365a376dde8efec9f5835b52c39b5b"
+      },
+      "digest": "65d3699d8e486e5b61746dc4fe44defe8b957f8fe91d1e5f0a759c6febca5e13"
+    },
+    {
+      "id": "ship/scribbit/d4a6a62a8be1",
+      "repo": "repo/scribbit",
+      "at": "2026-09-24T00:43:44+00:00",
+      "kind": "other",
+      "title": "scribb.it mint app: ordinals and counters minting with PSBTs only, plus its proxy API",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "- /ordinals: connect any of seven wallets, exact quote, the wallet signs\n  the commit (txid checked before broadcast) and the reveal as a PSBT with\n  its own key as the leaf key; resumable, with a re-sign rescue; batches\n- /counters: counter, reinscription and fairminter (XCP-69) modelled on\n  counters.fun; 21-case pre-flight; wallet signs commit and reveal; no\n  secret key stored\n- mint-api: fee oracle, Esplora and allowlisted Counterparty proxy behind\n  @bsh/edge (40 tests)\n- 64 app tests; 28 real-browser renders at 1280/400 px, light and dark\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "d4a6a62a8be16fd612e8fc487ea3c34f6f739e54"
+      },
+      "digest": "1a4cf82a879e9eb1a1c505a2031d8577728f7ce7e2acc2820fa21d2197d65251"
+    },
+    {
+      "id": "ship/scribbit/9077f8185adc",
+      "repo": "repo/scribbit",
+      "at": "2026-09-24T00:27:42+00:00",
+      "kind": "other",
+      "title": "Platform: wallet-signed reveals, XCP/Horizon wallets, remote signer, AMQP binding, wallet conformance lab, counters mint library",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "- inscription: buildUnsignedRevealPsbt / finalizeWalletSignedReveal /\n  verifyWalletSignedReveal / buildUnsignedRescuePsbt so the user's own wallet\n  signs the reveal as a PSBT (leaf key = wallet key, internal key NUMS);\n  exact weights for 64- and 65-byte signatures (140 tests)\n- wallet-kit: XCP Wallet and Horizon adapters, per-input disableTweak,\n  inscription signing context, capabilities, taprootOutputKey; real-browser\n  conformance lab with fake providers and a manual signet matrix (197 tests)\n- signer: policy-constrained remote signing service with HSM port, audit\n  log and retry-safe client (52 tests)\n- events: amqplib ConfirmChannel binding and connectAmqpBus (101 tests)\n- scribbit-counters: Bitcoin Counters mint engine ported from counters.fun,\n  re-keyed envelopes, exact reveal estimates, XCP-69 fairminter (118 tests)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "9077f8185adcd7713fdba0bb63d266865c88c6e9"
+      },
+      "digest": "49d4b3c15aa74bc991a41c70da198027ba2efec9180762d0df7e6ef00aee128d"
+    },
+    {
+      "id": "ship/scribbit/a674436b25eb",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T21:55:13+00:00",
+      "kind": "other",
+      "title": "Platform ledger: multi-product orders and payments (on-chain, BTCPay Lightning, card), receipts, refunds (104 tests)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "a674436b25eb0f4d99d7937c497135445b654fb2"
+      },
+      "digest": "38d3265351b86f7b7d14d3c2db07fe453628af1319db1ed9fb21ac0df1d2ad87"
+    },
+    {
+      "id": "ship/scribbit/81cb0d8a4bd2",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T21:49:27+00:00",
+      "kind": "other",
+      "title": "scribb.it MCP server: quote, envelope, commit address, fees, lanes and rescue tools over the inscription engine (73 tests)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "81cb0d8a4bd271f92e51789ceeacda94f80a2b84"
+      },
+      "digest": "b8ded7cfa9ea21930f473ea6def8756e180400a1e9933007dfcdfc0efa875792"
+    },
+    {
+      "id": "ship/scribbit/9298e7f7a9ff",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T21:34:39+00:00",
+      "kind": "other",
+      "title": "inscription: SIGHASH_ALL|ANYONECANPAY (0x81) by default, re-signed rescue with the user's ephemeral key",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Closes the redirect gap of the 0x83 half-signed reveal: the signature now\ncommits to both outputs (parent return, child) while still letting the\nservice attach the parent input. Self-rescue is kept by re-signing a fresh\n[commit] -> [child] with K_e, which the user retains in their recovery\nbundle. 0x83 stays available as an explicit option for one release; the CLI\n'rescue' command documents both paths. 104 inscription tests.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "9298e7f7a9ff2e39b1b25760ffe5d0d80b19984f"
+      },
+      "digest": "b1163a7b0a6a9b2a3afb142ef48f510416b4f0d67718d4c5c0a7fde2b21b1cb4"
+    },
+    {
+      "id": "ship/scribbit/97a30a36cdaf",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T21:10:18+00:00",
+      "kind": "other",
+      "title": "catalog-tool: read a submodule's pinned commit from the index, not only HEAD",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "A product repo regenerates its catalog in the same commit that bumps the\ndeps/scribbit pin, so `git ls-tree HEAD` still saw the old (or no) gitlink\nand `external.commit` came out stale/null, failing `pnpm catalog --check`\nright after the commit. `git ls-files -s` reads the index, which equals HEAD\nafter a commit and already reflects a staged bump; ls-tree HEAD remains the\nfallback. Covered by the external-workspace fixture test.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "97a30a36cdafda9cc9abd894eed5187b314ec6bb"
+      },
+      "digest": "6664f48b59f35bda9e5062c3bf38c66f9c85e7f2568d9a7ae6c313e50404aea0"
+    },
+    {
+      "id": "ship/scribbit/09082bebbb7c",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T21:07:27+00:00",
+      "kind": "other",
+      "title": "catalog-tool: compile each workspace root's manifest schema in its own Ajv instance",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Product repos carry a copy of schemas/component.schema.json next to the\nplatform's copy under deps/scribbit/schemas. Both share one `$id`, and a\nsingle Ajv instance rejects the second compile (\"schema with key or id ...\nalready exists\"), which made `pnpm validate` fatal in DegentClub/degent and\nDegentClub/blockspace. Each root now gets its own instance; a fixture test\nwrites a stricter nested schema copy and asserts only the external package\nis judged by it.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "09082bebbb7c5e9d3771390814dab417d2b685f1"
+      },
+      "digest": "53f0aa9ee2a9c35a287e4dad8181db5f80721d99a883099abe6172cf64c2c999"
+    },
+    {
+      "id": "ship/scribbit/c0fed4c89312",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T21:05:20+00:00",
+      "kind": "other",
+      "title": "Split the monorepo: scribbit becomes the platform repo (ADR-0004)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Blockspace Holdings' monorepo is split into three repositories under the\nDegentClub org, all sharing this git history. This repository keeps the\nshared platform (platform/*), the tooling (tools/*), the scribb.it product\n(products/scribbit/**), the platform- and scribbit-owned contracts\n(platform-events.yaml, scribbit-fees.yaml), schemas, templates and all ADRs.\n\nRemoved here and moved to their product repos (a contract lives with the\ncomponent that provides it):\n- products/degent/**, contracts/openapi/degent-mint.yaml,\n  contracts/asyncapi/degent-mint.yaml, ADR-0002 -> DegentClub/degent\n  (docs/adr/0002-degent-mint-architecture.md stays as a one-line pointer)\n- products/blockspace/**, contracts/openapi/blockspace-collections.yaml\n  -> DegentClub/blockspace\n\nProduct repos vendor this repository as a git submodule at deps/scribbit\npinned to a commit and list deps/scribbit/platform/* and deps/scribbit/tools/*\nin their pnpm-workspace.yaml, so @bsh/* platform packages and the catalog\ntool resolve from here.\n\nCatalog tool (tools/catalog): packages under a NESTED workspace root (a\ndirectory between the repo root and the package with its own\npnpm-workspace.yaml, e.g. deps/scribbit) are treated as external:\n- validate resolves their manifest-relative paths against the nested root\n  and tags findings with group \"external\" (stats.external counts them);\n  outer manifests may consume deps/<name>/contracts/... (schema pattern\n  extended)\n- boundaries checks outer @bsh imports against depends_on with external\n  packages as known targets but never scans external sources\n- catalog lists them with external: { repo, commit, root } (from .gitmodules\n  and `git ls-tree HEAD <root>`) and rewrites their paths relative to the\n  outer repo, so a machine can follow the link to the platform catalog\n- codeowners skips them and the contracts they provide\nFixture-based tests in tools/catalog/test/external.test.ts (39 tests total).\n\nContract ownership: the degent.mint.order.{status} schema in\ncon",
+      "refs": {
+        "commit": "c0fed4c8931244b28c642d278ff5b33cabd7e5e9"
+      },
+      "digest": "5893ff4dbeb60ebcff4f46d49eecc4a040bfbc7134c055efc6559a010658ab38"
+    },
+    {
+      "id": "ship/scribbit/9bc0168c7c99",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:55:08+00:00",
+      "kind": "other",
+      "title": "Integrate roadmap wave 2: bridge mint events onto the platform bus, rename scribbit-fee-oracle, regenerate catalog and CODEOWNERS",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "All 14 components validate, 928 imports cross no boundaries, typecheck clean,\n1,058 tests pass.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "9bc0168c7c9902e6e4e2e6896fb6ad36c50fd748"
+      },
+      "digest": "269c825d05f5f699175943948359187948670e7227911b89adb0293ebda8c086"
+    },
+    {
+      "id": "ship/scribbit/d9180cf6338d",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:48:53+00:00",
+      "kind": "other",
+      "title": "Platform identity (SIWB/BIP-322, sessions) and edge middleware (197 tests)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "d9180cf6338d516d634338610dc0066b0962277c"
+      },
+      "digest": "d3152ee27af7a9f924f1dd6e05ed26ec059a8d0138a9c15fc28281096276d7f5"
+    },
+    {
+      "id": "ship/scribbit/bce1a6d0ab5f",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:47:00+00:00",
+      "kind": "other",
+      "title": "scribb.it fee oracle and CLI; wave 2 in progress",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "bce1a6d0ab5ff4cb7ee9ff536d457553353d3f00"
+      },
+      "digest": "d3cbbf9acf33ad0d1fd25182c7ae1bb06cb8a842dd65815af2cdf7a10716039d"
+    },
+    {
+      "id": "ship/scribbit/a692416fb9c3",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:46:05+00:00",
+      "kind": "other",
+      "title": "Platform events and notify packages (126 tests); wave 2 in progress",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "a692416fb9c3e656599cfd7b0da4ce585b9e7076"
+      },
+      "digest": "e04f9e661e5f7cbf59d96aac628cd1c904e54d4b364214d5703f32e1e234dc0b"
+    },
+    {
+      "id": "ship/scribbit/674555f7ac8e",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:44:03+00:00",
+      "kind": "other",
+      "title": "degent.club mint service, SDK and contracts complete (195 tests)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "674555f7ac8e1b2bbcb31d2af95beadabe68b03e"
+      },
+      "digest": "cc6ea510ec9072631cb6acb7e5b9d941d5a861627c9872719d782bda0d819c4d"
+    },
+    {
+      "id": "ship/scribbit/2ee43da8cea7",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:41:26+00:00",
+      "kind": "other",
+      "title": "Checkpoint: degent.club mint front end complete (89 tests)",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "2ee43da8cea7246c34588ab43acc9cf4822a6e37"
+      },
+      "digest": "238219042c2bc8990fd32209a4635843814fce631a8df8154002ff2110a82203"
+    },
+    {
+      "id": "ship/scribbit/0069311b8cd1",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:34:14+00:00",
+      "kind": "other",
+      "title": "Checkpoint: roadmap wave 2 in progress",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "0069311b8cd18db0c793fcdf54627c85635319f8"
+      },
+      "digest": "80e734b4b1a57099d2a897a1f7a66c0c0a96c0163f0f36d2d4a5c8df0354eea4"
+    },
+    {
+      "id": "ship/scribbit/ea9c9e54ec6b",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:32:14+00:00",
+      "kind": "other",
+      "title": "Checkpoint: wallet-kit complete, catalog tooling + CI + ADRs, in-progress mint service/web and roadmap wave 2",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "ea9c9e54ec6b7127f3e7434c3503e6f1ebbbce9b"
+      },
+      "digest": "d5c47957ba25c21ecc5407659fb024a25c71de090f18e0770bcb825256b1dc7a"
+    },
+    {
+      "id": "ship/scribbit/997dfece9c6f",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:27:56+00:00",
+      "kind": "other",
+      "title": "WIP snapshot: wallet-kit, mint service/SDK, web app, catalog tooling in progress",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "997dfece9c6f0424851fc3a536c711ad6cbae295"
+      },
+      "digest": "db2bb2d41c5003449dcde99dcb0c00c5295b11da3e13691241c627d2bbfe28f5"
+    },
+    {
+      "id": "ship/scribbit/40e631f18d4f",
+      "repo": "repo/scribbit",
+      "at": "2026-09-23T20:27:20+00:00",
+      "kind": "other",
+      "title": "Scaffold Blockspace Holdings monorepo: platform, degent.club mint, catalog tooling",
+      "by": [
+        "agent/unattributed"
+      ],
+      "asserted": "2026-09-24",
+      "assertedBy": "agent/scribbit-records",
+      "visibility": "public",
+      "detail": "Work-in-progress snapshot. Includes the monorepo layout and component\nmanifest schema, @bsh/inscription (ord envelope, exact reveal weight,\n0x83 half-signed reveal with parent attach and self-rescue; 66 tests),\nADR-0002 for the automated degent.club mint, and in-progress wallet-kit,\nmint service/SDK, mint front end and catalog tooling.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\nClaude-Session: https://claude.ai/code/session_01XbNeaJV4gdj8V1ZUyNNShU",
+      "refs": {
+        "commit": "40e631f18d4f6046ece5fb86231ea015f95af9ff"
+      },
+      "digest": "0dbea1e9017488e2d64f333393c8218f22a5dd2c26ec96055e01fb6ff65fdb6c"
+    }
+  ]
+}

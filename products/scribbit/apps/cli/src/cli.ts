@@ -1,4 +1,5 @@
 import { CliError, EXIT } from './args.js';
+import { ANCHOR_HELP, ANCHOR_VERIFY_HELP, anchorCommand, anchorVerifyCommand } from './commands/anchor.js';
 import { commitAddressCommand, COMMIT_HELP } from './commands/commit-address.js';
 import { envelopeCommand, ENVELOPE_HELP } from './commands/envelope.js';
 import { quoteCommand, QUOTE_HELP } from './commands/quote.js';
@@ -15,6 +16,8 @@ const COMMANDS: Record<string, { run: Handler; help: string; summary: string }> 
   envelope: { run: envelopeCommand, help: ENVELOPE_HELP, summary: 'Hex dump summary of the inscription tapscript' },
   'commit-address': { run: commitAddressCommand, help: COMMIT_HELP, summary: 'P2TR commit address for a file and reveal key' },
   rescue: { run: rescueCommand, help: RESCUE_HELP, summary: 'Build the self-rescue transaction from a half-signed reveal' },
+  anchor: { run: anchorCommand, help: ANCHOR_HELP, summary: 'Quote a mesh checkpoint/1 head as an inscription (anchor on Bitcoin)' },
+  'anchor-verify': { run: anchorVerifyCommand, help: ANCHOR_VERIFY_HELP, summary: 'Prove a claim id against an anchored checkpoint root' },
 };
 
 export const MAIN_HELP = `scribbit ${VERSION}: put anything on Bitcoin (developer CLI over @bsh/inscription)
@@ -44,6 +47,8 @@ Examples:
   scribbit envelope note.txt --json
   scribbit commit-address art.webp --pubkey <xonly> --network mainnet
   scribbit rescue --psbt @reveal.psbt
+  scribbit anchor flashy/public/.well-known/checkpoint.json --network mainnet --fee-rate 2 --pubkey <xonly>
+  scribbit anchor-verify checkpoint.json --claim ship/scribbit/<sha12> --claims shiplog.json directory.fragment.json
 `;
 
 /** Run the CLI in-process. Returns the exit code; never calls process.exit. */

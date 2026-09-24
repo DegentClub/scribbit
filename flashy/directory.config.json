@@ -11,6 +11,17 @@
       "name": "scribb.it"
     }
   ],
-  "emitters": [],
+  "emitters": [
+    {
+      "id": "agent/scribbit-records",
+      "name": "Record emitter",
+      "formats": [
+        "shipped/1",
+        "devlog/1",
+        "checkpoint/1"
+      ],
+      "description": "The `mesh emit` run that derives this repository's record from git, seals each shipped/1 entry as agent/scribbit-records, writes the devlog beside it and the checkpoint/1 head over what is served."
+    }
+  ],
   "externalsOut": "directory.externals.json"
 }

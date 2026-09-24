@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-24T01:25:06.791Z",
+  "generatedAt": "2026-09-24T01:46:22.292Z",
   "schema": "schemas/component.schema.json",
   "components": [
     {
@@ -233,7 +233,9 @@
       "files": {
         "docs": "platform/mesh/README.md"
       },
-      "dependents": []
+      "dependents": [
+        "scribbit-cli"
+      ]
     },
     {
       "name": "notify",
@@ -268,11 +270,12 @@
       "kind": "tool",
       "product": "scribbit",
       "owner": "team-scribbit",
-      "summary": "Developer CLI `scribbit` - exact inscription quotes, envelope dumps, commit addresses and self-rescue transactions, with --json everywhere.",
+      "summary": "Developer CLI `scribbit` - exact inscription quotes, envelope dumps, commit addresses, self-rescue transactions and checkpoint anchors (a mesh head as an inscription), with --json everywhere.",
       "lifecycle": "beta",
       "depends_on": [
         "@bsh/inscription",
-        "@bsh/scribbit-fee-oracle"
+        "@bsh/scribbit-fee-oracle",
+        "@bsh/mesh"
       ],
       "consumes": [
         "contracts/openapi/scribbit-fees.yaml"
@@ -769,6 +772,11 @@
     {
       "from": "scribbit-cli",
       "to": "inscription",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-cli",
+      "to": "mesh",
       "type": "depends_on"
     },
     {

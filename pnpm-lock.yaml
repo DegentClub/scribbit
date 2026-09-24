@@ -263,6 +263,9 @@ importers:
       '@bsh/inscription':
         specifier: workspace:*
         version: link:../../../../platform/inscription
+      '@bsh/mesh':
+        specifier: workspace:*
+        version: link:../../../../platform/mesh
       '@bsh/scribbit-fee-oracle':
         specifier: workspace:*
         version: link:../../packages/scribbit-fee-oracle
