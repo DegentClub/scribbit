@@ -95,7 +95,7 @@ export function createApp(opts: AppOptions): Hono {
         transport: 'streamable-http',
         protocolVersions: ['2025-11-25', '2025-06-18', '2025-03-26'],
         auth: { scheme: 'bearer', keyPrefix: `bsh_${opts.keyEnv ?? 'live'}_`, scope: MCP_SCOPE, header: 'Authorization' },
-        tools: ['get_fees', 'quote_inscription', 'build_envelope', 'commit_address', 'explain_lanes', 'rescue_tx'],
+        tools: ['get_fees', 'quote_inscription', 'build_envelope', 'commit_address', 'explain_lanes', 'rescue_tx', 'playground_explain_step'],
         resources: ['scribbit://docs/lanes', 'scribbit://docs/security-model'],
         prompts: ['inscribe_this'],
       },

@@ -76,7 +76,8 @@
           "build_envelope",
           "commit_address",
           "explain_lanes",
-          "rescue_tx"
+          "rescue_tx",
+          "playground_explain_step"
         ],
         "resources": [
           "scribbit://docs/lanes",

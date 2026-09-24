@@ -3,7 +3,7 @@
 Read the root `CLAUDE.md` first. Local rules:
 
 - Kind: **service**. Manifest: `component.yaml` (the catalog entry in `catalog/catalog.json` is generated from it).
-- Import only `@bsh/inscription`, `@bsh/scribbit-fee-oracle`, `@bsh/edge` (see `depends_on`); `pnpm lint:boundaries` fails otherwise.
+- Import only `@bsh/inscription`, `@bsh/scribbit-fee-oracle`, `@bsh/edge`, `@bsh/scribbit-playground-kit` (see `depends_on`); `pnpm lint:boundaries` fails otherwise.
 - The HTTP surface is fixed by `contracts/openapi/scribbit-mcp.yaml`; change the contract first, then `src/app.ts`,
   then `test/contract.test.ts`. MCP message shapes belong to the MCP spec / SDK, not to the contract.
 - Tools are pure functions in `src/tools.ts`; `src/mcp.ts` only registers them with zod schemas. Keep it that way:

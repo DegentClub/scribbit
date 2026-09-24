@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: scribb.it MCP server
-  version: 1.0.0
+  version: 1.1.0
   summary: 'HTTP surface around the scribb.it MCP endpoint ("scribb.it: write to Bitcoin").'
   description: |
     Provided by `scribbit-mcp` (`@bsh/scribbit-mcp`, products/scribbit/services/mcp).
@@ -26,7 +26,8 @@ info:
     therefore not offered and returns 405.
 
     **Tools** (all read-only; nothing is signed, stored or broadcast): `get_fees`, `quote_inscription`,
-    `build_envelope`, `commit_address`, `explain_lanes`, `rescue_tx`. Tool errors are MCP results with
+    `build_envelope`, `commit_address`, `explain_lanes`, `rescue_tx`, `playground_explain_step` (Signet Playground step
+    explanations; there is deliberately no faucet tool). Tool errors are MCP results with
     `isError: true` and `structuredContent: { error: { code, message, details? } }`; the codes are listed under
     `components/schemas/ToolError`.
   license:

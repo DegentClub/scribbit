@@ -6,6 +6,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { NETWORKS } from './content.js';
+import { STEP_IDS } from '@bsh/scribbit-playground-kit';
 import { securityModelDoc } from './docs.js';
 import { guarded, okResult } from './errors.js';
 import { MAX_CONTENT_BYTES } from './limits.js';
@@ -15,6 +16,7 @@ import {
   explainLanes,
   getFees,
   lanesMarkdown,
+  playgroundExplainStep,
   quoteInscription,
   rescueTx,
   TIERS,
@@ -163,6 +165,18 @@ export function createScribbitMcpServer(ports: ScribbitMcpPorts = {}): McpServer
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
     (args) => run('rescue_tx', () => rescueTx(args), (r) => `Rescue tx ${String(r.txid)} (${String(r.weight)} WU); broadcast the hex yourself`),
+  );
+
+  server.registerTool(
+    'playground_explain_step',
+    {
+      title: 'Explain a Signet Playground step',
+      description:
+        'Plain-language explanation of one step of the scribb.it Signet Playground (1 wallet, 2 coins, 3 file, 4 inscribe, 5 certificate): what the learner does, what happened on chain, the safety note and the glossary terms involved. The same text the playground page shows. There is intentionally no faucet tool: agents must not spend the shared signet faucet budget for someone.',
+      inputSchema: { step: z.union([z.number().int().min(1).max(5), z.enum(STEP_IDS as unknown as [string, ...string[]])]).describe('Step number 1-5 or id: wallet | coins | file | inscribe | certificate') },
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+    },
+    (args) => run('playground_explain_step', () => playgroundExplainStep(args), (r) => `Step ${String(r.step)}: ${String(r.title)}`),
   );
 
   server.registerResource(

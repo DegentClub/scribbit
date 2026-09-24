@@ -42,7 +42,7 @@ describe('HTTP surface (contracts/openapi/scribbit-mcp.yaml)', () => {
     const body = await res.json();
     expectValid('Index', body);
     expect(body.mcp.endpoint).toBe('https://mcp.scribb.it/mcp');
-    expect(body.mcp.tools).toEqual(['get_fees', 'quote_inscription', 'build_envelope', 'commit_address', 'explain_lanes', 'rescue_tx']);
+    expect(body.mcp.tools).toEqual(['get_fees', 'quote_inscription', 'build_envelope', 'commit_address', 'explain_lanes', 'rescue_tx', 'playground_explain_step']);
     expect(body.networks).toEqual(['mainnet', 'signet']);
   });
 

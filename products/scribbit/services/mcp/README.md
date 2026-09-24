@@ -111,6 +111,7 @@ quotes in one step and commits in another cannot silently drift.
 | `commit_address` | `network`, `revealPubkey`, `contentType`, `contentBase64` (required), `contentSha256?`, `contentLength?`, `parentId?`, `metadataBase64?` | `address`, `scriptPubKey`, `tapLeafHash`, `controlBlock`, `internalKey` (NUMS), `leafScriptBytes`, `contentSha256` | `commitAddress` |
 | `explain_lanes` | `feeRate?` (default 2) | lane table (max weight / vsize / body per lane, both layouts), the README size rows with real numbers, `parentCostWeight` (402) | `estimateRevealWeight` over the documented assumptions |
 | `rescue_tx` | `halfSignedPsbtBase64`, `network?` | `hex`, `txid`, `inscriptionId`, `weight`, `vsize`, `lane` | `buildRescueReveal` (0x83 replay) |
+| `playground_explain_step` | `step` (1-5 or `wallet` \| `coins` \| `file` \| `inscribe` \| `certificate`) | `title`, `summary`, `explanation[]`, `onChain`, `safety`, `glossary[{id,term,definition}]`, `goalSeconds`, `steps` | `@bsh/scribbit-playground-kit` (the text the Signet Playground page shows) |
 
 Without a `feeRate`, `quote_inscription` reads the oracle: `standard.<tier>` for standard-lane reveals,
 `block.recommended` for block-lane ones, and adds a warning when the reveal needs a Libre Relay / Slipstream
@@ -121,6 +122,15 @@ broadcaster or the fee data is stale. With no oracle configured for the network 
 `@bsh/inscription` default (ADR-0005) signs **0x81** and pre-commits the parent return, so that PSBT cannot be
 replayed; the tool refuses it with a message pointing at `buildResignedRescue`, which the user runs locally
 with their ephemeral key. The PSBT is never echoed back in any result.
+
+### Why there is no faucet tool
+
+The Signet Playground (ADR-0009) has a signet faucet, but this server deliberately exposes **no**
+`signet_faucet_challenge` / `signet_faucet_drip`. The faucet's budget is shared and small, its limits are per
+address and per IP, and its proof of work is meant to cost the *learner's* browser a few seconds. An agent
+calling it would spend that shared budget on someone's behalf, from one server IP, and turn a speed bump into a
+loop. Agents explain (`playground_explain_step`) and quote (`quote_inscription` with `network: "signet"`); the
+person gets coins from the page.
 
 ## Resources and prompts
 

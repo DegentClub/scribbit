@@ -6,7 +6,7 @@ product: scribbit
 owner: team-scribbit
 summary: MCP server "scribb.it - write to Bitcoin" for AI agents - exact inscription quotes, commit addresses, envelope/lane facts, fees and 0x83 self-rescue over Streamable HTTP (API keys) or stdio.
 lifecycle: experimental
-depends_on: ["@bsh/inscription", "@bsh/scribbit-fee-oracle", "@bsh/edge"]
+depends_on: ["@bsh/inscription", "@bsh/scribbit-fee-oracle", "@bsh/edge", "@bsh/scribbit-playground-kit"]
 provides: [contracts/openapi/scribbit-mcp.yaml]
 consumes: [contracts/openapi/scribbit-fees.yaml]
 stores: ["memory:api_keys", "memory:rate_limits"]

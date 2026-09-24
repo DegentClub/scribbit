@@ -34,6 +34,7 @@ import {
   type ContentInput,
 } from './content.js';
 import { invalid, ToolError } from './errors.js';
+import { explainStep, STEP_IDS, UnknownStepError, type StepExplanation } from '@bsh/scribbit-playground-kit';
 import { MAX_CONTENT_BYTES } from './limits.js';
 
 /** Injected ports. Everything is optional: without a fee provider the tools are fully offline. */
@@ -435,4 +436,33 @@ export function rescueTx(input: RescueInput): RescueResult {
     hex: r.hex,
     note: 'Nothing was broadcast. Send `hex` with any node (`bitcoin-cli sendrawtransaction`); the inscription lands without on-chain parent provenance. Keep the PSBT confidential until broadcast.',
   };
+}
+
+// ------------------------------------------------------------------------------------- playground_explain_step
+
+export interface ExplainStepInput {
+  step: number | string;
+}
+
+export interface ExplainStepResult extends StepExplanation, Record<string, unknown> {
+  steps: string[];
+  faucet: string;
+}
+
+/**
+ * The Signet Playground's explanation for one step, from @bsh/scribbit-playground-kit (the same text the app shows).
+ * Deliberately there is no faucet tool: an agent should not spend a shared, rate-limited faucet budget on a
+ * person's behalf (ADR-0009); the person solves the proof of work in their own browser.
+ */
+export function playgroundExplainStep(input: ExplainStepInput): ExplainStepResult {
+  try {
+    return {
+      ...explainStep(input.step),
+      steps: [...STEP_IDS],
+      faucet: 'The playground faucet is used from the page itself (a proof of work in the visitor\'s browser). This server exposes no faucet tool on purpose.',
+    };
+  } catch (e) {
+    if (e instanceof UnknownStepError) throw invalid(e.message, { field: 'step', allowed: [1, 2, 3, 4, 5, ...STEP_IDS] });
+    throw e;
+  }
 }
