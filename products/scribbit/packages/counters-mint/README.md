@@ -9,6 +9,30 @@ pnpm --filter @bsh/scribbit-counters test
 pnpm --filter @bsh/scribbit-counters typecheck
 ```
 
+## Quickstart
+
+From another package in this repository: add `"@bsh/scribbit-counters": "workspace:*"` to `dependencies` and `scribbit-counters` to `depends_on` in your `component.yaml`. (Not yet published to npm.)
+
+```ts
+import { classifyAssetName, createCpClient, encodeContent, estimateMint } from '@bsh/scribbit-counters';
+
+const body = new TextEncoder().encode('hello, counters');
+const asset = 'PRINTSHOP';
+
+console.log(classifyAssetName(asset)); // 'named' (burns 0.5 XCP); 'A1234…' numeric, 'PARENT.child' subasset
+const content = encodeContent(body, 'text/plain'); // { description, mime_type, kind } as compose expects
+
+// Exact reveal weight, fee and commit value before calling Counterparty Core.
+const est = estimateMint({ bytes: body.length, feeRate: 3, kind: 'counter', assetName: asset, mimeType: content.mime_type });
+console.log(est.revealVsize, est.commitValue, est.xcpBurn, est.standardRelay); // 116 348 50000000n true (vB, sats, raw XCP burn, public relay)
+
+// The mint itself goes through Counterparty Core v2 behind the product's allowlisted proxy (@bsh/scribbit-mint-api):
+const cp = createCpClient({ baseUrl: 'https://mint.example/api/cp' }); // cp.compose(...), cp.getAsset(asset), cp.broadcast(...)
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. The full commit/reveal sequence (compose, `buildCommitPsbt`, `buildRevealPsbt`, sign, broadcast) is in
+"Order of operations" below.
+
 ## What a counter is
 
 A **counter** is a file committed to Bitcoin as a **Counterparty asset description carried in a v11 taproot

@@ -10,6 +10,41 @@ and in the mint service: no network, no `Buffer`, only `Uint8Array` / `bigint`.
 Built on `@scure/btc-signer` 2.x (PSBT + finalization) and `@noble/curves` / `@noble/hashes` 2.x.
 The public contract is [SPEC.md](./SPEC.md).
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/inscription": "workspace:*"` to `dependencies` and `inscription` to `depends_on` in your `component.yaml` (the example also uses `@noble/curves`). (Not yet published to npm.)
+
+```ts
+import { schnorr } from '@noble/curves/secp256k1.js';
+import * as ins from '@bsh/inscription';
+
+const network = 'signet';
+const recipient = 'tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c'; // the user's ordinals address (BIP-350 test vector)
+const content = { contentType: 'text/plain;charset=utf-8', body: new TextEncoder().encode('hello, block space') };
+
+// 1. Browser: an ephemeral reveal key K_e and the commit address it controls.
+const kE = schnorr.utils.randomSecretKey();
+const commit = ins.commitAddress(schnorr.getPublicKey(kE), content, network);
+
+// 2. Exact reveal weight -> lane and fee -> how much the commit output must hold.
+const weight = ins.estimateRevealWeight({ content, withParent: false, recipientScript: ins.addressToScript(recipient, network) });
+const quote = ins.quoteReveal({ revealWeight: weight, feeRate: 2.5, postage: ins.LIMITS.DEFAULT_POSTAGE });
+console.log(commit.address, ins.laneFor(weight), `${quote.commitValue} sats`); // tb1p... standard 901 sats
+
+// 3. The wallet funds commit.address with quote.commitValue (outpoint below is illustrative), then the
+//    browser signs the reveal (SIGHASH_ALL|ANYONECANPAY) and the service finalizes and broadcasts it.
+const half = ins.buildHalfSignedReveal({
+  network, revealPrivkey: kE, content, withParent: false,
+  commitOutpoint: { txid: 'ab'.repeat(32), vout: 0 }, commitValue: quote.commitValue,
+  recipientAddress: recipient, postage: ins.LIMITS.DEFAULT_POSTAGE,
+});
+const reveal = ins.finalizeReveal(half.psbtBase64);
+console.log(reveal.weight === weight, ins.inscriptionIdFromReveal(reveal.txid)); // true <txid>i0
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. With a collection parent, see "Example" below: the service adds the parent input with `attachParent`
+and the policy signer co-signs with `signParentInput`.
+
 ## Flow
 
 ```

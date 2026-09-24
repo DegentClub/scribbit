@@ -19,6 +19,38 @@ const { psbtBase64, txid } = await wallet.signPsbt(fundingPsbtBase64, {
 });
 ```
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/wallet-kit": "workspace:*"` to `dependencies` and `wallet-kit` to `depends_on` in your `component.yaml`. (Not yet published to npm.)
+
+```ts
+import {
+  UserRejectedError, addressMatchesNetwork, createWalletKit, detectAddressType, requireSegwitPayment,
+} from '@bsh/wallet-kit';
+
+// Pure helpers work anywhere (Node, tests, workers):
+console.log(detectAddressType('tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c')); // 'p2tr'
+console.log(addressMatchesNetwork('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4', 'signet'));   // false
+
+// In a page with wallet extensions (plain Node has none, so this block is skipped here):
+const kit = createWalletKit({ network: 'signet' });
+const installed = kit.detect(); // adapters injected into this page right now
+if (installed[0]) {
+  try {
+    const wallet = await kit.connect(installed[0].id); // network-checked addresses
+    requireSegwitPayment(wallet.payment);               // refuse legacy payment addresses
+    const signature = await wallet.signMessage('hello', wallet.ordinals.address, 'bip322-simple');
+    console.log(wallet.id, wallet.ordinals.address, signature);
+  } catch (e) {
+    if (e instanceof UserRejectedError) console.log('user cancelled');
+    else throw e;
+  }
+}
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. (outside a browser only the address helpers print). To try real wallets:
+`pnpm --filter @bsh/wallet-kit conformance:serve` opens the conformance lab (see "Conformance lab" below).
+
 ## Surface
 
 | Export | What it does |

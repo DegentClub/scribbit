@@ -2,6 +2,16 @@
 
 One paragraph: what this app does, who uses it, and what it deliberately does not do.
 
+## Quickstart
+
+<!-- Replace with the real commands and the smallest request that shows the app working, and keep them runnable.
+     `pnpm readiness` fails until the README has a "Quickstart" heading and enough content. -->
+
+```bash
+pnpm install
+pnpm --filter @bsh/__component__ dev
+```
+
 ## Use
 
 ```bash

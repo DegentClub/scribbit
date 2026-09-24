@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-24T00:43:42.332Z",
+  "generatedAt": "2026-09-24T01:18:18.997Z",
   "schema": "schemas/component.schema.json",
   "components": [
     {
@@ -23,6 +23,7 @@
         "boundaries": "tsx src/cli.ts boundaries",
         "catalog": "tsx src/cli.ts catalog",
         "codeowners": "tsx src/cli.ts codeowners",
+        "readiness": "tsx src/cli.ts readiness",
         "test": "vitest run",
         "typecheck": "tsc --noEmit -p .",
         "validate": "tsx src/cli.ts validate"

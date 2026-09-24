@@ -1,0 +1,7 @@
+name: fenced
+package: "@bsh/fenced"
+kind: library
+product: scribbit
+owner: team-scribbit
+summary: Fixture component whose Quickstart heading is inside a code fence.
+lifecycle: experimental

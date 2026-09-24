@@ -19,6 +19,34 @@ await bus.publish(blockIndexed.create({
 }));
 ```
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/events": "workspace:*"` to `dependencies` and `events` to `depends_on` in your `component.yaml`. (Not yet published to npm.)
+
+```ts
+import { InMemoryBus, blockIndexed, idempotent, platformRegistry, sourceFor, subscribeTopic } from '@bsh/events';
+
+const bus = new InMemoryBus({ registry: platformRegistry() }); // AmqpBusAdapter / connectAmqpBus in production
+
+await subscribeTopic(bus, blockIndexed, idempotent(async (e) => {
+  console.log(`${e.type}: height ${e.data.height}`); // block.indexed.signet: height 200000
+}), { name: 'quickstart.blocks' });
+
+await bus.publish(blockIndexed.create({
+  source: sourceFor('bitcoin-indexer'),
+  params: { network: 'signet' },
+  data: {                                          // validated against the topic's JSON Schema
+    network: 'signet',
+    height: 200_000,
+    hash: '00'.repeat(32),
+    previousHash: '11'.repeat(32),
+    time: '2026-09-23T12:00:00Z',
+  },
+}));
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. In production, `connectAmqpBus({ url, service })` returns an `EventBus` over RabbitMQ with the same API.
+
 ## Pieces
 
 | Module | What |

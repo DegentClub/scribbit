@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in the platform and scribb.it does not behave as documented.
+title: "<component>: <what goes wrong>"
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security vulnerabilities do not belong here**: use
+        [Report a vulnerability](https://github.com/DegentClub/scribbit/security/advisories/new) (see SECURITY.md).
+        Never paste private keys, seed phrases, API keys or customer data.
+  - type: input
+    id: component
+    attributes:
+      label: Component
+      description: Name from catalog/catalog.json (e.g. `inscription`, `wallet-kit`, `degent-mint`, `blockspace-api`).
+      placeholder: inscription
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Package version, or the commit SHA of the repository you ran.
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options:
+        - mainnet
+        - testnet4
+        - signet
+        - regtest
+        - not network-specific
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest sequence (code, commands or clicks) that shows the problem. Regtest/signet reproductions are best.
+      placeholder: |
+        1. pnpm --filter @bsh/... dev
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include error codes and messages. Transaction ids and PSBTs are fine on test networks.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      render: text
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, OS, browser + version where relevant.
+      placeholder: Node 22.12, Ubuntu 24.04, Chrome 140
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: This is not a security vulnerability, and I removed keys, seeds and personal data from this report.
+          required: true

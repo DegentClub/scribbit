@@ -10,6 +10,45 @@ pnpm --filter @bsh/scribbit-mint-api typecheck
 MINT_NETWORK=signet CORS_ORIGINS=http://localhost:5173 CP_API_URL=https://cp.example/v2 pnpm --filter @bsh/scribbit-mint-api dev   # :3060
 ```
 
+## Quickstart
+
+Run it:
+
+```bash
+pnpm install
+MINT_NETWORK=signet CORS_ORIGINS=http://localhost:5173 pnpm --filter @bsh/scribbit-mint-api dev   # :3060
+curl -s localhost:3060/healthz
+```
+
+Or embed it (every upstream call goes through the injectable `fetch`):
+
+```ts
+import { createFeeOracle, staticSource } from '@bsh/scribbit-fee-oracle';
+import { createApp } from '@bsh/scribbit-mint-api';
+
+// A fake Esplora upstream; production passes nothing and the global fetch reaches the real one.
+const upstream = async (url: string) =>
+  url.endsWith('/utxo')
+    ? Response.json([{ txid: 'ab'.repeat(32), vout: 0, value: 10_000, status: { confirmed: true, block_height: 1 } }])
+    : new Response('not found', { status: 404 });
+
+const app = createApp({
+  network: 'signet',
+  esploraUrl: 'https://mempool.space/signet/api',
+  cpUrl: 'https://cp.example/v2',
+  fees: createFeeOracle({ network: 'signet', sources: [staticSource({ targets: { 1: 3, 3: 2, 6: 1 }, minRelay: 1 })] }),
+  fetch: upstream,
+  corsOrigins: ['http://localhost:5173'],
+});
+
+const addr = 'tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c';
+console.log((await app.request(`/api/esplora/address/${addr}/utxo`)).status);  // 200: payment UTXOs
+console.log((await (await app.request('/api/fees')).json()).standard);          // fee snapshot
+console.log((await app.request('/api/cp/assets/XCP/issuances')).status);       // 403 cp_not_allowed: allowlist only
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output.
+
 ## Routes
 
 | Route | What | Errors |

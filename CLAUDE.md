@@ -50,6 +50,7 @@ Product slugs are fixed and used identically everywhere (folders, `product:` fie
 pnpm install                 # once
 pnpm check                   # validate manifests + boundaries + typecheck + tests (what CI runs)
 pnpm catalog                 # regenerate catalog/catalog.json
+pnpm readiness               # open-source readiness gate (LICENSE, community files, package READMEs); part of check
 pnpm --filter @bsh/catalog-tool run codeowners --org DegentClub   # regenerate .github/CODEOWNERS
 pnpm --filter @bsh/scribbit-cli dev      # the scribbit developer CLI
 ```

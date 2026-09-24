@@ -1,0 +1,8 @@
+name: core
+package: "@bsh/core"
+kind: library
+product: platform
+owner: team-platform
+summary: Fixture component core for readiness tests.
+lifecycle: beta
+depends_on: []

@@ -20,6 +20,40 @@ pnpm --filter @bsh/scribbit-mcp mint-key -- --env test --id dev --owner me   # p
 MCP_API_KEY_ENV=test MCP_API_KEYS_JSON='[<record>]' pnpm --filter @bsh/scribbit-mcp dev   # :3050
 ```
 
+## Quickstart
+
+Connect it to Claude Code from a checkout (stdio, offline: quotes then need a `feeRate`):
+
+```bash
+pnpm install
+claude mcp add scribbit -e MCP_FEE_URL_MAINNET=off -- node "$PWD/products/scribbit/services/mcp/bin/scribbit-mcp.mjs"
+```
+
+Or drive it in-process with the MCP SDK (this is how the tests run it):
+
+```ts
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createScribbitMcpServer } from '@bsh/scribbit-mcp';
+
+// The same server the stdio and HTTP entry points expose, driven in-process (no fee oracle: pass feeRate).
+const server = createScribbitMcpServer();
+const [clientT, serverT] = InMemoryTransport.createLinkedPair();
+await server.connect(serverT);
+const client = new Client({ name: 'quickstart', version: '1.0.0' });
+await client.connect(clientT);
+
+console.log((await client.listTools()).tools.map((t) => t.name)); // [ 'get_fees', 'quote_inscription', ... ]
+const r = await client.callTool({
+  name: 'quote_inscription',
+  arguments: { contentType: 'text/plain', contentLength: 19, feeRate: 2, network: 'signet' },
+});
+console.log((r.structuredContent as { fees: { commitValue: number } }).fees.commitValue); // 824 (sats)
+await client.close();
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output.
+
 ## Connecting
 
 **Claude Code (local, stdio):**

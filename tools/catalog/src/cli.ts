@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * bsh-catalog: validate | boundaries | catalog | codeowners  [--json] [--check] [--root <dir>] [--org <gh-org>]
+ * bsh-catalog: validate | boundaries | catalog | codeowners | readiness
+ *   [--json] [--check] [--root <dir>] [--org <gh-org>] [--min-readme-lines <n>]
  *
  * Exit codes: 0 ok, 1 findings (errors), 2 usage / internal error.
  * `--json` prints exactly one JSON object on stdout:
@@ -11,11 +12,12 @@ import { fileURLToPath } from "node:url";
 import { checkBoundaries } from "./boundaries.js";
 import { runCatalog } from "./catalog.js";
 import { runCodeowners } from "./codeowners.js";
+import { checkReadiness, DEFAULT_MIN_README_LINES } from "./readiness.js";
 import type { CheckResult } from "./types.js";
 import { validateWorkspace } from "./validate.js";
 import { findRepoRoot, loadWorkspace } from "./workspace.js";
 
-export const COMMANDS = ["validate", "boundaries", "catalog", "codeowners"] as const;
+export const COMMANDS = ["validate", "boundaries", "catalog", "codeowners", "readiness"] as const;
 export type Command = (typeof COMMANDS)[number];
 
 export interface CliOptions {
@@ -24,14 +26,18 @@ export interface CliOptions {
   check: boolean;
   root?: string;
   org?: string;
+  minReadmeLines?: number;
 }
 
-const USAGE = `usage: bsh-catalog <${COMMANDS.join("|")}> [--json] [--check] [--root <dir>] [--org <github-org>]
+const USAGE = `usage: bsh-catalog <${COMMANDS.join("|")}> [--json] [--check] [--root <dir>] [--org <github-org>] [--min-readme-lines <n>]
 
   validate     every workspace package has a schema-valid component.yaml that matches package.json
   boundaries   imports follow depends_on; no cross-product or platform->product imports; no relative escapes
   catalog      write catalog/catalog.json + catalog/CATALOG.md (--check: fail if stale)
-  codeowners   write .github/CODEOWNERS from component owners (--check: fail if stale)`;
+  codeowners   write .github/CODEOWNERS from component owners (--check: fail if stale)
+  readiness    open-source readiness: LICENSE (Apache-2.0), NOTICE, community files, issue forms, security
+               workflows; every package has license, a README.md with a Quickstart heading
+               (>= --min-readme-lines non-blank lines, default ${DEFAULT_MIN_README_LINES}) and a lifecycle`;
 
 export function parseArgs(argv: string[]): CliOptions | string {
   const [command, ...rest] = argv;
@@ -47,6 +53,11 @@ export function parseArgs(argv: string[]): CliOptions | string {
       if (!v) return `${a} needs a value\n\n${USAGE}`;
       if (a === "--root") opts.root = v;
       else opts.org = v;
+    } else if (a === "--min-readme-lines") {
+      const v = rest[++i];
+      const n = v !== undefined && /^\d+$/.test(v) ? Number(v) : NaN;
+      if (!Number.isInteger(n)) return `--min-readme-lines needs a non-negative integer\n\n${USAGE}`;
+      opts.minReadmeLines = n;
     } else if (a === "--") continue;
     else return `unknown option "${a}"\n\n${USAGE}`;
   }
@@ -67,6 +78,8 @@ export function run(opts: CliOptions): CheckResult {
     }
     case "codeowners":
       return runCodeowners(ws, { check: opts.check, org: opts.org ?? process.env.CODEOWNERS_ORG });
+    case "readiness":
+      return checkReadiness(ws, { minReadmeLines: opts.minReadmeLines });
   }
 }
 

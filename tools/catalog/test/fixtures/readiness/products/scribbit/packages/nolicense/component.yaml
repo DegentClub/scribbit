@@ -1,0 +1,6 @@
+name: nolicense
+package: "@bsh/nolicense"
+kind: library
+product: scribbit
+owner: team-scribbit
+summary: Fixture component with no license, a short README and no lifecycle.

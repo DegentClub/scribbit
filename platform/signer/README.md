@@ -13,6 +13,36 @@ consumer service ──RemoteSignerClient──► @bsh/signer (Hono + @bsh/edge
                                             └  verify signature → audit → respond
 ```
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/signer": "workspace:*"` to `dependencies` and `signer` to `depends_on` in your `component.yaml` (the example also uses `@noble/curves`, `@noble/hashes` and `@scure/base`). (Not yet published to npm.)
+
+```ts
+import { schnorr } from '@noble/curves/secp256k1.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { hex } from '@scure/base';
+import { InMemoryAuditLog, InMemoryKeyProvider, Signer, isSignerError } from '@bsh/signer';
+
+// Dev key provider; production: EnvKeyProvider / an HSM behind the KeyProvider port.
+const keys = new InMemoryKeyProvider([['certify-2026', schnorr.utils.randomSecretKey()]]);
+const audit = new InMemoryAuditLog();
+const signer = new Signer({ keys, audit, allowedPurposes: ['blockspace.certify'], network: 'signet' });
+
+// The purpose owns its preimage: the caller hashes, the signer only signs allowed purposes.
+const digest32 = hex.encode(sha256(new TextEncoder().encode('attestation payload')));
+const r = await signer.signSchnorrDigest({ keyId: 'certify-2026', purpose: 'blockspace.certify', digest32 });
+console.log(schnorr.verify(hex.decode(r.signature), hex.decode(digest32), hex.decode(r.publicKey))); // true
+
+try {
+  await signer.signSchnorrDigest({ keyId: 'certify-2026', purpose: 'anything.else', digest32 });
+} catch (e) {
+  console.log(isSignerError(e) && e.code); // 'policy_denied' (and an audited deny record)
+}
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. Services call a remote signer through `RemoteSignerClient({ baseUrl, apiKey })` with the same methods;
+run one locally with `pnpm --filter @bsh/signer dev` (see "Service" and "Develop" below).
+
 ## Library
 
 | Export | What |

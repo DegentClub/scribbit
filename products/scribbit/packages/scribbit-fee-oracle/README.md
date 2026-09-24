@@ -14,6 +14,32 @@ pnpm --filter @bsh/scribbit-fee-oracle typecheck
 FEE_NETWORK=signet MEMPOOL_URLS=https://mempool.space/signet pnpm --filter @bsh/scribbit-fee-oracle dev   # :8080
 ```
 
+## Quickstart
+
+From another package in this repository: add `"@bsh/scribbit-fee-oracle": "workspace:*"` to `dependencies` and `scribbit-fee-oracle` to `depends_on` in your `component.yaml`. (Not yet published to npm.)
+
+```ts
+import { createFeeOracle, mempoolRecommendedSource, staticSource } from '@bsh/scribbit-fee-oracle';
+
+// Offline: two fixed readings (targets in blocks -> sat/vB). The median wins, outliers are dropped.
+const oracle = createFeeOracle({
+  network: 'signet',
+  sources: [
+    staticSource({ targets: { 1: 6, 3: 4, 6: 2 }, minRelay: 1 }, 'a'),
+    staticSource({ targets: { 1: 7, 3: 5, 6: 2 }, minRelay: 1 }, 'b'),
+  ],
+});
+const fees = await oracle.getFees();
+console.log(fees.standard, fees.stale); // { slow: 2, normal: 4.5, fast: 6.5 } false
+
+// Live: swap in real sources (every adapter takes an injectable fetch).
+const live = createFeeOracle({ network: 'signet', sources: [mempoolRecommendedSource({ baseUrl: 'https://mempool.space/signet' })] });
+// await live.getFees() now polls mempool.space; the server (`pnpm ... dev`) serves the same over HTTP.
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. As a server: `FEE_NETWORK=signet MEMPOOL_URLS=https://mempool.space/signet pnpm --filter @bsh/scribbit-fee-oracle dev`
+(port 8080).
+
 ## Library
 
 ```ts

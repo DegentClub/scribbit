@@ -12,6 +12,26 @@ pnpm --filter @bsh/scribbit-cli typecheck
 # or via the bin: products/scribbit/apps/cli/bin/scribbit.mjs <command> ...
 ```
 
+## Quickstart
+
+From the repository root:
+
+```bash
+pnpm install
+echo 'hello, block space' > hello.txt
+node products/scribbit/apps/cli/bin/scribbit.mjs quote hello.txt --fee-rate 2 --network signet
+# envelope      89 bytes, 1 body chunk(s)
+# reveal        569 WU / 143 vB (single layout)
+# lane          standard
+# reveal fee    286 sats
+# postage       546 sats
+# commit value  832 sats  <- fund the commit address with exactly this
+node products/scribbit/apps/cli/bin/scribbit.mjs envelope hello.txt --json   # one JSON object, for scripts
+```
+
+(`pnpm --filter @bsh/scribbit-cli scribbit ...` works too, but then relative paths resolve from the package
+directory: pass absolute paths.)
+
 ## Commands
 
 | Command | What it prints |

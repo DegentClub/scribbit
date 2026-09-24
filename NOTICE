@@ -1,0 +1,35 @@
+scribbit (DegentClub/scribbit): the Blockspace Holdings platform and scribb.it
+Copyright 2026 Blockspace Holdings and contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+Documentation and specifications (docs/ and prose Markdown) are licensed under
+Creative Commons Attribution 4.0 International (see LICENSE-docs).
+
+The names and logos "Blockspace Holdings", "block.space", "scribb.it" and
+"degent.club" are trademarks of Blockspace Holdings and are not licensed under
+either licence; see TRADEMARKS.md.
+
+-------------------------------------------------------------------------------
+Third-party and derived material
+-------------------------------------------------------------------------------
+
+counters.fun (BitcoinCounters/counters.fun)
+  Portions derived from BitcoinCounters/counters.fun, used with permission of
+  the same owner. Derived files:
+    products/scribbit/packages/counters-mint/src/
+      assetnames.ts, content.ts, cp.ts, envelope.ts, fairminter.ts,
+      numeric.ts, pending.ts, psbt.ts, slipstream.ts, xcp69.ts
+    platform/wallet-kit/src/adapters/xcp.ts
+    platform/wallet-kit/src/adapters/horizon.ts
+    products/scribbit/services/mint-api/src/cp-allowlist.ts (modelled on)
+    products/scribbit/apps/mint/src/flows/counters/state.ts (modelled on)
+  Provenance detail: products/scribbit/packages/counters-mint/README.md
+  ("Provenance and licence").
+
+Published test vectors
+  platform/identity/test/ uses the private key and addresses published in
+  BIP-322's test vectors, and platform/ledger/test/ uses the BIP-39 test
+  mnemonic. They are public test data, never funded keys.
+
+Dependencies installed by the package manager (node_modules) are not
+distributed in this repository and keep their own licences.

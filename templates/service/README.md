@@ -2,6 +2,16 @@
 
 One paragraph: what this service does, who uses it, and what it deliberately does not do.
 
+## Quickstart
+
+<!-- Replace with the real commands and the smallest request that shows the service working, and keep them runnable.
+     `pnpm readiness` fails until the README has a "Quickstart" heading and enough content. -->
+
+```bash
+pnpm install
+pnpm --filter @bsh/__component__ start   # {"status":"ok","service":"__component__"}
+```
+
 ## Use
 
 ```bash

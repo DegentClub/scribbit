@@ -1,0 +1,115 @@
+name: Wallet compatibility report
+description: A browser wallet behaves differently from what our wallet support matrix says (works, fails or signs differently).
+title: "wallet-compat: <wallet> <version> <operation> on <network>"
+labels: [wallet-compat, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These reports keep the wallet support matrix (`@bsh/wallet-kit` README, "Verified vs assumed") honest.
+        Test with a **fresh wallet on testnet4, signet or regtest**. Never paste a seed phrase or private key.
+        If a wallet signed something other than what it displayed, that may be a vulnerability: use
+        [Report a vulnerability](https://github.com/DegentClub/scribbit/security/advisories/new) instead.
+  - type: dropdown
+    id: wallet
+    attributes:
+      label: Wallet
+      options:
+        - UniSat
+        - Xverse
+        - Leather
+        - OKX
+        - Magic Eden
+        - XCP Wallet
+        - Horizon
+        - Other (name it below)
+    validations:
+      required: true
+  - type: input
+    id: wallet_version
+    attributes:
+      label: Wallet name and version
+      description: Exact extension or app version (from the wallet's settings / about page).
+      placeholder: Xverse 1.12.3
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version / platform
+      placeholder: Chrome 140 on macOS 15
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Network
+      options:
+        - mainnet
+        - testnet4
+        - signet
+        - regtest
+        - not network-specific
+    validations:
+      required: true
+  - type: dropdown
+    id: operation
+    attributes:
+      label: Operation
+      options:
+        - connect (addresses, network check)
+        - signPsbt - funding / commit (payment inputs)
+        - signPsbt - reveal (tapscript / script-path leaf)
+        - signPsbt - taproot key path
+        - signPsbt - marketplace listing or purchase
+        - signMessage - BIP-322
+        - signMessage - legacy / ECDSA (BIP-137)
+        - broadcast (pushTx)
+        - disconnect / account change events
+        - other (describe below)
+    validations:
+      required: true
+  - type: input
+    id: address_type
+    attributes:
+      label: Address types involved
+      description: Ordinals and payment address types, e.g. P2TR (bc1p / tb1p), P2WPKH (bc1q / tb1q), P2SH-P2WPKH.
+      placeholder: ordinals P2TR, payment P2WPKH
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works as documented
+        - Works, but our matrix says it does not / marks it ASSUMED
+        - Fails with an error
+        - Wallet shows a warning or unexpected prompt
+        - Signs, but the result is rejected (finalize / broadcast fails)
+        - Hangs or never returns
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What happened
+      description: Error codes and messages (our error class and the wallet's), what the wallet displayed, and the sighash type if known.
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: PSBT, transaction id or signature (test networks only)
+      description: Base64 PSBT before/after signing, txid, or signature, so we can reproduce. Remove anything from mainnet.
+      render: text
+  - type: input
+    id: component
+    attributes:
+      label: Where you saw it
+      description: Component or site (e.g. `wallet-kit` conformance lab, scribb.it /ordinals, degent.club mint, block.space /developers).
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I used a test network or a wallet holding no meaningful funds, and shared no seed phrase or private key.
+          required: true

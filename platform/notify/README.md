@@ -22,6 +22,39 @@ await notifier.subscribe({ subscriberId: 'acme', channel: 'webhook', target: 'ht
 await notifier.attach(bus);                                        // or: await notifier.handle(event)
 ```
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/notify": "workspace:*"` to `dependencies` and `notify` to `depends_on` in your `component.yaml` (events come from `@bsh/events`). (Not yet published to npm.)
+
+```ts
+import { blockIndexed, sourceFor } from '@bsh/events';
+import { Notifier, WebhookChannel, verifyWebhookSignature } from '@bsh/notify';
+
+const SECRET = 'whsec-demo'; // production: per subscription, from the secret store
+// A stand-in receiver: verifies the signature exactly as a customer's endpoint would.
+const receiver = async (_url: string, init: { headers: Record<string, string>; body: string }) => {
+  const v = verifyWebhookSignature(init.body, init.headers['Bsh-Signature'], SECRET);
+  console.log('receiver:', v.ok, JSON.parse(init.body).type);
+  return new Response(null, { status: 204 });
+};
+
+const notifier = new Notifier({
+  channels: [new WebhookChannel({ fetch: receiver, secrets: async () => SECRET })],
+});
+await notifier.subscribe({
+  subscriberId: 'acme', channel: 'webhook', target: 'https://hooks.acme.example/bsh', topics: ['block.indexed.{network}'],
+});
+
+const event = blockIndexed.create({
+  source: sourceFor('bitcoin-indexer'), params: { network: 'signet' },
+  data: { network: 'signet', height: 1, hash: '00'.repeat(32), previousHash: '11'.repeat(32), time: '2026-09-23T12:00:00Z' },
+});
+console.log((await notifier.handle(event)).map((o) => o.status)); // receiver: true block.indexed.signet, then [ 'delivered' ]
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. In production, `notifier.attach(bus)` subscribes to a durable `@bsh/events` bus instead of calling
+`handle` directly.
+
 ## Model
 
 - **Subscription** `{ subscriberId, channel, target, topics[] }` (+ optional `id`, `active`). `topics` are

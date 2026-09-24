@@ -13,6 +13,40 @@ services and tests. Built on `@noble/curves` 2, `@noble/hashes` 2 and `@scure/bt
 | Sessions (`issueSession`, `verifySession`, `SessionKeyRing`) | Compact JWS, EdDSA/Ed25519, `iss/aud/exp/iat/jti`, `kid` rotation, JWKS |
 | Model (`BlockspaceIdentity`, `LinkedWallet`, `linkWallet`) | Account-linking types |
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/identity": "workspace:*"` to `dependencies` and `identity` to `depends_on` in your `component.yaml`. (Not yet published to npm.)
+The example also uses `@scure/btc-signer` and `@noble/curves` to stand in for the user's wallet.
+
+```ts
+import { getAddress } from '@scure/btc-signer';
+import { schnorr } from '@noble/curves/secp256k1.js';
+import { InMemoryNonceStore, SessionKeyRing, generateSigningKey, issueChallenge, signBip322Simple, verifySignIn } from '@bsh/identity';
+
+// A throwaway wallet key, standing in for the user's wallet (which does the signing in real life).
+const priv = schnorr.utils.randomSecretKey();
+const address = getAddress('tr', priv)!; // bc1p...
+
+// Server: issue a single-use challenge bound to domain + address.
+const nonces = new InMemoryNonceStore(); // production: a Redis/Postgres NonceStore
+const { message } = await issueChallenge(nonces, { domain: 'id.example.com', address, network: 'mainnet', ttlSeconds: 300 });
+
+// Wallet: BIP-322 simple signature over the exact challenge text.
+const signature = signBip322Simple(priv, 'p2tr', message);
+
+// Server: verify (domain, nonce, expiry, signature), then issue a session token.
+const r = await verifySignIn({ message, signature, address }, { domain: 'id.example.com', nonces, network: 'mainnet' });
+if (!r.ok) throw new Error(r.error);
+const keys = new SessionKeyRing(generateSigningKey('k1')); // production: the key comes from the secret store
+const token = keys.issue({ sub: r.address, accounts: [r.address], product: 'console', scopes: ['profile'] });
+console.log(r.ok, keys.verify(token, { audience: 'console' }).sub === address); // true true
+
+// A replayed signature is refused: the nonce was consumed.
+console.log((await verifySignIn({ message, signature, address }, { domain: 'id.example.com', nonces, network: 'mainnet' })).ok); // false
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output.
+
 ## Sign-in flow
 
 ```ts

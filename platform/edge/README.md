@@ -5,6 +5,31 @@ request ids, uniform JSON errors, CORS allowlist, security headers, body limits,
 limits, API keys with per-key quotas, and opt-in proxy trust. Runtime-neutral (Node via
 `@hono/node-server`, Bun, Deno, workers).
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/edge": "workspace:*"` to `dependencies` and `edge` to `depends_on` in your `component.yaml`, plus `hono` itself. (Not yet published to npm.)
+
+```ts
+import { Hono } from 'hono';
+import { bodyLimit, jsonErrorHandler, jsonErrors, rateLimit, requestId, securityHeaders } from '@bsh/edge';
+
+const app = new Hono();
+app.onError(jsonErrorHandler());
+app.use(requestId());
+app.use(jsonErrors());
+app.use(securityHeaders());
+app.use(rateLimit({ windowMs: 60_000, max: 60 }));
+app.use(bodyLimit(64 * 1024));
+app.get('/hello', (c) => c.json({ hello: 'world', requestId: c.get('requestId') }));
+
+const res = await app.request('/hello');
+console.log(res.status, res.headers.get('RateLimit-Remaining'), await res.json());
+const missing = await app.request('/nope');
+console.log(missing.status, await missing.json()); // 404 {"error":{"code":"not_found",...}}
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. `pnpm --filter @bsh/edge test` runs the full behaviour suite.
+
 ## Recommended stack
 
 ```ts

@@ -17,6 +17,34 @@ product ──API key──▶ Hono API (@bsh/edge) ──▶ LedgerService ─�
                                         events: ledger.order.{status}, ledger.payment.{status} on @bsh/events
 ```
 
+## Quickstart
+
+Inside this workspace, or a product repository that pins `deps/scribbit`: add `"@bsh/ledger": "workspace:*"` to `dependencies` and `ledger` to `depends_on` in your `component.yaml`. (Not yet published to npm.)
+
+```ts
+import { FakeProvider, LedgerService, LedgerWorker, MemoryOrderStore } from '@bsh/ledger';
+
+// In-memory store + a deterministic provider; production uses SqliteOrderStore and the
+// OnchainAddressProvider / BtcpayProvider adapters (see "API" below).
+const store = new MemoryOrderStore();
+const fake = new FakeProvider();
+const service = new LedgerService({ store, providers: [fake] }); // add `bus` to publish ledger.* events
+const ctx = { product: 'scribbit' as const };
+
+const { order } = await service.createOrder(
+  { product: 'scribbit', customerRef: 'user-42', lineItems: [{ sku: 'inscription', description: 'One inscription', quantity: 1, unitSats: 25_000 }] },
+  { ...ctx, idempotencyKey: 'order-user-42-1' }, // a replay returns the same order
+);
+const { payment } = await service.createPayment(order.id, { method: 'onchain' }, ctx);
+console.log(order.totalSats, payment.status, payment.checkout); // 25000 'created' { address: 'bcrt1qfake1' }
+
+fake.settle(payment.providerRef);                                // the customer pays exactly
+await new LedgerWorker({ service, store, providers: [fake] }).tick();
+console.log((await service.getOrder(order.id, ctx)).status);     // 'paid'
+```
+
+Runs as is with `tsx` (Node 22); the comments show its output. To run the HTTP service locally: `pnpm --filter @bsh/ledger dev` (configuration in `env.schema.json`).
+
 ## Domain
 
 | Entity | Fields | States |

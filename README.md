@@ -1,5 +1,14 @@
 # scribbit: the platform repo
 
+<!-- Three doors. TODO(domain): confirm blockspace.dev (portal) and scribb.it before launch. -->
+**Learn** [blockspace.dev](https://blockspace.dev) · **Build** [block.space](https://block.space) · **Mint** [scribb.it](https://scribb.it) · [degent.club](https://degent.club)
+
+[![CI](https://github.com/DegentClub/scribbit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DegentClub/scribbit/actions/workflows/ci.yml)
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/DegentClub/scribbit/badge)](https://scorecard.dev/viewer/?uri=github.com/DegentClub/scribbit)
+<!-- TODO(npm): replace with https://img.shields.io/npm/v/@bsh/<package> badges once packages are published. -->
+[![npm: not yet published](https://img.shields.io/badge/npm-not%20yet%20published-lightgrey.svg)](#licence)
+
 The shared platform of Blockspace Holdings and the **scribb.it** product, in one pnpm workspace. The other two
 products live in their own repositories and consume this one as a pinned git submodule at `deps/scribbit`
 ([ADR-0004](docs/adr/0004-repo-split.md)):
@@ -19,7 +28,7 @@ fleet), chain nodes, data pipelines and forks live in separate repositories; see
 ```bash
 corepack enable                 # pnpm version comes from package.json "packageManager"
 pnpm install
-pnpm check                      # validate manifests + boundaries + typecheck + tests (what CI runs)
+pnpm check                      # validate manifests + boundaries + readiness + typecheck + tests (what CI runs)
 pnpm --filter @bsh/scribbit-cli dev    # the scribbit developer CLI
 ```
 
@@ -80,3 +89,17 @@ Design and rationale: [ADR-0001](docs/adr/0001-monorepo-structure.md) (structure
 [ADR-0003](docs/adr/0003-machine-readable-catalog.md) (manifests, catalog, and the join with the infra Fleet API)
 and [ADR-0004](docs/adr/0004-repo-split.md) (the three-repository split and external components).
 All decisions: [`docs/adr/`](docs/adr/README.md).
+
+## Licence
+
+- **Code:** [Apache License 2.0](LICENSE). Copyright 2026 Blockspace Holdings and contributors; attributions in
+  [NOTICE](NOTICE). Every package declares `"license": "Apache-2.0"`.
+- **Documentation and specifications** (`docs/`, prose Markdown): [CC BY 4.0](LICENSE-docs).
+- **Names and logos** (Blockspace Holdings, block.space, scribb.it, degent.club) are trademarks and are not licensed;
+  see [TRADEMARKS.md](TRADEMARKS.md).
+- **Derived code:** portions of `@bsh/scribbit-counters` and the XCP / Horizon wallet adapters are derived from
+  BitcoinCounters/counters.fun, used with permission of the same owner (see [NOTICE](NOTICE)).
+- **Forks** of third-party projects that we maintain elsewhere keep their upstream licences.
+
+Contributions are accepted under the same licences with a DCO sign-off: see [CONTRIBUTING.md](CONTRIBUTING.md).
+Security issues: [SECURITY.md](SECURITY.md). Help: [SUPPORT.md](SUPPORT.md). Governance: [GOVERNANCE.md](GOVERNANCE.md).

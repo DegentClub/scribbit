@@ -18,6 +18,20 @@ pnpm --filter @bsh/scribbit-mint screenshots  # after build: headless Chromium, 
 
 Screenshots from the real-browser run: [`docs/screenshots/`](./docs/screenshots/).
 
+## Quickstart
+
+From the repository root:
+
+```bash
+pnpm install
+pnpm --filter @bsh/scribbit-mint dev
+# open http://localhost:5173/ordinals?demo=1   (or /counters?demo=1)
+```
+
+`?demo=1` runs every flow on fixtures with a fake wallet, so nothing touches a network or a real wallet (see
+"Demo mode" below). Against real services, set the `VITE_*` variables in "Configuration" and run
+`@bsh/scribbit-mint-api` next to it.
+
 ## /ordinals flow
 
 ```

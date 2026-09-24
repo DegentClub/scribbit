@@ -1,0 +1,91 @@
+# gitleaks configuration (security.yml runs `gitleaks git` over the FULL history on every PR, push and weekly).
+#
+# The default ruleset stays on ([extend] useDefault) and is extended with Bitcoin key formats it does not know.
+# Known PUBLIC test vectors are allowlisted by EXACT VALUE AND PATH (condition = "AND"), so the same value
+# anywhere else, or any other value in the same file, is still reported. Never allowlist by path alone.
+# The same file is used in DegentClub/scribbit, DegentClub/degent and DegentClub/blockspace: the product repos'
+# histories contain the platform tree from before the repository split (ADR-0004), so the platform's test vectors
+# appear in all three histories.
+#
+# Adding an entry: the value must be a published test vector or a deliberately fake constant that can never hold
+# funds or grant access, and the description must say where it comes from. Real secrets are rotated, not allowlisted.
+
+title = "Blockspace Holdings gitleaks config"
+
+[extend]
+useDefault = true
+
+# ---------------------------------------------------------------------------------------------------------------
+# Bitcoin key material (not covered by the default ruleset)
+# ---------------------------------------------------------------------------------------------------------------
+
+[[rules]]
+id = "bitcoin-wif-private-key"
+description = "Bitcoin private key in Wallet Import Format (mainnet 5/K/L, testnet 9/c)"
+regex = '''\b((?:[KLc][1-9A-HJ-NP-Za-km-z]{51})|(?:[59][1-9A-HJ-NP-Za-km-z]{50}))\b'''
+secretGroup = 1
+entropy = 3.5
+
+[[rules]]
+id = "bitcoin-extended-private-key"
+description = "BIP32 extended private key (xprv/yprv/zprv, tprv/uprv/vprv)"
+regex = '''\b([xyztuv]prv[1-9A-HJ-NP-Za-km-z]{107,108})\b'''
+secretGroup = 1
+
+[[rules]]
+id = "hex-private-key-assignment"
+description = "32-byte hex value assigned to a private-key, secret, seed or signing-key name"
+regex = '''(?i)\b[a-z0-9_]*(?:priv|secret|seed|signing_?key|reveal_?key|nsec)[a-z0-9_]*\b['"]?\s*[:=]\s*(?:hex\.decode\(\s*|hexToBytes\(\s*|Buffer\.from\(\s*)?['"`]([0-9a-f]{64})['"`]'''
+secretGroup = 1
+
+[[rules]]
+id = "bip39-mnemonic-assignment"
+description = "12/15/18/21/24-word phrase assigned to a mnemonic or seed-phrase name"
+regex = '''(?i)\b[a-z0-9_]*(?:mnemonic|seed_?phrase|recovery_?phrase)[a-z0-9_]*\b['"]?\s*[:=]\s*['"`]((?:[a-z]{3,8} ){11,23}[a-z]{3,8})['"`]'''
+secretGroup = 1
+
+# ---------------------------------------------------------------------------------------------------------------
+# Allowlisted public test vectors: exact value AND path
+# ---------------------------------------------------------------------------------------------------------------
+
+[[allowlists]]
+description = "BIP-322 published test-vector private key (bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l), platform identity tests"
+condition = "AND"
+paths = ['''^platform/identity/test/helpers\.ts$''']
+regexTarget = "secret"
+regexes = ['''^L3VFeEujGtevx9w18HD1fhRbCH67Az2dpCymeRE1SoPK6XQtaN2k$''']
+
+[[allowlists]]
+description = "BIP-39 published test mnemonic ('abandon' x11 + 'about'), platform ledger derivation tests"
+condition = "AND"
+paths = ['''^platform/ledger/test/derivation\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about$''']
+
+[[allowlists]]
+description = "Deterministic repeated-byte test keys (0x01..0x05 x32), platform inscription tests"
+condition = "AND"
+paths = ['''^platform/inscription/test/(helpers|wallet\.test)\.ts$''']
+regexTarget = "secret"
+regexes = ['''^(01|02|03|04|05){32}$''']
+
+[[allowlists]]
+description = "Deterministic repeated-byte test keys (0x11 x32, 0x22 x32), platform signer tests"
+condition = "AND"
+paths = ['''^platform/signer/test/helpers\.ts$''']
+regexTarget = "secret"
+regexes = ['''^(1111111111111111111111111111111111111111111111111111111111111111|2222222222222222222222222222222222222222222222222222222222222222)$''']
+
+[[allowlists]]
+description = "degent-mint regtest-only dev reveal-vault key (ASCII 'degnt-mint-regtest-only-dev-key!'); config.ts refuses it off regtest"
+condition = "AND"
+paths = ['''^products/degent/services/mint/src/adapters/reveal-vault\.ts$''']
+regexTarget = "secret"
+regexes = ['''^6465676e742d6d696e742d726567746573742d6f6e6c792d6465762d6b657921$''']
+
+[[allowlists]]
+description = "Fake api_key used to test log scrubbing, degent-atelier provider tests"
+condition = "AND"
+paths = ['''^products/degent/services/atelier/test/providers\.test\.ts$''']
+regexTarget = "secret"
+regexes = ['''^abcdef123456$''']
