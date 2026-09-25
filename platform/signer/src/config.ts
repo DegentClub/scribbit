@@ -2,7 +2,16 @@
 import { InMemoryApiKeyStore, type ApiKeyEnv, type ApiKeyRecord } from '@bsh/edge';
 import { readFileSync } from 'node:fs';
 import { EnvKeyProvider, FileKeyProvider, type KeyProvider } from './key-provider.js';
-import { maxFee, maxInputValue, outputAllowlist, type Policy, type TaprootKeyPathInspection } from './policy.js';
+import {
+  maxFee,
+  maxInputValue,
+  outputAllowlist,
+  parentReturn,
+  P2TR_DUST_SATS,
+  type ParentReturnPolicyConfig,
+  type Policy,
+  type TaprootKeyPathInspection,
+} from './policy.js';
 import type { BitcoinNetwork } from './taproot.js';
 
 export class ConfigError extends Error {
@@ -24,6 +33,9 @@ export interface SignerConfig {
   maxInputSats?: bigint;
   maxFeeSats?: bigint;
   outputAllowlist?: string[];
+  /** Taproot policy shape. `parent-return` pins the degent collection-parent co-signing shape (see `parentReturn`). */
+  policy: 'default' | 'parent-return';
+  parentReturn?: ParentReturnPolicyConfig;
   keyEnv: ApiKeyEnv;
   apiKeys: ApiKeyRecord[];
   trustedProxies: string[];
@@ -101,6 +113,35 @@ export function loadConfig(env: NodeJS.ProcessEnv): SignerConfig {
   const maxInputSats = big(env, 'SIGNER_MAX_INPUT_SATS');
   const maxFeeSats = big(env, 'SIGNER_MAX_FEE_SATS');
   const outputs = list(env.SIGNER_OUTPUT_ALLOWLIST);
+
+  const policy = (env.SIGNER_POLICY ?? 'default') as 'default' | 'parent-return';
+  if (!['default', 'parent-return'].includes(policy)) throw new ConfigError('SIGNER_POLICY must be default or parent-return');
+  let parentReturnCfg: ParentReturnPolicyConfig | undefined;
+  if (policy === 'parent-return') {
+    const keyId = env.SIGNER_PARENT_RETURN_KEY_ID;
+    if (!keyId) throw new ConfigError('SIGNER_POLICY=parent-return requires SIGNER_PARENT_RETURN_KEY_ID (the collection parent key id)');
+    if (maxFeeSats === undefined) throw new ConfigError('SIGNER_POLICY=parent-return requires SIGNER_MAX_FEE_SATS (the reveal fee cap)');
+    if (outputs.length) throw new ConfigError('SIGNER_POLICY=parent-return is incompatible with SIGNER_OUTPUT_ALLOWLIST (output 1 pays each minter and would never match)');
+    const returnScript = env.SIGNER_PARENT_RETURN_RETURN_SCRIPT;
+    const minPostage = big(env, 'SIGNER_PARENT_RETURN_MIN_POSTAGE_SATS') ?? P2TR_DUST_SATS;
+    const parentSighash = list(env.SIGNER_PARENT_RETURN_ALLOWED_SIGHASH).map((s) => {
+      const n = Number(s);
+      if (!Number.isInteger(n) || n < 0 || n > 0xff) throw new ConfigError(`SIGNER_PARENT_RETURN_ALLOWED_SIGHASH: bad value "${s}"`);
+      return n;
+    });
+    parentReturnCfg = {
+      kind: 'parentReturn',
+      keyId,
+      inputIndex: int(env, 'SIGNER_PARENT_RETURN_INPUT_INDEX', 0),
+      maxInputs: int(env, 'SIGNER_PARENT_RETURN_MAX_INPUTS', 2),
+      maxOutputs: int(env, 'SIGNER_PARENT_RETURN_MAX_OUTPUTS', 2),
+      minPostageSats: minPostage,
+      maxFeeSats,
+      ...(returnScript ? { returnScript } : {}),
+      ...(parentSighash.length ? { allowedSighash: parentSighash } : {}),
+    };
+  }
+
   return {
     port: int(env, 'PORT', 3060),
     host: env.HOST ?? '127.0.0.1',
@@ -113,6 +154,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): SignerConfig {
     ...(maxInputSats !== undefined ? { maxInputSats } : {}),
     ...(maxFeeSats !== undefined ? { maxFeeSats } : {}),
     ...(outputs.length ? { outputAllowlist: outputs } : {}),
+    policy,
+    ...(parentReturnCfg ? { parentReturn: parentReturnCfg } : {}),
     keyEnv,
     apiKeys,
     trustedProxies: list(env.SIGNER_TRUSTED_PROXIES),
@@ -132,7 +175,13 @@ export function keyProviderFrom(cfg: SignerConfig, env: NodeJS.ProcessEnv): KeyP
 export function taprootPoliciesFrom(cfg: SignerConfig): Policy<TaprootKeyPathInspection>[] {
   const out: Policy<TaprootKeyPathInspection>[] = [];
   if (cfg.maxInputSats !== undefined) out.push(maxInputValue(cfg.maxInputSats));
-  if (cfg.maxFeeSats !== undefined) out.push(maxFee(cfg.maxFeeSats));
+  if (cfg.policy === 'parent-return' && cfg.parentReturn) {
+    // The shape policy already bounds the fee against SIGNER_MAX_FEE_SATS (and every other output); a bare
+    // maxFee on top of it would be redundant, so parent-return owns that check instead of the generic one.
+    out.push(parentReturn(cfg.parentReturn));
+  } else if (cfg.maxFeeSats !== undefined) {
+    out.push(maxFee(cfg.maxFeeSats));
+  }
   if (cfg.outputAllowlist) out.push(outputAllowlist(cfg.outputAllowlist));
   return out;
 }

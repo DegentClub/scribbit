@@ -115,8 +115,8 @@ export class Signer {
     const started = this.now();
     const principal = ctx.principal ?? 'local';
     const details: Record<string, unknown> = { inputIndex: req?.inputIndex };
-    const record = (decision: AuditRecord['decision'], reason?: string) =>
-      this.audit({ kind: 'taproot-keypath', keyId: String(req?.keyId), principal, decision, reason, requestId: ctx.requestId, started, details });
+    const record = (decision: AuditRecord['decision'], reason?: string, denialCode?: string) =>
+      this.audit({ kind: 'taproot-keypath', keyId: String(req?.keyId), principal, decision, reason, denialCode, requestId: ctx.requestId, started, details });
 
     try {
       if (!req || typeof req.psbtBase64 !== 'string' || !req.psbtBase64) throw new SignerError('invalid_request', 'psbtBase64 is required');
@@ -146,7 +146,7 @@ export class Signer {
       };
       const decision = await this.taprootPolicy.inspect(view);
       if (!decision.allow) {
-        await record('deny', decision.reason);
+        await record('deny', decision.reason, decision.code);
         throw new SignerError('policy_denied', decision.reason);
       }
       const sig = await this.o.keys.sign(req.keyId, insp.digest, { tweak: 'bip341' });
@@ -174,8 +174,8 @@ export class Signer {
     const started = this.now();
     const principal = ctx.principal ?? 'local';
     const details: Record<string, unknown> = { purpose: req?.purpose, digest: req?.digest32 };
-    const record = (decision: AuditRecord['decision'], reason?: string) =>
-      this.audit({ kind: 'schnorr-digest', keyId: String(req?.keyId), principal, decision, reason, requestId: ctx.requestId, started, details });
+    const record = (decision: AuditRecord['decision'], reason?: string, denialCode?: string) =>
+      this.audit({ kind: 'schnorr-digest', keyId: String(req?.keyId), principal, decision, reason, denialCode, requestId: ctx.requestId, started, details });
 
     try {
       if (!req) throw new SignerError('invalid_request', 'request body is required');
@@ -186,7 +186,7 @@ export class Signer {
       const view: SchnorrDigestInspection = { kind: 'schnorr-digest', keyId: req.keyId, purpose: req.purpose, digest32: req.digest32.toLowerCase(), principal };
       const decision = await this.digestPolicy.inspect(view);
       if (!decision.allow) {
-        await record('deny', decision.reason);
+        await record('deny', decision.reason, decision.code);
         throw new SignerError('policy_denied', decision.reason);
       }
       const pub = await this.o.keys.publicKey(req.keyId);
@@ -208,6 +208,7 @@ export class Signer {
     principal: string;
     decision: AuditRecord['decision'];
     reason?: string;
+    denialCode?: string;
     requestId?: string;
     started: number;
     details: Record<string, unknown>;
@@ -220,6 +221,7 @@ export class Signer {
       principal: a.principal,
       decision: a.decision,
       ...(a.reason ? { reason: a.reason } : {}),
+      ...(a.denialCode ? { denialCode: a.denialCode } : {}),
       ...(a.requestId ? { requestId: a.requestId } : {}),
       durationMs: Math.max(0, this.now() - a.started),
       details: a.details,

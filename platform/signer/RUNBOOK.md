@@ -36,12 +36,48 @@ show them to root until then, so keep startup short and the host locked down.
 | `429` | Per-key bucket (`SIGNER_RATE_LIMIT_KEY_PER_MIN`) exhausted | Legitimate burst → raise the limit for that deployment; otherwise a runaway consumer |
 | Process exits 2 at start | Config error (printed) | Common: file provider on mainnet without override, key file mode not 0600, plaintext `key` in an API key record |
 
+## degent parent co-signing
+
+The degent mint's remote policy signer (`DegentClub/degent`, `products/degent/services/mint`, its RUNBOOK.md
+§7 points here) uses this signer to co-sign the collection **parent** input of every reveal. The
+`parentReturn` taproot policy (`platform/signer/README.md` "degent parent co-signing" has the full mechanics)
+pins the reveal to exactly 2 inputs / 2 outputs, output 0 returning the parent's own value to its own script,
+output 1 at or above P2TR dust, a fee within cap, and `SIGHASH_DEFAULT` on the parent input only — enforced by
+the signer itself, so a compromised or misconfigured mint host cannot move the parent anywhere else even with
+a valid API key.
+
+**Run a dedicated signer instance for this key** (env policies apply to every key an instance serves):
+
+| Variable | Value | Why |
+|---|---|---|
+| `SIGNER_NETWORK` | same as the mint's `NETWORK` | the mint's startup preflight refuses a mismatch |
+| `SIGNER_KEY_PROVIDER` / `SIGNER_KEY_IDS` | `env` / `<keyId>` (e.g. `degent-parent`) | the untweaked key; `p2tr(key)` is `COLLECTION_ADDRESS` |
+| `SIGNER_POLICY` | `parent-return` | selects `parentReturn` instead of the default policy set |
+| `SIGNER_PARENT_RETURN_KEY_ID` | same `<keyId>` | the only key id this policy allows; any other is `key_not_covered` |
+| `SIGNER_MAX_FEE_SATS` | the mint's `SIGNER_MAX_FEE_SATS` (RUNBOOK §7 there has the formula, e.g. `508725000`) | also `parentReturn`'s fee cap — the fee is paid by the user's commit input, never the parent |
+| `SIGNER_ALLOWED_SIGHASH` | `0x00` | the parent is always signed SIGHASH_DEFAULT; `parentReturn` enforces this on its own too (defense in depth) even if this were left broader |
+| `SIGNER_MAX_INPUT_SATS` | `PARENT_VALUE_SATS` (e.g. `10000`) | the key may only ever spend a UTXO of the parent's exact size |
+| `SIGNER_OUTPUT_ALLOWLIST` | **unset** | refused together with `SIGNER_POLICY=parent-return` at config load (output 1 pays each minter and would never match) |
+| `SIGNER_ALLOWED_PURPOSES` | empty | no digest signing with the parent key |
+| `SIGNER_PARENT_RETURN_*` | defaults are correct for degent (`inputIndex=0`, `maxInputs=maxOutputs=2`, `minPostageSats=330`, `returnScript`=the key's own script) | override only for a deliberately different shape; see `env.schema.json` |
+
+**Symptoms**
+
+| Log / audit | Meaning | Action |
+|---|---|---|
+| `403 policy_denied` from `/v1/sign/taproot-keypath`, mint logs `policy signer refused` with `stage: remote` | `parentReturn` refused a reveal the mint's own `evaluateParentPolicy` accepted: a policy MISMATCH between the two, or an attempted parent-drain from a compromised mint host | `GET /v1/audit?decision=deny&keyId=<keyId>` — `denialCode` names the exact deviation (`parent_return_script_mismatch`, `parent_return_value_mismatch`, `too_many_outputs`, `postage_below_dust`, `fee_above_cap`, `input_index_not_allowed`, …). Compare against the mint's `PolicyConfig` / `COLLECTION_ADDRESS` / `PARENT_VALUE_SATS`; do NOT loosen `parentReturn` to make it pass — fix the mint config or treat as a compromise (see "Incident: suspected key compromise" above) |
+| Every reveal denied right after a parent rotation | `returnScript` defaults to the key's own script; if `SIGNER_KEY_IDS` was rotated to a new key without updating the mint's `COLLECTION_ADDRESS` to match, output 0 will never match | Follow the mint's parent-rotation runbook (its RUNBOOK.md §2) in lock-step with this key's rotation |
+| `denialCode: key_not_covered` | Wrong `keyId` in the request, or this instance is (misconfigured to be) shared with another key | Check the mint's `SIGNER_KEY_ID` matches `SIGNER_PARENT_RETURN_KEY_ID` exactly |
+
 ## Audit
 
 Every decision is a JSON line on stdout (`msg: "signer.audit"`) and in the in-memory ring served by
 `GET /v1/audit`. Ship stdout to the log pipeline; the ring is lost on restart. Records never contain key
 material, PSBT bodies or signatures. To reconstruct what was signed: `details.digest` (BIP341 sighash),
-`details.txid` (when finalized), `details.outputs`, `details.fee`, `principal`, `requestId`.
+`details.txid` (when finalized), `details.outputs`, `details.fee`, `principal`, `requestId`. Denials from a
+policy that supplies one also carry `denialCode` (a stable machine code, e.g. `fee_above_cap`) — filter or
+alert on it instead of parsing `reason` text; it is an open set (`contracts/openapi/signer.yaml`
+`x-extensible-enum`), so tolerate codes not yet in that list.
 
 ## Incident: suspected key compromise
 

@@ -16,6 +16,8 @@ export interface AuditRecord {
   decision: AuditDecision;
   /** Policy name + reason for denials; error code + message for errors. */
   reason?: string;
+  /** Stable machine code of the denying policy (e.g. `fee_above_cap`), when it supplied one. Open set. */
+  denialCode?: string;
   requestId?: string;
   durationMs: number;
   /** Non-secret facts about the request; the shape depends on `kind`. */

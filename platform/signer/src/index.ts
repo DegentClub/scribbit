@@ -1,4 +1,4 @@
-export type { Policy, PolicyDecision, SchnorrDigestInspection, TaprootKeyPathInspection } from './policy.js';
+export type { ParentReturnDenialCode, ParentReturnPolicyConfig, Policy, PolicyDecision, SchnorrDigestInspection, TaprootKeyPathInspection } from './policy.js';
 export {
   allOf,
   allow,
@@ -6,9 +6,13 @@ export {
   allowedSighashTypes,
   deny,
   denyAll,
+  forKeys,
   maxFee,
   maxInputValue,
   outputAllowlist,
+  P2TR_DUST_SATS,
+  parentReturn,
+  PARENT_RETURN_DENIAL_CODES,
   principalAllowlist,
   purposeAllowlist,
 } from './policy.js';

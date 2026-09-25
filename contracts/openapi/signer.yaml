@@ -17,6 +17,9 @@ info:
 
     Errors use the uniform edge body `{ "error": { "code", "message", "requestId" } }`. Policy denials are
     `403 policy_denied` and MUST NOT be retried by clients; only network failures are retryable.
+
+    Enums returned in responses that are marked `x-extensible-enum` are open sets: clients must tolerate new
+    values (e.g. `AuditRecord.denialCode`, one per policy that supplies a machine-readable denial reason).
   license:
     name: Proprietary
 servers:
@@ -210,6 +213,31 @@ components:
         principal: { type: string, description: API key id of the caller, or `local`. }
         decision: { type: string, enum: [allow, deny, error] }
         reason: { type: string, description: '`<policy>: <reason>` for denials; `<code>: <message>` for errors.' }
+        denialCode:
+          type: string
+          description: >
+            Stable machine code of the denying policy (e.g. `fee_above_cap`, `parent_return_script_mismatch`),
+            when it supplied one. Absent for policies that only give a free-text reason, and for allow/error
+            records. This is an open set (see `x-extensible-enum` note above): new policies add new codes.
+          x-extensible-enum:
+            [
+              sighash_not_allowed,
+              input_value_above_cap,
+              fee_negative,
+              fee_above_cap,
+              output_not_allowed,
+              purpose_not_allowed,
+              principal_not_allowed,
+              key_not_covered,
+              input_index_not_allowed,
+              too_few_inputs,
+              too_many_inputs,
+              too_few_outputs,
+              too_many_outputs,
+              parent_return_script_mismatch,
+              parent_return_value_mismatch,
+              postage_below_dust,
+            ]
         requestId: { type: string }
         durationMs: { type: integer }
         details: { type: object, additionalProperties: true, description: Non-secret facts (input, outputs, fee, sighash, digest, purpose, txid). Never key material, PSBT bodies or signatures. }

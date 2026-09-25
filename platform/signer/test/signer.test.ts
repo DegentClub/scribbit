@@ -76,7 +76,15 @@ describe('Signer audit trail', () => {
     expect(signs).toBe(0);
     expect(audit.list()).toHaveLength(1);
     expect(audit.list()[0]).toMatchObject({ decision: 'deny', reason: 'treasury-only: not the treasury', principal: 'p' });
+    expect(audit.list()[0]!.denialCode).toBeUndefined(); // this policy did not supply a machine code
     noSecrets(audit.list()[0]!);
+  });
+
+  it('carries a policy\'s machine denial code onto the audit record when it supplies one', async () => {
+    const { signer, audit } = setup({ taprootPolicies: [{ name: 'coded', inspect: () => deny('nope', 'my_code') }] });
+    const { psbtBase64 } = keyPathPsbt();
+    await expect(signer.signTaprootKeyPath({ psbtBase64, inputIndex: 0, keyId: 'a' }, { principal: 'p' })).rejects.toMatchObject({ code: 'policy_denied' });
+    expect(audit.list()[0]).toMatchObject({ decision: 'deny', reason: 'coded: nope', denialCode: 'my_code' });
   });
 
   it('records errors (unknown key, bad PSBT) as error with the code', async () => {

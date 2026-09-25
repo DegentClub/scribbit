@@ -18,7 +18,7 @@ consumer service ──RemoteSignerClient──► @bsh/signer (Hono + @bsh/edge
 | Export | What |
 |---|---|
 | `Signer({ keys, audit, allowedPurposes, taprootPolicies?, digestPolicies?, allowedSighashTypes?, network? })` | `signTaprootKeyPath(req, ctx)`, `signSchnorrDigest(req, ctx)`, `publicKey(keyId)`, `keyIds()` |
-| `Policy<TReq>` | `{ name, inspect(request) → { allow: true } \| { allow: false, reason } }` (sync or async). Built-ins: `allOf`, `allowAll`, `denyAll`, `allowedSighashTypes`, `maxInputValue`, `maxFee`, `outputAllowlist`, `purposeAllowlist`, `principalAllowlist` |
+| `Policy<TReq>` | `{ name, inspect(request) → { allow: true } \| { allow: false, reason, code? } }` (sync or async). Built-ins: `allOf`, `allowAll`, `denyAll`, `allowedSighashTypes`, `maxInputValue`, `maxFee`, `outputAllowlist`, `purposeAllowlist`, `principalAllowlist`, `forKeys`, `parentReturn` (see "degent parent co-signing" below). `code` is a stable machine denial code, copied onto the audit record's `denialCode` |
 | `TaprootKeyPathInspection` | What a taproot policy sees: `keyId, inputIndex, sighashType, input{txid,vout,amount,script}, inputs[], outputs[{amount,script,address?}], version, lockTime, fee, principal` |
 | `SchnorrDigestInspection` | `keyId, purpose, digest32, principal` |
 | `KeyProvider` | `publicKey(keyId) → x-only 32 bytes`, `sign(keyId, msg32, { tweak?: 'bip341', merkleRoot? }) → 64-byte BIP340`, `keyIds()` |
@@ -65,6 +65,56 @@ const { psbtBase64, signature, txid } = await signer.signTaprootKeyPath({ psbtBa
 signer never hashes for the caller: each purpose owns its domain-separated preimage (`blockspace.certify`
 = tagged hash of the certification payload, defined by that service's contract), so a digest for one purpose
 can never be a valid message for another.
+
+### degent parent co-signing (`parentReturn`)
+
+The degent mint's remote policy signer (`DegentClub/degent`, `products/degent/services/mint`, RUNBOOK.md §7
+there points here) asks this key to co-sign one input of every reveal: the collection **parent**. A
+compromised or misconfigured mint host must never be able to move that parent anywhere but back to the
+collection address — that is what `parentReturn` enforces on the signer side, independently of the mint's own
+`evaluateParentPolicy` (ADR-0002 §3 in `DegentClub/degent`). The mint sends a **lean** PSBT: the unsigned
+transaction plus `witnessUtxo` for every input, no `tapLeafScript` or signature on input 1 (a few hundred
+bytes; see `remote-policy-signer.ts` there). `parentReturn` needs nothing more:
+
+```ts
+import { Signer, parentReturn } from '@bsh/signer';
+
+const signer = new Signer({
+  keys, // a dedicated instance for this key only (see below)
+  audit,
+  allowedPurposes: [],
+  allowedSighashTypes: [0x00],
+  taprootPolicies: [parentReturn({ keyId: 'degent-parent', maxFeeSats: 508_725_000n })],
+  network: 'mainnet',
+});
+```
+
+`parentReturn(config)` allows signing `config.inputIndex` (default 0, the parent) of a transaction only if:
+
+- it has 2 inputs (parent + the minter's commit) and 2 outputs (`maxInputs` / `maxOutputs` raise the
+  ceiling; the floor is always 2) — `too_few_inputs`, `too_many_inputs`, `too_few_outputs`, `too_many_outputs`;
+- the input is signed with an allowed hash type, default `0x00` (SIGHASH_DEFAULT) only — `sighash_not_allowed`;
+- output 0 pays `config.returnScript` (default: the key's own key-path P2TR script — the signer has already
+  proven the parent input pays it, via `input_mismatch` otherwise) with **exactly** the signed input's value:
+  ord places the child on the first sat after the parent's, so a larger output 0 would swallow the child and a
+  smaller one would leak parent value — `parent_return_script_mismatch`, `parent_return_value_mismatch`;
+- every other output carries at least `config.minPostageSats` (default 330, P2TR dust) —
+  `postage_below_dust`;
+- the fee (sum inputs − sum outputs) is within `[0, config.maxFeeSats]` — `fee_negative`, `fee_above_cap`;
+- the key id matches `config.keyId` at all — `key_not_covered`; and the parent is signed, not the commit —
+  `input_index_not_allowed`.
+
+Every denial's `reason` is `<code>: <detail>` and its `code` is one of `PARENT_RETURN_DENIAL_CODES`, copied to
+the audit record's `denialCode` (`GET /v1/audit`) so an operator can query denials by code, not by parsing text.
+It **cannot** see which recipient the mint recorded for output 1 (the mint's own policy and the minter's 0x81
+signature pin that) — it only pins the shape that keeps the parent itself safe.
+
+**Service configuration**: set `SIGNER_POLICY=parent-return`, `SIGNER_PARENT_RETURN_KEY_ID=<keyId>` and
+`SIGNER_MAX_FEE_SATS`; `SIGNER_MAX_INPUT_SATS=<PARENT_VALUE_SATS>` and `SIGNER_ALLOWED_SIGHASH=0x00` alongside
+it as defense in depth (see `env.schema.json` for every `SIGNER_PARENT_RETURN_*` override and
+RUNBOOK.md "degent parent co-signing" for the full deployment table). Run a **dedicated signer instance** for
+the parent key: env policies apply to every key an instance serves, and `SIGNER_OUTPUT_ALLOWLIST` is refused
+alongside `parent-return` at config load (output 1 pays each minter and would never match a fixed allowlist).
 
 ## Service
 
@@ -122,7 +172,9 @@ one of those actions is attributable (API key id, request id, timestamp, what wa
 
 **What it does not protect against.** A compromised consumer with a valid `sign:<keyId>` key can request
 any signature that policy allows — policies are the blast-radius control, so make them tight per key (a
-parent-inscription key gets `outputAllowlist` of the collection address; a certify key gets purposes only).
+parent-inscription key gets `outputAllowlist` of the collection address; a degent collection-parent key gets
+`parentReturn`, which pins the exact reveal shape so a compromised mint host cannot move the parent anywhere
+but back to itself; a certify key gets purposes only).
 A compromised signer host with software providers exposes the keys — that is what the HSM path removes.
 The service does not rate-limit by amount over time (a `maxSpendPerWindow` policy backed by the audit log is
 the obvious next step) and does not verify that a PSBT's prevouts exist on chain (a policy can query an
@@ -149,6 +201,6 @@ file provider exists for local development and refuses mainnet without an explic
 ## Develop
 
 ```bash
-pnpm --filter @bsh/signer test        # policy, sighash (independent BIP341 impl + btc-signer cross-check), PSBT rejections, API auth/scopes, audit, client retries
+pnpm --filter @bsh/signer test        # policy (incl. parentReturn shape/deviations), sighash (independent BIP341 impl + btc-signer cross-check), PSBT rejections, API auth/scopes, audit, client retries, config, e2e HTTP
 pnpm --filter @bsh/signer typecheck
 ```
