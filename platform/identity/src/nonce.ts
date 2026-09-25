@@ -53,7 +53,6 @@ export class InMemoryNonceStore implements NonceStore {
   }
 
   async consume(nonce: string, binding: { domain: string; address: string }, now: number): Promise<NonceConsumeResult> {
-    this.sweep(now);
     const e = this.entries.get(nonce);
     if (!e) return 'unknown';
     if (e.used) return 'replayed';
