@@ -1,5 +1,6 @@
 /** HTTP entry point: `pnpm --filter @bsh/scribbit-mcp dev | start`. Configuration: env.schema.json. */
 import { serve } from '@hono/node-server';
+import { Asker, createAnthropicChatPort, loadIndex } from '@bsh/blockspace-tutor-kb';
 import { createApp } from './app.js';
 import { ConfigError, keyStoreFrom, loadServerConfig } from './config.js';
 import { feeProviders } from './fees.js';
@@ -12,8 +13,10 @@ function main(): void {
     console.error(e instanceof ConfigError ? e.message : e);
     process.exit(2);
   }
+  const chat = createAnthropicChatPort(process.env);
+  const asker = new Asker({ index: loadIndex(), ...(chat ? { chat } : {}) });
   const app = createApp({
-    ports: { fees: feeProviders(cfg.networks, cfg.feeUrls) },
+    ports: { fees: feeProviders(cfg.networks, cfg.feeUrls), asker },
     keys: keyStoreFrom(cfg.keys),
     keyEnv: cfg.keyEnv,
     requireApiKey: cfg.requireApiKey,

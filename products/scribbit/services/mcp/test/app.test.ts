@@ -132,7 +132,7 @@ describe('MCP over Streamable HTTP (stateless, JSON responses)', () => {
     const { app, live } = setup();
     const list = await rpc(app, live.key, { jsonrpc: '2.0', id: 2, method: 'tools/list' });
     expect(list.status).toBe(200);
-    expect((await list.json()).result.tools.map((t: { name: string }) => t.name)).toHaveLength(7);
+    expect((await list.json()).result.tools.map((t: { name: string }) => t.name)).toHaveLength(8);
     const commit = await rpc(app, live.key, callTool(3, 'commit_address', { network: 'signet', revealPubkey: PUB_HEX, contentType: 'text/plain', contentBase64: b64(bytes(9)) }));
     const c = (await commit.json()).result.structuredContent;
     expect(c.address).toBe(ins.commitAddress(Buffer.from(PUB_HEX, 'hex'), { contentType: 'text/plain', body: bytes(9) }, 'signet').address);

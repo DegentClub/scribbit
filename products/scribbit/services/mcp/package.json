@@ -1,6 +1,6 @@
 {
   "name": "@bsh/scribbit-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "Apache-2.0",
   "mcpName": "io.github.DegentClub/scribbit-mcp",
   "private": true,
@@ -17,6 +17,7 @@
     "mint-key": "tsx src/mint-key.ts"
   },
   "dependencies": {
+    "@bsh/blockspace-tutor-kb": "workspace:*",
     "@bsh/edge": "workspace:*",
     "@bsh/inscription": "workspace:*",
     "@bsh/scribbit-fee-oracle": "workspace:*",

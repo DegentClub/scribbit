@@ -3,7 +3,7 @@
   "name": "io.github.DegentClub/scribbit-mcp",
   "title": "scribb.it: write to Bitcoin",
   "description": "Exact Bitcoin inscription quotes, commit addresses, envelope and lane facts, fees and 0x83 rescue.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "websiteUrl": "https://github.com/DegentClub/scribbit/tree/main/products/scribbit/services/mcp",
   "repository": {
     "url": "https://github.com/DegentClub/scribbit",
@@ -15,7 +15,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@bsh/scribbit-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
@@ -77,7 +77,8 @@
           "commit_address",
           "explain_lanes",
           "rescue_tx",
-          "playground_explain_step"
+          "playground_explain_step",
+          "ask_blockspace"
         ],
         "resources": [
           "scribbit://docs/lanes",

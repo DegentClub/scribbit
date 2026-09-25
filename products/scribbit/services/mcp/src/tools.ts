@@ -21,6 +21,7 @@ import {
   type Network,
 } from '@bsh/inscription';
 import type { FeeProvider, FeesResponse } from '@bsh/scribbit-fee-oracle';
+import { Asker, loadIndex, LEVELS, type AskRequest, type AskResult } from '@bsh/blockspace-tutor-kb';
 import {
   isNetwork,
   NETWORKS,
@@ -43,6 +44,16 @@ export interface ScribbitMcpPorts {
   fees?: Partial<Record<Network, FeeProvider>>;
   /** Called for unexpected (non-ToolError) failures, with the tool name; nothing else is logged. */
   onUnexpected?: (tool: string, error: unknown) => void;
+  /** Ask Blockspace answering engine for `ask_blockspace`. Default: a cached extractive (offline) asker. */
+  asker?: Asker;
+}
+
+let defaultAsker: Asker | undefined;
+/** The shared asker: the injected one, or a lazily-built extractive (offline) asker over the committed index. */
+export function getAsker(ports: ScribbitMcpPorts): Asker {
+  if (ports.asker) return ports.asker;
+  defaultAsker ??= new Asker({ index: loadIndex() });
+  return defaultAsker;
 }
 
 export const TIERS = ['slow', 'normal', 'fast'] as const;
@@ -454,6 +465,32 @@ export interface ExplainStepResult extends StepExplanation, Record<string, unkno
  * Deliberately there is no faucet tool: an agent should not spend a shared, rate-limited faucet budget on a
  * person's behalf (ADR-0009); the person solves the proof of work in their own browser.
  */
+// ------------------------------------------------------------------------------------------- ask_blockspace
+
+export interface AskBlockspaceInput {
+  question: string;
+  level?: string | undefined;
+  includeLiveFacts?: boolean | undefined;
+  network?: string | undefined;
+}
+
+export interface AskBlockspaceResult extends AskResult, Record<string, unknown> {}
+
+/**
+ * Retrieval-grounded answer to a blockspace question, sharing the Ask Blockspace knowledge base and guardrails
+ * (@bsh/blockspace-tutor-kb) with the tutor service. Read-only; refuses price/keys/mainnet-signing; never
+ * fabricates a citation. Uses the injected asker (extractive by default — no model, no network).
+ */
+export async function askBlockspace(input: AskBlockspaceInput, ports: ScribbitMcpPorts): Promise<AskBlockspaceResult> {
+  if (typeof input.question !== 'string' || input.question.trim() === '') throw invalid('question must be a non-empty string', { field: 'question' });
+  if (input.level !== undefined && !(LEVELS as readonly string[]).includes(input.level)) throw invalid(`level must be one of ${LEVELS.join(', ')}`, { field: 'level' });
+  const req: AskRequest = { question: input.question };
+  if (input.level) req.level = input.level as AskRequest['level'];
+  if (input.includeLiveFacts) req.includeLiveFacts = true;
+  if (input.network) req.network = input.network;
+  return { ...(await getAsker(ports).ask(req)) } as AskBlockspaceResult;
+}
+
 export function playgroundExplainStep(input: ExplainStepInput): ExplainStepResult {
   try {
     return {

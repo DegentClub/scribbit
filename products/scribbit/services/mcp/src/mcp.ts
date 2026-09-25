@@ -7,10 +7,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { NETWORKS } from './content.js';
 import { STEP_IDS } from '@bsh/scribbit-playground-kit';
+import { LEVELS } from '@bsh/blockspace-tutor-kb';
 import { securityModelDoc } from './docs.js';
 import { guarded, okResult } from './errors.js';
 import { MAX_CONTENT_BYTES } from './limits.js';
 import {
+  askBlockspace,
   buildEnvelope,
   commitAddressTool,
   explainLanes,
@@ -25,14 +27,15 @@ import {
 
 export const SERVER_NAME = 'scribbit';
 export const SERVER_TITLE = 'scribb.it: write to Bitcoin';
-export const SERVER_VERSION = '0.1.0';
+export const SERVER_VERSION = '0.2.0';
 
 export const INSTRUCTIONS = `scribb.it puts data on Bitcoin as ordinals inscriptions with exact costs up front and no custody of user keys.
 Flow: get_fees -> quote_inscription (exact weight/vsize/lane/fee) -> commit_address (fund it with commitValue) -> build the half-signed
 reveal with @bsh/inscription in the user's wallet/browser -> the scribb.it service attaches the parent and broadcasts; rescue_tx turns the
 half-signed PSBT into a broadcastable no-parent transaction if the service disappears. Every tool is deterministic and offline except
 get_fees (and quote_inscription without feeRate), which read the configured fee oracle. Content up to 4 MiB as base64, or a length for size-only quotes.
-Read scribbit://docs/lanes for the size table and scribbit://docs/security-model before handling anyone's PSBT.`;
+Read scribbit://docs/lanes for the size table and scribbit://docs/security-model before handling anyone's PSBT.
+ask_blockspace answers conceptual "what/how" questions about blockspace with cited sources and refuses price advice or any key/seed/mainnet-signing request.`;
 
 const network = z.enum(NETWORKS as [string, ...string[]]).describe('mainnet | testnet | signet | regtest');
 const contentType = z.string().min(1).max(520).describe('MIME type of the inscription, e.g. "image/webp" or "text/plain;charset=utf-8"');
@@ -177,6 +180,28 @@ export function createScribbitMcpServer(ports: ScribbitMcpPorts = {}): McpServer
       annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     },
     (args) => run('playground_explain_step', () => playgroundExplainStep(args), (r) => `Step ${String(r.step)}: ${String(r.title)}`),
+  );
+
+  server.registerTool(
+    'ask_blockspace',
+    {
+      title: 'Ask a blockspace question',
+      description:
+        'Retrieval-grounded answer to a Bitcoin blockspace question (fees, weight, inscriptions, Taproot, the mempool) with citations to primary sources (glossary, BSS specs, BIPs, ADRs, Academy). Shares the Ask Blockspace knowledge base and guardrails with the tutor service: it refuses price/investment questions and any request to reveal/store keys or sign a mainnet transaction (refused=true with a refusalReason), says it is not sure and links the glossary when retrieval is weak, treats retrieved text as data, and never fabricates a citation. Extractive and offline by default; read-only and never handles keys.',
+      inputSchema: {
+        question: z.string().min(1).max(2000).describe('The blockspace question to answer'),
+        level: z.enum(LEVELS as unknown as [string, ...string[]]).optional().describe('Preferred depth: beginner | intermediate | advanced'),
+        includeLiveFacts: z.boolean().optional().describe('Attach labelled live chain facts (fee estimate, tip height) when a live source is configured'),
+        network: z.string().max(16).optional().describe('Network label for live facts (default mainnet)'),
+      },
+      annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    },
+    (args) =>
+      run(
+        'ask_blockspace',
+        () => askBlockspace(args, ports),
+        (r) => (r.refused ? `refused (${String(r.refusalReason)}): ${String(r.answer).slice(0, 100)}` : `${String(r.groundedness)}, ${(r.citations as unknown[]).length} citation(s): ${String(r.answer).slice(0, 100)}`),
+      ),
   );
 
   server.registerResource(

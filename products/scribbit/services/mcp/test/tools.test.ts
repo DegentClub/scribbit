@@ -10,9 +10,9 @@ describe('tool list', () => {
   beforeAll(async () => (h = await connect()));
   afterAll(() => h.close());
 
-  it('exposes exactly the seven documented tools, all read-only', async () => {
+  it('exposes exactly the eight documented tools, all read-only', async () => {
     const { tools } = await h.client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(['build_envelope', 'commit_address', 'explain_lanes', 'get_fees', 'playground_explain_step', 'quote_inscription', 'rescue_tx']);
+    expect(tools.map((t) => t.name).sort()).toEqual(['ask_blockspace', 'build_envelope', 'commit_address', 'explain_lanes', 'get_fees', 'playground_explain_step', 'quote_inscription', 'rescue_tx']);
     for (const t of tools) {
       expect(t.annotations?.readOnlyHint, t.name).toBe(true);
       expect(t.inputSchema.type).toBe('object');

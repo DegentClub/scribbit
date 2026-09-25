@@ -112,6 +112,7 @@ quotes in one step and commits in another cannot silently drift.
 | `explain_lanes` | `feeRate?` (default 2) | lane table (max weight / vsize / body per lane, both layouts), the README size rows with real numbers, `parentCostWeight` (402) | `estimateRevealWeight` over the documented assumptions |
 | `rescue_tx` | `halfSignedPsbtBase64`, `network?` | `hex`, `txid`, `inscriptionId`, `weight`, `vsize`, `lane` | `buildRescueReveal` (0x83 replay) |
 | `playground_explain_step` | `step` (1-5 or `wallet` \| `coins` \| `file` \| `inscribe` \| `certificate`) | `title`, `summary`, `explanation[]`, `onChain`, `safety`, `glossary[{id,term,definition}]`, `goalSeconds`, `steps` | `@bsh/scribbit-playground-kit` (the text the Signet Playground page shows) |
+| `ask_blockspace` | `question`, `level?`, `includeLiveFacts?`, `network?` | `answer`, `citations[{sourceId,type,title,url,score}]`, `groundedness`, `groundednessNote`, `refused` + `refusalReason?`, `liveFacts?`, `model` | `@bsh/blockspace-tutor-kb` (retrieval + guardrails; extractive/offline by default). Refuses price/keys/mainnet-signing; never fabricates a citation. |
 
 Without a `feeRate`, `quote_inscription` reads the oracle: `standard.<tier>` for standard-lane reveals,
 `block.recommended` for block-lane ones, and adds a warning when the reveal needs a Libre Relay / Slipstream

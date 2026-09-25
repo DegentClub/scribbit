@@ -5,6 +5,7 @@
  */
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { Network } from '@bsh/inscription';
+import { Asker, createAnthropicChatPort, loadIndex } from '@bsh/blockspace-tutor-kb';
 import { isNetwork, NETWORKS } from './content.js';
 import { feeProviders } from './fees.js';
 import { createScribbitMcpServer } from './mcp.js';
@@ -23,8 +24,10 @@ export async function startStdio(env: Record<string, string | undefined> = proce
     const raw = env[`MCP_FEE_URL_${n.toUpperCase()}`]?.trim();
     if (raw) feeUrls[n] = raw.toLowerCase() === 'off' ? 'off' : raw;
   }
+  const chat = createAnthropicChatPort(env);
   const server = createScribbitMcpServer({
     fees: feeProviders(networks, feeUrls),
+    asker: new Asker({ index: loadIndex(), ...(chat ? { chat } : {}) }),
     // stdout is the protocol channel; diagnostics go to stderr only.
     onUnexpected: (tool, e) => console.error(JSON.stringify({ msg: 'tool failed', tool, error: String((e as Error)?.message ?? e) })),
   });

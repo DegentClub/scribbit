@@ -11,6 +11,8 @@ export { ConfigError, keyStoreFrom, loadServerConfig, parseKeyRecord, parseKeyRe
 export { feeProviderFor, feeProviders, type FeeProviderChoice } from './fees.js';
 export { ToolError, type ToolErrorBody, type ToolErrorCode } from './errors.js';
 export {
+  askBlockspace,
+  getAsker,
   buildEnvelope,
   commitAddressTool,
   docWeight,
