@@ -16,6 +16,8 @@ export type { Network } from './network.js';
 export { networkParams } from './network.js';
 export type { InscriptionContent } from './envelope.js';
 export { buildInscriptionScript, encodeParentId, inscriptionIdFromReveal, inscriptionScriptLength } from './envelope.js';
+export type { EnvelopeFlags, ParsedField, ParsedInscription, ParseOptions } from './parse.js';
+export { decodeInscriptionId, ENVELOPE_TAGS, parseEnvelope, parseEnvelopes } from './parse.js';
 export type { CommitInfo } from './commit.js';
 export { addressToScript, commitAddress, NUMS_INTERNAL_KEY } from './commit.js';
 export type { CommitSighashForSizing, Lane } from './sizing.js';

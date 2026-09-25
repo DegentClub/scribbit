@@ -1,0 +1,364 @@
+{
+  "spec": "BSS-0005",
+  "title": "Half-signed reveal (0x81 / legacy 0x83), K_e rescue and wallet-signed reveal PSBTs",
+  "generator": "tools/gen-inscription.ts",
+  "reference": {
+    "package": "@bsh/inscription",
+    "repo": "scribbit",
+    "path": "platform/inscription",
+    "commit": "d4a6a62a8be16fd612e8fc487ea3c34f6f739e54",
+    "dirty": true
+  },
+  "note": "Fields listed in `randomized` depend on BIP340 auxiliary randomness chosen by the reference implementation at generation time. They MUST be verified (Schnorr-verify against the stated digest and key), not byte-compared. Every other expected field is deterministic and MUST match byte for byte.",
+  "keys": {
+    "revealKey": {
+      "label": "reveal-key-K_e",
+      "secretKey": "ee55988fe232d2253c40d80f76651a9f6b1311c33374064b6b5b3ffcf3dad413",
+      "xonlyPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb"
+    },
+    "collectionKey": {
+      "label": "collection-parent-key",
+      "secretKey": "ad0085132cd6abc9245b260cac625134da0cf9625754aa60fad36db57334c2c9",
+      "xonlyInternalKey": "2416896b11e19482b68f72b04b5e65a9b28016c36f9c6ca5638e835430cbd284",
+      "address": "bc1pm4p4h2juwy4darzumxhc087r8acfnyj898q0f34kvnujkyk7esnqs3ya4e"
+    },
+    "recipient": {
+      "label": "recipient",
+      "address": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv"
+    }
+  },
+  "vectors": [
+    {
+      "id": "half-signed-0x81-parent",
+      "description": "Browser half-signed reveal [commit] -> [parent return, child], SIGHASH_ALL|ANYONECANPAY; then the service attaches the parent at input 0 and the policy signer signs it.",
+      "deterministic": false,
+      "randomized": [
+        "psbtBase64",
+        "signature",
+        "finalTxHex"
+      ],
+      "input": {
+        "network": "mainnet",
+        "revealKey": {
+          "label": "reveal-key-K_e",
+          "secretKey": "ee55988fe232d2253c40d80f76651a9f6b1311c33374064b6b5b3ffcf3dad413",
+          "xonlyPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb"
+        },
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+          "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "1066",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546",
+        "parentReturnAddress": "bc1pm4p4h2juwy4darzumxhc087r8acfnyj898q0f34kvnujkyk7esnqs3ya4e",
+        "parentValue": "10000",
+        "sighash": "all_anyonecanpay",
+        "parentOutpoint": {
+          "txid": "34c607f9f917a230ddfb6e3d1c9ce07b0df1726e3a5c2de50580837147c28aa9",
+          "vout": 0
+        },
+        "feeRate": 2
+      },
+      "expected": {
+        "commitAddress": "bc1pp7au5e8cpvdxmsavf2a95u63xzmhdkdkd25quxlwd7le8655kzzqsq9han",
+        "commitScriptPubKey": "51200fbbca64f80b1a6dc3ac4aba5a735130b776d9b66aa80e1bee6fbf93ea94b084",
+        "tapLeafHash": "eb8971a9e937120f1379621ec8e1d7f79315bc5ee2fd91f1bf6d2c648009f6f7",
+        "controlBlock": "c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "estimatedWeight": 1037,
+        "sighashType": 129,
+        "sighash": "613e94dcc9ef063d9cd0329f8ae5446ce9a2c8abd03a04c76c8cca635a482cf2",
+        "signatureAuxZero": "307551833bacde33e34b42c98bd0f3aab5b46bbee0887561a7f3abe8ddc3f37ef5a94795a9b5ebc9aa3e2d7fcae31eedc2ee2b8f040a38af984f26450d825e2981",
+        "psbtBase64": "cHNidP8BAIkCAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////AhAnAAAAAAAAIlEg3UNbqlxxKt6MXNmvh5/DP3CZkkcpwPTGtmT5KxLezCYiAgAAAAAAACJRIBwtEsyrR3zFz8uEWmu87Pl8eLfEKvxKKb8P3RfK2hDIAAAAAAABASsqBAAAAAAAACJRIA+7ymT4Cxptw6xKulpzUTC3dtm2aqgOG+5vv5PqlLCEAQMEgQAAAEEUoWZES1mLgnc4gBwI/C4fMHy1aL1tGjk1zlDaiausp7vriXGp6TcSDxN5Yh7I4df3kxW8XuL9kfG/bSxkgAn290H4fwJnZABX3xXPAWvscy4Y6Di6NzE+QJ9t7Fmh0r12Qbgdgh5zuzcReuT0Ct4f1TXLMeYfBX+UxKqjFZ4SpinlgSIVwFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAnCChZkRLWYuCdziAHAj8Lh8wfLVovW0aOTXOUNqJq6ynu6wAYwNvcmQBAQppbWFnZS93ZWJwAQMg+EQdVPBUnkBC9PoL7CJDOFu5kLusPvppUhBNr7iJ/r8AQAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9owAEXIFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAAAAA",
+        "signature": "f87f0267640057df15cf016bec732e18e838ba37313e409f6dec59a1d2bd7641b81d821e73bb37117ae4f40ade1fd535cb31e61f057f94c4aaa3159e12a629e581",
+        "finalTxid": "713ffc17526cde169024507ef4da07895d3c15d0fd399a499b4b8be27e9f5bd0",
+        "finalWeight": 1037,
+        "finalVsize": 260,
+        "inscriptionId": "713ffc17526cde169024507ef4da07895d3c15d0fd399a499b4b8be27e9f5bd0i0",
+        "finalTxHex": "02000000000102a98ac24771838005e52d5c3a6e72f10d7be09c1c3d6efbdd30a217f9f907c6340000000000fdffffff25a2bd7cc1cf27e78aa6bf5ee80b276d7a0da7dddee5e4ee81608e46afa89e270000000000fdffffff021027000000000000225120dd435baa5c712ade8c5cd9af879fc33f7099924729c0f4c6b664f92b12decc2622020000000000002251201c2d12ccab477cc5cfcb845a6bbcecf97c78b7c42afc4a29bf0fdd17cada10c8014091ca69317cf83660c60d4757ffdf3c5e6b361c3cdcd21a6d55464a58fd7f5db3687167cb558d329ab5bd10db2ca5a6132bcb4bcac5bf1e6f97447dfbe9b9ee650341f87f0267640057df15cf016bec732e18e838ba37313e409f6dec59a1d2bd7641b81d821e73bb37117ae4f40ade1fd535cb31e61f057f94c4aaa3159e12a629e5819b20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f726401010a696d6167652f77656270010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf0040000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f6821c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac000000000"
+      }
+    },
+    {
+      "id": "half-signed-0x83-legacy",
+      "description": "LEGACY (deprecated) SIGHASH_SINGLE|ANYONECANPAY half-signed reveal [commit] -> [child]; replayed as the rescue.",
+      "deterministic": false,
+      "randomized": [
+        "psbtBase64",
+        "signature",
+        "rescueTxHex"
+      ],
+      "input": {
+        "network": "mainnet",
+        "revealKey": {
+          "label": "reveal-key-K_e",
+          "secretKey": "ee55988fe232d2253c40d80f76651a9f6b1311c33374064b6b5b3ffcf3dad413",
+          "xonlyPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb"
+        },
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+          "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "1066",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546",
+        "parentReturnAddress": "bc1pm4p4h2juwy4darzumxhc087r8acfnyj898q0f34kvnujkyk7esnqs3ya4e",
+        "parentValue": "10000",
+        "sighash": "single_anyonecanpay"
+      },
+      "expected": {
+        "sighashType": 131,
+        "sighash": "bb81e13c95d42108934f1fb23a296ffc268f7aa8390d9258aef5c4b8ae428014",
+        "signatureAuxZero": "bf7d91c4b0fc694615423875aa385ee78906480eb8df141e834b262970fadfa475c31a09ef2b0124d663db6e67efb624c37cf9c57df214353985648a92ed186783",
+        "psbtBase64": "cHNidP8BAF4CAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////ASICAAAAAAAAIlEgHC0SzKtHfMXPy4Raa7zs+Xx4t8Qq/Eopvw/dF8raEMgAAAAAAAEBKyoEAAAAAAAAIlEgD7vKZPgLGm3DrEq6WnNRMLd22bZqqA4b7m+/k+qUsIQBAwSDAAAAQRShZkRLWYuCdziAHAj8Lh8wfLVovW0aOTXOUNqJq6ynu+uJcanpNxIPE3liHsjh1/eTFbxe4v2R8b9tLGSACfb3QSt7xTCtnG03k9Z1Uk9CBLIjH8VB+rW4z/bUpuKNx9wzyLwXs1FlG9LM/ZjEPps1KJsH6S7YOgvkZui0KEUQxWqDIhXAUJKbdMGgSVS3i0tgNel6XgeKWg8o7JbVR7/ums6AOsCcIKFmREtZi4J3OIAcCPwuHzB8tWi9bRo5Nc5Q2omrrKe7rABjA29yZAEBCmltYWdlL3dlYnABAyD4RB1U8FSeQEL0+gvsIkM4W7mQu6w++mlSEE2vuIn+vwBAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P2jAARcgUJKbdMGgSVS3i0tgNel6XgeKWg8o7JbVR7/ums6AOsAAAA==",
+        "signature": "2b7bc530ad9c6d3793d675524f4204b2231fc541fab5b8cff6d4a6e28dc7dc33c8bc17b351651bd2ccfd98c43e9b35289b07e92ed83a0be466e8b4284510c56a83",
+        "rescueTxid": "17726d96dc079473d6ee803634feae707b5084de9a8e5132e3af5404997b135f",
+        "rescueWeight": 635,
+        "rescueTxHex": "0200000000010125a2bd7cc1cf27e78aa6bf5ee80b276d7a0da7dddee5e4ee81608e46afa89e270000000000fdffffff0122020000000000002251201c2d12ccab477cc5cfcb845a6bbcecf97c78b7c42afc4a29bf0fdd17cada10c803412b7bc530ad9c6d3793d675524f4204b2231fc541fab5b8cff6d4a6e28dc7dc33c8bc17b351651bd2ccfd98c43e9b35289b07e92ed83a0be466e8b4284510c56a839b20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f726401010a696d6167652f77656270010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf0040000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f6821c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac000000000"
+      }
+    },
+    {
+      "id": "ke-resigned-rescue",
+      "description": "K_e rescue: fresh [commit] -> [child] signed with SIGHASH_DEFAULT (64-byte signature).",
+      "deterministic": false,
+      "randomized": [
+        "txHex"
+      ],
+      "input": {
+        "network": "mainnet",
+        "revealKey": {
+          "label": "reveal-key-K_e",
+          "secretKey": "ee55988fe232d2253c40d80f76651a9f6b1311c33374064b6b5b3ffcf3dad413",
+          "xonlyPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb"
+        },
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+          "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "1066",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546",
+        "parentReturnAddress": "bc1pm4p4h2juwy4darzumxhc087r8acfnyj898q0f34kvnujkyk7esnqs3ya4e",
+        "parentValue": "10000",
+        "feeRate": 2
+      },
+      "expected": {
+        "sighashType": 0,
+        "sighash": "2e41bd91d496919279ba49bdb55159f152fd1de837528c4e9647e4ffca2f90ae",
+        "signatureAuxZero": "53f8fa3c57a9ca4e8ea04c8f2135766067cf50cc1b3d1c205774e709fad32d9a0b1ad115014fa2516601bc9c81e4ef8bee76e19f58b93c3577e85bb31c15d890",
+        "txid": "17726d96dc079473d6ee803634feae707b5084de9a8e5132e3af5404997b135f",
+        "weight": 634,
+        "vsize": 159,
+        "fee": "520",
+        "overpay": "202",
+        "txHex": "0200000000010125a2bd7cc1cf27e78aa6bf5ee80b276d7a0da7dddee5e4ee81608e46afa89e270000000000fdffffff0122020000000000002251201c2d12ccab477cc5cfcb845a6bbcecf97c78b7c42afc4a29bf0fdd17cada10c8034061065ca5d8825e6baa07c5818df0dfa2743e32b1e7642a8adfed3f57633c07d96d4b45adc50ce2e649a6ad2fb64f234b92ded710b007f88a60667b80c4b6cc389b20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f726401010a696d6167652f77656270010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf0040000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f6821c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac000000000"
+      }
+    },
+    {
+      "id": "wallet-output-parent-0x81",
+      "description": "Wallet-signed reveal, leaf key kind 'output', with parent return (0x81).",
+      "deterministic": true,
+      "input": {
+        "network": "mainnet",
+        "walletKey": {
+          "label": "wallet-key",
+          "secretKey": "96bde75b3223d30c202fe50f13ff72803c17b263556662382ef11944cdfbe9c8",
+          "internalKey": "da1071f050f3a58cd815e4dc350caca165f249388c7ac621ccc5579b4404da4d",
+          "outputKey": "6ae870aa0950125ec2af46e17e4a4cdcf46c9308093245d4788c9559bfb1b230",
+          "address": "bc1pdt58p2sf2qf9as40gmshujjvmn6xeycgpyeyt4rc3j24n0a3kgcqnuja3p"
+        },
+        "leafKeyKind": "output",
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+          "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "1066",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546",
+        "parentReturnAddress": "bc1pm4p4h2juwy4darzumxhc087r8acfnyj898q0f34kvnujkyk7esnqs3ya4e",
+        "parentValue": "10000"
+      },
+      "expected": {
+        "leafPubkey": "6ae870aa0950125ec2af46e17e4a4cdcf46c9308093245d4788c9559bfb1b230",
+        "commitAddress": "bc1p2fqshcpw5sm3muv9akj74x7sq46j0u6a74eru733uexm9jjrqn2stg9g69",
+        "sighashType": 129,
+        "unsignedPsbtBase64": "cHNidP8BAIkCAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////AhAnAAAAAAAAIlEg3UNbqlxxKt6MXNmvh5/DP3CZkkcpwPTGtmT5KxLezCYiAgAAAAAAACJRIBwtEsyrR3zFz8uEWmu87Pl8eLfEKvxKKb8P3RfK2hDIAAAAAAABASsqBAAAAAAAACJRIFJBC+AupDcd8YXtpeqb0AV1J/Nd9XI+ejHmTbLKQwTVAQMEgQAAACIVwVCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAnCBq6HCqCVASXsKvRuF+Skzc9GyTCAkyRdR4jJVZv7GyMKwAYwNvcmQBAQppbWFnZS93ZWJwAQMg+EQdVPBUnkBC9PoL7CJDOFu5kLusPvppUhBNr7iJ/r8AQAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9owAEXIFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAARggpzT15qH89dzphJ9uTJjBcg6B0C4TNW7/qGezBF31W6IAAAA=",
+        "sighash": "495256df836cecf3b9e037bb3b1956802a6cf1c5906925b0bdfc2ac697f01b5c",
+        "signatureAuxZero": "308b17138eb7ba96c3aa1aa08f2f94e78dec1e93130f726bb29c8dbc40de4b4e4ec7632b24ed0886247a86094b0f2abc64747f5eab855b1b45a70aa0d7d2fd8881",
+        "signedPsbtBase64": "cHNidP8BAIkCAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////AhAnAAAAAAAAIlEg3UNbqlxxKt6MXNmvh5/DP3CZkkcpwPTGtmT5KxLezCYiAgAAAAAAACJRIBwtEsyrR3zFz8uEWmu87Pl8eLfEKvxKKb8P3RfK2hDIAAAAAAABASsqBAAAAAAAACJRIFJBC+AupDcd8YXtpeqb0AV1J/Nd9XI+ejHmTbLKQwTVAQMEgQAAAEEUauhwqglQEl7Cr0bhfkpM3PRskwgJMkXUeIyVWb+xsjCnNPXmofz13OmEn25MmMFyDoHQLhM1bv+oZ7MEXfVbokEwixcTjre6lsOqGqCPL5TnjewekxMPcmuynI28QN5LTk7HYysk7QiGJHqGCUsPKrxkdH9eq4VbG0WnCqDX0v2IgSIVwVCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAnCBq6HCqCVASXsKvRuF+Skzc9GyTCAkyRdR4jJVZv7GyMKwAYwNvcmQBAQppbWFnZS93ZWJwAQMg+EQdVPBUnkBC9PoL7CJDOFu5kLusPvppUhBNr7iJ/r8AQAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9owAEXIFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAARggpzT15qH89dzphJ9uTJjBcg6B0C4TNW7/qGezBF31W6IAAAA="
+      }
+    },
+    {
+      "id": "wallet-internal-parent-0x81",
+      "description": "Wallet-signed reveal, leaf key kind 'internal', with parent return (0x81).",
+      "deterministic": true,
+      "input": {
+        "network": "mainnet",
+        "walletKey": {
+          "label": "wallet-key",
+          "secretKey": "96bde75b3223d30c202fe50f13ff72803c17b263556662382ef11944cdfbe9c8",
+          "internalKey": "da1071f050f3a58cd815e4dc350caca165f249388c7ac621ccc5579b4404da4d",
+          "outputKey": "6ae870aa0950125ec2af46e17e4a4cdcf46c9308093245d4788c9559bfb1b230",
+          "address": "bc1pdt58p2sf2qf9as40gmshujjvmn6xeycgpyeyt4rc3j24n0a3kgcqnuja3p"
+        },
+        "leafKeyKind": "internal",
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+          "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "1066",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546",
+        "parentReturnAddress": "bc1pm4p4h2juwy4darzumxhc087r8acfnyj898q0f34kvnujkyk7esnqs3ya4e",
+        "parentValue": "10000"
+      },
+      "expected": {
+        "leafPubkey": "da1071f050f3a58cd815e4dc350caca165f249388c7ac621ccc5579b4404da4d",
+        "commitAddress": "bc1pd36fwmxdnzp3grx87c36h5hhhslcercrvf8adrypcxkm56v0zpwqup4zet",
+        "sighashType": 129,
+        "unsignedPsbtBase64": "cHNidP8BAIkCAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////AhAnAAAAAAAAIlEg3UNbqlxxKt6MXNmvh5/DP3CZkkcpwPTGtmT5KxLezCYiAgAAAAAAACJRIBwtEsyrR3zFz8uEWmu87Pl8eLfEKvxKKb8P3RfK2hDIAAAAAAABASsqBAAAAAAAACJRIGx0l2zNmIMUDMf2I6vS97w/jI8DYk/WjIHBrbppjxBcAQMEgQAAACIVwFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAnCDaEHHwUPOljNgV5Nw1DKyhZfJJOIx6xiHMxVebRATaTawAYwNvcmQBAQppbWFnZS93ZWJwAQMg+EQdVPBUnkBC9PoL7CJDOFu5kLusPvppUhBNr7iJ/r8AQAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9owAEXIFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAARggJZjKpHEVQTaTVFxV8mYohM1KOoC2q7g1FWKF2TsQPtoAAAA=",
+        "sighash": "688cb2d799950d311ed0cbc2bd933d0ab7685b96aef31b1b9eb25d8b79b02c6f",
+        "signatureAuxZero": "c0213ffd3662b820a8467168b176768134079605c80d4850c413094900b274a262a4f172011f7aaa0b22dd678c97643c5f2187cf9193ed6002880a5338266c5381",
+        "signedPsbtBase64": "cHNidP8BAIkCAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////AhAnAAAAAAAAIlEg3UNbqlxxKt6MXNmvh5/DP3CZkkcpwPTGtmT5KxLezCYiAgAAAAAAACJRIBwtEsyrR3zFz8uEWmu87Pl8eLfEKvxKKb8P3RfK2hDIAAAAAAABASsqBAAAAAAAACJRIGx0l2zNmIMUDMf2I6vS97w/jI8DYk/WjIHBrbppjxBcAQMEgQAAAEEU2hBx8FDzpYzYFeTcNQysoWXySTiMesYhzMVXm0QE2k0lmMqkcRVBNpNUXFXyZiiEzUo6gLaruDUVYoXZOxA+2kHAIT/9NmK4IKhGcWixdnaBNAeWBcgNSFDEEwlJALJ0omKk8XIBH3qqCyLdZ4yXZDxfIYfPkZPtYAKIClM4JmxTgSIVwFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAnCDaEHHwUPOljNgV5Nw1DKyhZfJJOIx6xiHMxVebRATaTawAYwNvcmQBAQppbWFnZS93ZWJwAQMg+EQdVPBUnkBC9PoL7CJDOFu5kLusPvppUhBNr7iJ/r8AQAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9owAEXIFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAARggJZjKpHEVQTaTVFxV8mYohM1KOoC2q7g1FWKF2TsQPtoAAAA="
+      }
+    },
+    {
+      "id": "wallet-output-noparent-all",
+      "description": "Wallet-signed reveal, leaf key kind 'output', no parent (all).",
+      "deterministic": true,
+      "input": {
+        "network": "mainnet",
+        "walletKey": {
+          "label": "wallet-key",
+          "secretKey": "96bde75b3223d30c202fe50f13ff72803c17b263556662382ef11944cdfbe9c8",
+          "internalKey": "da1071f050f3a58cd815e4dc350caca165f249388c7ac621ccc5579b4404da4d",
+          "outputKey": "6ae870aa0950125ec2af46e17e4a4cdcf46c9308093245d4788c9559bfb1b230",
+          "address": "bc1pdt58p2sf2qf9as40gmshujjvmn6xeycgpyeyt4rc3j24n0a3kgcqnuja3p"
+        },
+        "leafKeyKind": "output",
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "846",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546",
+        "sighash": "all"
+      },
+      "expected": {
+        "leafPubkey": "6ae870aa0950125ec2af46e17e4a4cdcf46c9308093245d4788c9559bfb1b230",
+        "commitAddress": "bc1pzrt5ptnyemshwlzr0hlg0tc2997jt875lvac4mdx2axur86z4zksszl0ue",
+        "sighashType": 1,
+        "unsignedPsbtBase64": "cHNidP8BAF4CAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////ASICAAAAAAAAIlEgHC0SzKtHfMXPy4Raa7zs+Xx4t8Qq/Eopvw/dF8raEMgAAAAAAAEBK04DAAAAAAAAIlEgENdArmTO4Xd8Q33+h68KKX0ln9T7O4rtpldNwZ9CqK0BAwQBAAAAIhXAUJKbdMGgSVS3i0tgNel6XgeKWg8o7JbVR7/ums6AOsB5IGrocKoJUBJewq9G4X5KTNz0bJMICTJF1HiMlVm/sbIwrABjA29yZAEBCmltYWdlL3dlYnAAQAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9owAEXIFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAARgg0K51sy+FjCPAHEGYSMMxPzSZuu6P9opK0hq9yjxmUHwAAA==",
+        "sighash": "3ab1105b2c0fc7576e96a701bad00112004135f4eee763a133e48b307eeaed93",
+        "signatureAuxZero": "85a256570e14d955c92e0839a59a6149eca3bb6647158b183f3780ba31cc67edc3826db7443ed9f6f64b02dcdcef3a8d9285b03d7cc20aaf1eb52ad81285128501",
+        "signedPsbtBase64": "cHNidP8BAF4CAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////ASICAAAAAAAAIlEgHC0SzKtHfMXPy4Raa7zs+Xx4t8Qq/Eopvw/dF8raEMgAAAAAAAEBK04DAAAAAAAAIlEgENdArmTO4Xd8Q33+h68KKX0ln9T7O4rtpldNwZ9CqK0BAwQBAAAAQRRq6HCqCVASXsKvRuF+Skzc9GyTCAkyRdR4jJVZv7GyMNCudbMvhYwjwBxBmEjDMT80mbruj/aKStIavco8ZlB8QYWiVlcOFNlVyS4IOaWaYUnso7tmRxWLGD83gLoxzGftw4Jtt0Q+2fb2SwLc3O86jZKFsD18wgqvHrUq2BKFEoUBIhXAUJKbdMGgSVS3i0tgNel6XgeKWg8o7JbVR7/ums6AOsB5IGrocKoJUBJewq9G4X5KTNz0bJMICTJF1HiMlVm/sbIwrABjA29yZAEBCmltYWdlL3dlYnAAQAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4fICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj9owAEXIFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAARgg0K51sy+FjCPAHEGYSMMxPzSZuu6P9opK0hq9yjxmUHwAAA==",
+        "finalTxid": "17726d96dc079473d6ee803634feae707b5084de9a8e5132e3af5404997b135f",
+        "finalWeight": 600
+      }
+    },
+    {
+      "id": "wallet-internal-noparent-default",
+      "description": "Wallet-signed reveal, leaf key kind 'internal', no parent (default).",
+      "deterministic": true,
+      "input": {
+        "network": "mainnet",
+        "walletKey": {
+          "label": "wallet-key",
+          "secretKey": "96bde75b3223d30c202fe50f13ff72803c17b263556662382ef11944cdfbe9c8",
+          "internalKey": "da1071f050f3a58cd815e4dc350caca165f249388c7ac621ccc5579b4404da4d",
+          "outputKey": "6ae870aa0950125ec2af46e17e4a4cdcf46c9308093245d4788c9559bfb1b230",
+          "address": "bc1pdt58p2sf2qf9as40gmshujjvmn6xeycgpyeyt4rc3j24n0a3kgcqnuja3p"
+        },
+        "leafKeyKind": "internal",
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "846",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546"
+      },
+      "expected": {
+        "leafPubkey": "da1071f050f3a58cd815e4dc350caca165f249388c7ac621ccc5579b4404da4d",
+        "commitAddress": "bc1pp878tde72aav95zldxq037wept4td2u44mrtkyytqqfacdmx5pvqthynk3",
+        "sighashType": 0,
+        "unsignedPsbtBase64": "cHNidP8BAF4CAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////ASICAAAAAAAAIlEgHC0SzKtHfMXPy4Raa7zs+Xx4t8Qq/Eopvw/dF8raEMgAAAAAAAEBK04DAAAAAAAAIlEgCfx1tz5XesLQX2mA+PnZCuq2q5WuxrsQiwAT3DdmoFgiFcBQkpt0waBJVLeLS2A16XpeB4paDyjsltVHv+6azoA6wHkg2hBx8FDzpYzYFeTcNQysoWXySTiMesYhzMVXm0QE2k2sAGMDb3JkAQEKaW1hZ2Uvd2VicABAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P2jAARcgUJKbdMGgSVS3i0tgNel6XgeKWg8o7JbVR7/ums6AOsABGCAVzdkyI37UTZ2N8SgBzBml/u/FRPCHKeTvyO0EqVajNQAA",
+        "sighash": "cf141d6752e053c215466f5a885fc359ac901cf92c8ce9905a62ccc4b90f40b5",
+        "signatureAuxZero": "3087f08e8103cab74ca412a8f0d72393aefad4a82bad60ebd26e513e39266599cbe502599a71ddf140797a58278018631b759462791eca8ecc0abd713e25048d",
+        "signedPsbtBase64": "cHNidP8BAF4CAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////ASICAAAAAAAAIlEgHC0SzKtHfMXPy4Raa7zs+Xx4t8Qq/Eopvw/dF8raEMgAAAAAAAEBK04DAAAAAAAAIlEgCfx1tz5XesLQX2mA+PnZCuq2q5WuxrsQiwAT3DdmoFhBFNoQcfBQ86WM2BXk3DUMrKFl8kk4jHrGIczFV5tEBNpNFc3ZMiN+1E2djfEoAcwZpf7vxUTwhynk78jtBKlWozVAMIfwjoEDyrdMpBKo8Ncjk6761KgrrWDr0m5RPjkmZZnL5QJZmnHd8UB5elgngBhjG3WUYnkeyo7MCr1xPiUEjSIVwFCSm3TBoElUt4tLYDXpel4HiloPKOyW1Ue/7prOgDrAeSDaEHHwUPOljNgV5Nw1DKyhZfJJOIx6xiHMxVebRATaTawAYwNvcmQBAQppbWFnZS93ZWJwAEAAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5Ojs8PT4/aMABFyBQkpt0waBJVLeLS2A16XpeB4paDyjsltVHv+6azoA6wAEYIBXN2TIjftRNnY3xKAHMGaX+78VE8Icp5O/I7QSpVqM1AAA=",
+        "finalTxid": "17726d96dc079473d6ee803634feae707b5084de9a8e5132e3af5404997b135f",
+        "finalWeight": 599
+      }
+    },
+    {
+      "id": "wallet-rescue-output-all",
+      "description": "Wallet-signed rescue [commit] -> [child] for a wallet that refuses SIGHASH_DEFAULT (sighash 'all', 0x01).",
+      "deterministic": true,
+      "input": {
+        "network": "mainnet",
+        "leafKeyKind": "output",
+        "leafPubkey": "6ae870aa0950125ec2af46e17e4a4cdcf46c9308093245d4788c9559bfb1b230",
+        "content": {
+          "contentType": "image/webp",
+          "bodyLength": 64,
+          "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+          "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+        },
+        "commitOutpoint": {
+          "txid": "279ea8af468e6081eee4e5dedda70d7a6d270be85ebfa68ae727cfc17cbda225",
+          "vout": 0
+        },
+        "commitValue": "1066",
+        "recipientAddress": "bc1prsk39n9tga7vtn7ts3dxh08vl9783d7y9t7y52dlplw30jk6zryq46pvjv",
+        "postage": "546",
+        "sighash": "all"
+      },
+      "expected": {
+        "unsignedPsbtBase64": "cHNidP8BAF4CAAAAASWivXzBzyfniqa/XugLJ216Dafd3uXk7oFgjkavqJ4nAAAAAAD9////ASICAAAAAAAAIlEgHC0SzKtHfMXPy4Raa7zs+Xx4t8Qq/Eopvw/dF8raEMgAAAAAAAEBKyoEAAAAAAAAIlEgUkEL4C6kNx3xhe2l6pvQBXUn8131cj56MeZNsspDBNUBAwQBAAAAIhXBUJKbdMGgSVS3i0tgNel6XgeKWg8o7JbVR7/ums6AOsCcIGrocKoJUBJewq9G4X5KTNz0bJMICTJF1HiMlVm/sbIwrABjA29yZAEBCmltYWdlL3dlYnABAyD4RB1U8FSeQEL0+gvsIkM4W7mQu6w++mlSEE2vuIn+vwBAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P2jAARcgUJKbdMGgSVS3i0tgNel6XgeKWg8o7JbVR7/ums6AOsABGCCnNPXmofz13OmEn25MmMFyDoHQLhM1bv+oZ7MEXfVbogAA",
+        "commitAddress": "bc1p2fqshcpw5sm3muv9akj74x7sq46j0u6a74eru733uexm9jjrqn2stg9g69",
+        "fee": "520",
+        "sighashType": 1
+      }
+    }
+  ]
+}

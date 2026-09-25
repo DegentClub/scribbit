@@ -1,0 +1,465 @@
+{
+  "spec": "BSS-0004",
+  "title": "Inscription envelope, parent tag encoding and commit outputs",
+  "generator": "tools/gen-inscription.ts",
+  "reference": {
+    "package": "@bsh/inscription",
+    "repo": "scribbit",
+    "path": "platform/inscription",
+    "commit": "d4a6a62a8be16fd612e8fc487ea3c34f6f739e54",
+    "dirty": true
+  },
+  "keys": {
+    "revealKey": {
+      "label": "reveal-key-K_e",
+      "derivation": "sha256(\"bss/test-vector/\" || label)",
+      "secretKey": "ee55988fe232d2253c40d80f76651a9f6b1311c33374064b6b5b3ffcf3dad413",
+      "xonlyPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb"
+    }
+  },
+  "constants": {
+    "numsInternalKey": "50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+    "tapscriptLeafVersion": 192,
+    "maxScriptElementSize": 520
+  },
+  "vectors": [
+    {
+      "id": "env-text-no-parent",
+      "description": "Short UTF-8 text body, no parent, no metadata.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "text/plain;charset=utf-8",
+        "bodyHex": "446567656e74202331"
+      },
+      "expected": {
+        "bodySha256": "8bba43b95116811409e1aa2ca314586e66160aab1709513cb9f85073f1537bec",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010118746578742f706c61696e3b636861727365743d7574662d380009446567656e7420233168",
+        "leafScriptLength": 79,
+        "tapLeafHash": "770c38621fbf7d069c279321ce0c8ecb62550b144aab2cf4e0e712bcb1467eb3",
+        "controlBlock": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "512052e02580239d4d9d2f66fed5e5e018dff8cc985c4633b323015f93d1fa9e20c5",
+        "commitAddress": {
+          "mainnet": "bc1p2tsztqprn4xe6tmxlm27tcqcmluvexzugcemxgcpt7far757yrzswkart6",
+          "testnet": "tb1p2tsztqprn4xe6tmxlm27tcqcmluvexzugcemxgcpt7far757yrzse7tv34",
+          "signet": "tb1p2tsztqprn4xe6tmxlm27tcqcmluvexzugcemxgcpt7far757yrzse7tv34",
+          "regtest": "bcrt1p2tsztqprn4xe6tmxlm27tcqcmluvexzugcemxgcpt7far757yrzs58p2y0"
+        }
+      }
+    },
+    {
+      "id": "env-empty-body",
+      "description": "Empty body: only the OP_0 body tag is emitted.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "text/plain",
+        "bodyHex": ""
+      },
+      "expected": {
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f726401010a746578742f706c61696e0068",
+        "leafScriptLength": 55,
+        "tapLeafHash": "0dfc92bffa6eaf32f69c9c2085bf0bdc9b146080c17582b2914165b4a8a5316d",
+        "controlBlock": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "5120c119954e36f0874686f3504d19681a19167ca6066c012e1a97eb854cdb8f9a8a",
+        "commitAddress": {
+          "mainnet": "bc1pcyve2n3k7zr5dphn2px3j6q6ryt8efsxdsqjux5hawz5eku0n29qwptvqs",
+          "testnet": "tb1pcyve2n3k7zr5dphn2px3j6q6ryt8efsxdsqjux5hawz5eku0n29qefar6l",
+          "signet": "tb1pcyve2n3k7zr5dphn2px3j6q6ryt8efsxdsqjux5hawz5eku0n29qefar6l",
+          "regtest": "bcrt1pcyve2n3k7zr5dphn2px3j6q6ryt8efsxdsqjux5hawz5eku0n29q5sh909"
+        }
+      }
+    },
+    {
+      "id": "env-parent-i0",
+      "description": "One-byte body with a parent (index 0: index bytes trimmed).",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/webp",
+        "bodyHex": "2a",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f726401010a696d6167652f77656270010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf00012a68",
+        "leafScriptLength": 92,
+        "tapLeafHash": "dc6f338103f56e8b88d65357fdfa53c4ff49ad527e42aeee918339349604bf01",
+        "controlBlock": "c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "5120535fd954823c4841d5bc4c7fb1e5bf96e31c5752b77aa8ecbd2151b0934ab4a9",
+        "commitAddress": {
+          "mainnet": "bc1p2d0aj4yz83yyr4duf3lmredljm33c46jkaa23m9ay9gmpy62kj5shy9ptf",
+          "testnet": "tb1p2d0aj4yz83yyr4duf3lmredljm33c46jkaa23m9ay9gmpy62kj5sqvnw3x",
+          "signet": "tb1p2d0aj4yz83yyr4duf3lmredljm33c46jkaa23m9ay9gmpy62kj5sqvnw3x",
+          "regtest": "bcrt1p2d0aj4yz83yyr4duf3lmredljm33c46jkaa23m9ay9gmpy62kj5sd4egyu"
+        }
+      }
+    },
+    {
+      "id": "env-body-75",
+      "description": "Pattern body of 75 bytes with parent: exercises direct push.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 75,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "182ab56f7739e43cee0b9ba1e92c4b2a81b088705516a5243910159744f21be9",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004b000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a68",
+        "leafScriptLength": 165,
+        "tapLeafHash": "5bd6a18000ff2df5c51b153de52cadec086a257b7dd05fdf6c93fdaa2df08d79",
+        "controlBlock": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "5120e5bb320d206af192249bbf195456691de93362d0fc653b25e19836bf34747911",
+        "commitAddress": {
+          "mainnet": "bc1pukanyrfqdtceyfymhuv4g4nfrh5nxcksl3jnkf0pnqmt7dr50ygs3nfcmh",
+          "testnet": "tb1pukanyrfqdtceyfymhuv4g4nfrh5nxcksl3jnkf0pnqmt7dr50ygsxmlhpc",
+          "signet": "tb1pukanyrfqdtceyfymhuv4g4nfrh5nxcksl3jnkf0pnqmt7dr50ygsxmlhpc",
+          "regtest": "bcrt1pukanyrfqdtceyfymhuv4g4nfrh5nxcksl3jnkf0pnqmt7dr50ygstz435z"
+        }
+      }
+    },
+    {
+      "id": "env-body-76",
+      "description": "Pattern body of 76 bytes with parent: exercises OP_PUSHDATA1.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 76,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "081f6c68899a48a1be455a55416104921d2fe4bdae696f4b72f9d9626a47915e",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004c4c000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b68",
+        "leafScriptLength": 167,
+        "tapLeafHash": "4673f1711175fa13ba07245bdc6d5af07a2c443b61d6ec8619cf323cfd6edd82",
+        "controlBlock": "c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "51204ecb32fb6739a265212430650c396b7fbfec65ebd33cb9c5a6d9bcafe7882ed6",
+        "commitAddress": {
+          "mainnet": "bc1pfm9n97m88x3x2gfyxpjscwtt07l7ce0t6v7tn3dxmx72leug9mtqp2qg8j",
+          "testnet": "tb1pfm9n97m88x3x2gfyxpjscwtt07l7ce0t6v7tn3dxmx72leug9mtqkzk8aa",
+          "signet": "tb1pfm9n97m88x3x2gfyxpjscwtt07l7ce0t6v7tn3dxmx72leug9mtqkzk8aa",
+          "regtest": "bcrt1pfm9n97m88x3x2gfyxpjscwtt07l7ce0t6v7tn3dxmx72leug9mtqmmupg8"
+        }
+      }
+    },
+    {
+      "id": "env-body-255",
+      "description": "Pattern body of 255 bytes with parent: exercises OP_PUSHDATA1.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 255,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "857df204175f077a9986709897f00ee0bcc0449585248e4b42498337e9329999",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004cff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa0001020368",
+        "leafScriptLength": 346,
+        "tapLeafHash": "9018802856886851dde7f7e21b1939a06053a198127613e9370f82d20b70c644",
+        "controlBlock": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "5120ce09bd349d12b02dd32d97d83581f0f77e315a76dd81afc18b3b02c1baf1b9fd",
+        "commitAddress": {
+          "mainnet": "bc1pecym6dyaz2czm5edjlvrtq0s7alrzknkmkq6lsvt8vpvrwh3h87sm767xh",
+          "testnet": "tb1pecym6dyaz2czm5edjlvrtq0s7alrzknkmkq6lsvt8vpvrwh3h87svkv3uc",
+          "signet": "tb1pecym6dyaz2czm5edjlvrtq0s7alrzknkmkq6lsvt8vpvrwh3h87svkv3uc",
+          "regtest": "bcrt1pecym6dyaz2czm5edjlvrtq0s7alrzknkmkq6lsvt8vpvrwh3h87sp0xhfz"
+        }
+      }
+    },
+    {
+      "id": "env-body-256",
+      "description": "Pattern body of 256 bytes with parent: exercises OP_PUSHDATA2.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 256,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "5bc31b283cef0072274e97d74916552954c935794536cab632641e5ea071379d",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004d0001000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030468",
+        "leafScriptLength": 348,
+        "tapLeafHash": "1ef62106117f4c94bcdb969827425708c8d06b6f078663b7df9704a22b7f8b09",
+        "controlBlock": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "51203b5241fe1b612fe54158a1a7c342a66c84dd4b5df697da9096d2db978f40a549",
+        "commitAddress": {
+          "mainnet": "bc1p8dfyrlsmvyh72s2c5xnuxs4xdjzd6j6a76ta4yyk6tde0r6q54ysp5jjtp",
+          "testnet": "tb1p8dfyrlsmvyh72s2c5xnuxs4xdjzd6j6a76ta4yyk6tde0r6q54yskuya3w",
+          "signet": "tb1p8dfyrlsmvyh72s2c5xnuxs4xdjzd6j6a76ta4yyk6tde0r6q54yskuya3w",
+          "regtest": "bcrt1p8dfyrlsmvyh72s2c5xnuxs4xdjzd6j6a76ta4yyk6tde0r6q54ysm9wmy5"
+        }
+      }
+    },
+    {
+      "id": "env-body-520",
+      "description": "Pattern body of 520 bytes with parent: exercises OP_PUSHDATA2.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 520,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "000b54c4e094a31eaf3d37d89c1c82228bf75519a7421daf2fb4ff15080b6301",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004d0802000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101168",
+        "leafScriptLength": 612,
+        "tapLeafHash": "f5ffc30d17662dd9f8c8ece12cdbc1f8bd1f89d91b883985f2b4179b7415e266",
+        "controlBlock": "c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "51208923bb6a8b092e304bc82d9f5f20d7fa053d971487fb497533e72507cf329892",
+        "commitAddress": {
+          "mainnet": "bc1p3y3mk65tpyhrqj7g9k047gxhlgznm9c5sla5jafnuujs0nejnzfqvrw4rd",
+          "testnet": "tb1p3y3mk65tpyhrqj7g9k047gxhlgznm9c5sla5jafnuujs0nejnzfqmtc6ez",
+          "signet": "tb1p3y3mk65tpyhrqj7g9k047gxhlgznm9c5sla5jafnuujs0nejnzfqmtc6ez",
+          "regtest": "bcrt1p3y3mk65tpyhrqj7g9k047gxhlgznm9c5sla5jafnuujs0nejnzfqkjjuvc"
+        }
+      }
+    },
+    {
+      "id": "env-body-521",
+      "description": "Pattern body of 521 bytes with parent: exercises 520-byte chunking.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 521,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "f43951b7b5e1e088564f53f9de8834bdbdba55437d51c8b75a4e0b978c4df75b",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004d0802000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f1011011268",
+        "leafScriptLength": 614,
+        "tapLeafHash": "de9e9755fe8122eda005c52d60195940df40734593accad00bbf6f622819966e",
+        "controlBlock": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "5120ba1d15e82242e3d5015971a922366556b8fb6146522dbcf503e99a5c7cdd270c",
+        "commitAddress": {
+          "mainnet": "bc1phgw3t6pzgt3a2q2ewx5jydn926u0kc2x2gkmeagraxd9clxayuxqa4cep7",
+          "testnet": "tb1phgw3t6pzgt3a2q2ewx5jydn926u0kc2x2gkmeagraxd9clxayuxq2awkm3",
+          "signet": "tb1phgw3t6pzgt3a2q2ewx5jydn926u0kc2x2gkmeagraxd9clxayuxq2awkm3",
+          "regtest": "bcrt1phgw3t6pzgt3a2q2ewx5jydn926u0kc2x2gkmeagraxd9clxayuxq8yyswt"
+        }
+      }
+    },
+    {
+      "id": "env-body-1040",
+      "description": "Pattern body of 1040 bytes with parent: exercises 520-byte chunking.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 1040,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "45d57b49e6dc1b1739430a4b6b3576f95beae3a2bd66a720554a8d12e2615cd4",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004d0802000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f10114d080212131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222368",
+        "leafScriptLength": 1135,
+        "tapLeafHash": "4081bc3f2d98c75cb1ae8cbd4eabf464a4ac719ec77a0d31bc9b3a13a3c76884",
+        "controlBlock": "c150929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "5120a9c2c02d83b4986bf08fc58881debb8c03b889efe1bac274541509f233b17c91",
+        "commitAddress": {
+          "mainnet": "bc1p48pvqtvrkjvxhuy0ckygrh4m3spm3z00uxavyaz5z5ylyva30jgs3hv2u0",
+          "testnet": "tb1p48pvqtvrkjvxhuy0ckygrh4m3spm3z00uxavyaz5z5ylyva30jgsxl69xq",
+          "signet": "tb1p48pvqtvrkjvxhuy0ckygrh4m3spm3z00uxavyaz5z5ylyva30jgsxl69xq",
+          "regtest": "bcrt1p48pvqtvrkjvxhuy0ckygrh4m3spm3z00uxavyaz5z5ylyva30jgstxsrn6"
+        }
+      }
+    },
+    {
+      "id": "env-body-1041",
+      "description": "Pattern body of 1041 bytes with parent: exercises 520-byte chunking.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "image/png",
+        "bodyLength": 1041,
+        "bodyRule": "body[i] = i mod 251 for i in [0, length)",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "bodySha256": "9443fee374ebfd2b0fefe1e9ee45bd933d2277dcd58b0003a9cfe284dcab4044",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f7264010109696d6167652f706e67010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf004d0802000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f10114d080212131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20212223012468",
+        "leafScriptLength": 1137,
+        "tapLeafHash": "d0978c9b7421fe0caf6aa3266b7c426ee6a63bdaf4aa9be33ceaa61f59377bb7",
+        "controlBlock": "c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "51207a5840b46502020e12276b10c186479274780375fe1112ea842f56b16745abcc",
+        "commitAddress": {
+          "mainnet": "bc1p0fvypdr9qgpquy38dvgvrpj8jf68sqm4lcg3965y9attze6940xq8x7uyq",
+          "testnet": "tb1p0fvypdr9qgpquy38dvgvrpj8jf68sqm4lcg3965y9attze6940xqswgn70",
+          "signet": "tb1p0fvypdr9qgpquy38dvgvrpj8jf68sqm4lcg3965y9attze6940xqswgn70",
+          "regtest": "bcrt1p0fvypdr9qgpquy38dvgvrpj8jf68sqm4lcg3965y9attze6940xqahz4t4"
+        }
+      }
+    },
+    {
+      "id": "env-metadata-600",
+      "description": "600 bytes of metadata: two tag-5 pushes (520 + 80), each preceded by its own tag.",
+      "deterministic": true,
+      "input": {
+        "revealPubkey": "a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bb",
+        "contentType": "application/json",
+        "bodyHex": "7b22646567656e74223a317d",
+        "parentId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0",
+        "metadataLength": 600,
+        "metadataRule": "metadata[i] = i mod 251 for i in [0, length)"
+      },
+      "expected": {
+        "bodySha256": "b6be0c3c7a1852c343f3e783b8642e0de542afa24eae73be1be5b0cf82763abf",
+        "leafScriptHex": "20a166444b598b827738801c08fc2e1f307cb568bd6d1a3935ce50da89abaca7bbac0063036f72640101106170706c69636174696f6e2f6a736f6e010320f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf01054d0802000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fa000102030405060708090a0b0c0d0e0f101101054c5012131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f6061000c7b22646567656e74223a317d68",
+        "leafScriptLength": 718,
+        "tapLeafHash": "2b02cd6f6f9fd2a39fa6f7661c415a0cfdeb596fa191d642eeb7ebfe4efd2818",
+        "controlBlock": "c050929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0",
+        "commitScriptPubKey": "5120143b52148a464e2bba196e20e13e9c245170bf166b0335afe5026785db948115",
+        "commitAddress": {
+          "mainnet": "bc1pzsa4y9y2ge8zhwsedcswz05uy3ghp0ckdvpnttl9qfnctku5sy2s67lz4l",
+          "testnet": "tb1pzsa4y9y2ge8zhwsedcswz05uy3ghp0ckdvpnttl9qfnctku5sy2sdkfd0s",
+          "signet": "tb1pzsa4y9y2ge8zhwsedcswz05uy3ghp0ckdvpnttl9qfnctku5sy2sdkfd0s",
+          "regtest": "bcrt1pzsa4y9y2ge8zhwsedcswz05uy3ghp0ckdvpnttl9qfnctku5sy2sq0rt62"
+        }
+      }
+    },
+    {
+      "id": "parent-id-0",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i0"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf"
+      }
+    },
+    {
+      "id": "parent-id-1",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i1"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf01"
+      }
+    },
+    {
+      "id": "parent-id-255",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i255"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febfff"
+      }
+    },
+    {
+      "id": "parent-id-256",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i256"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf0001"
+      }
+    },
+    {
+      "id": "parent-id-65535",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i65535"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febfffff"
+      }
+    },
+    {
+      "id": "parent-id-65536",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i65536"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf000001"
+      }
+    },
+    {
+      "id": "parent-id-16777216",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i16777216"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febf00000001"
+      }
+    },
+    {
+      "id": "parent-id-4294967295",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i4294967295"
+      },
+      "expected": {
+        "tagValueHex": "f8441d54f0549e4042f4fa0bec2243385bb990bbac3efa6952104dafb889febfffffffff"
+      }
+    },
+    {
+      "id": "parent-id-invalid-0",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": ""
+      },
+      "expected": {
+        "error": true
+      }
+    },
+    {
+      "id": "parent-id-invalid-1",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "xyz"
+      },
+      "expected": {
+        "error": true
+      }
+    },
+    {
+      "id": "parent-id-invalid-2",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i01"
+      },
+      "expected": {
+        "error": true
+      }
+    },
+    {
+      "id": "parent-id-invalid-3",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44f8i4294967296"
+      },
+      "expected": {
+        "error": true
+      }
+    },
+    {
+      "id": "parent-id-invalid-4",
+      "deterministic": true,
+      "input": {
+        "inscriptionId": "bffe89b8af4d105269fa3eacbb90b95b384322ec0bfaf442409e54f0541d44fi0"
+      },
+      "expected": {
+        "error": true
+      }
+    }
+  ]
+}

@@ -20,8 +20,20 @@ const OP_IF = 0x63;
 const OP_ENDIF = 0x68;
 const OP_CHECKSIG = 0xac;
 
-/** ord envelope tags (single-byte data pushes). */
-export const TAG = Object.freeze({ CONTENT_TYPE: 1, PARENT: 3, METADATA: 5, BODY: 0 });
+/**
+ * ord envelope tags (single-byte data pushes). The builder emits BODY, CONTENT_TYPE, PARENT and METADATA;
+ * the rest are here so the parser (`parse.ts`) shares one source of tag numbers with the builder.
+ */
+export const TAG = Object.freeze({
+  BODY: 0,
+  CONTENT_TYPE: 1,
+  POINTER: 2,
+  PARENT: 3,
+  METADATA: 5,
+  METAPROTOCOL: 7,
+  CONTENT_ENCODING: 9,
+  DELEGATE: 11,
+});
 
 const CHUNK = LIMITS.MAX_SCRIPT_ELEMENT_SIZE;
 const PROTOCOL_ID = utf8('ord');

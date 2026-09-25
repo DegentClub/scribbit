@@ -45,6 +45,23 @@ console.log(reveal.weight === weight, ins.inscriptionIdFromReveal(reveal.txid));
 Runs as is with `tsx` (Node 22); the comments show its output. With a collection parent, see "Example" below: the service adds the parent input with `attachParent`
 and the policy signer co-signs with `signParentInput`.
 
+### Reading an envelope back
+
+`parseEnvelope` is the inverse of `buildInscriptionScript`: give it a tapscript leaf (or a full taproot witness stack, whose
+leaf it selects automatically) and it decodes the ordinals envelope into typed fields and raw body bytes, following ord's
+reading rules (multiple inscriptions, all tags, cursed/duplicate-field flags reported not judged).
+
+```ts
+import * as ins from '@bsh/inscription';
+
+const script = ins.buildInscriptionScript(revealPubkey, { contentType: 'text/plain;charset=utf-8', body: new TextEncoder().encode('gm'), parentId });
+const env = ins.parseEnvelope(script)!;
+console.log(env.contentType, new TextDecoder().decode(env.body), env.parents); // text/plain;charset=utf-8 gm ["<txid>i<n>"]
+
+// Or straight off a signed reveal's witness (the tapscript leaf is picked, annex removed):
+for (const e of ins.parseEnvelopes(witnessStack)) console.log(e.contentType, e.body.length, e.pointer, e.delegate, e.flags);
+```
+
 ## Flow
 
 ```
@@ -241,6 +258,10 @@ const { hex: rawHex } = ins.finalizeWalletSignedReveal((await wallet.signPsbt(re
 | `LIMITS` | Policy/consensus constants (400k standard, 3.99M block lane, 520-byte push, dust, default postage) |
 | `buildInscriptionScript(pub, content)` | ord envelope tapscript, byte-for-byte as ord emits it |
 | `inscriptionScriptLength(content)` * | Length of that script without allocating it |
+| `parseEnvelope(script \| witness)` * | Inverse of `buildInscriptionScript`: first inscription decoded to `contentType`, `body` bytes, `parents`, `metadata`, `pointer`, `metaprotocol`, `contentEncoding`, `delegate`, `fields`, cursed `flags` |
+| `parseEnvelopes(script \| witness)` * | Every inscription in a leaf/witness, in order (multi-inscription reveals) |
+| `decodeInscriptionId(bytes)` * | Inverse of `encodeParentId`: on-chain tag value → `"<txid>i<index>"` |
+| `ENVELOPE_TAGS` * | ord tag number → name map |
 | `encodeParentId(id)` | `txid` reversed + LE index, trailing zeros trimmed |
 | `commitAddress(pub, content, network)` | P2TR(NUMS, single leaf): address, scriptPubKey, leaf, control block, leaf hash |
 | `addressToScript(address, network)` * | scriptPubKey for an address (throws on wrong network) |
@@ -387,3 +408,8 @@ weight recomputed from the raw hex (`3 × stripped + total`), and btc-signer's
 - Metadata (tag 5) is emitted as ord does: one `0x05` tag before **each** ≤520-byte chunk.
 - An empty body emits only the `OP_0` body tag. Empty metadata is omitted. `contentType` must be
   non-empty.
+- `parseEnvelope` / `parseEnvelopes` read envelopes back with ord's rules: pushes alternate tag/value
+  until an empty push in tag position starts the body; `OP_1..OP_16` / `OP_1NEGATE` count as one-byte
+  numeric pushes (reported as the `pushnum` flag); any other opcode inside the `OP_IF … OP_ENDIF` means
+  "not an envelope". `flags` (`pushnum`, `duplicateField`, `incompleteField`, `unrecognizedEvenField`)
+  surface ord's cursed / unusual markers without judging them.

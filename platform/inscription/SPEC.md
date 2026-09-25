@@ -124,6 +124,19 @@ export const NUMS_INTERNAL_KEY: Uint8Array;        // BIP341 H, internal key of 
 export function networkParams(network: Network): { bech32: string; pubKeyHash: number; scriptHash: number; wif: number };
 export function inscriptionScriptLength(content: InscriptionContent): number;   // == buildInscriptionScript(...).length
 export function addressToScript(address: string, network: Network): Uint8Array;
+// Envelope PARSER — the inverse of buildInscriptionScript. Accepts a tapscript leaf, or a full taproot
+// witness stack (its tapscript leaf is selected automatically, annex removed). Follows ord's reading rules.
+export interface EnvelopeFlags { pushnum: boolean; duplicateField: boolean; incompleteField: boolean; unrecognizedEvenField: boolean; }
+export interface ParsedField { tag: number | null; name: string; value: Uint8Array; offset: number; }
+export interface ParsedInscription {
+  contentType?: string; body: Uint8Array; hasBody: boolean; bodyChunks: { value: Uint8Array; offset: number }[];
+  parents: string[]; metadata?: Uint8Array; pointer?: number; metaprotocol?: string; contentEncoding?: string; delegate?: string;
+  fields: ParsedField[]; flags: EnvelopeFlags; offset: number; length: number;
+}
+export function parseEnvelope(input: Uint8Array | Uint8Array[], opts?: { base?: number }): ParsedInscription | undefined; // first
+export function parseEnvelopes(input: Uint8Array | Uint8Array[], opts?: { base?: number }): ParsedInscription[];          // all, in order
+export function decodeInscriptionId(value: Uint8Array): string | undefined;   // inverse of encodeParentId
+export const ENVELOPE_TAGS: Readonly<Record<number, string>>;                 // ord tag number -> name
 // EXACT weight of buildResignedRescue's transaction (rescue layout minus the 1-byte hash type).
 export function estimateResignedRescueWeight(args: { content: InscriptionContent; recipientScript: Uint8Array }): number;
 // Independent BIP341 digest of the commit input (script path, no annex) for hash type
