@@ -1,0 +1,67 @@
+/* The mint's print-shop styles, plus the playground's TEST NETWORK frame. The frame colour is a signal:
+   teal-green for "test", deliberately not Bitcoin orange. */
+@import '@bsh/scribbit-mint/src/styles.css';
+
+:root {
+  --test: #0f6b5f;
+  --test-bg: #d9efe9;
+  --test-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --test: #5fd3bf;
+    --test-bg: #12302b;
+    --test-ink: #0b1f1c;
+  }
+}
+
+/* A fixed edge around the whole viewport: visible on every screen, never in the way of clicks. */
+body::after { content: ''; position: fixed; inset: 0; border: 6px solid var(--test); pointer-events: none; z-index: 50; }
+.testnet-banner { margin: 0 -20px; padding: 10px 26px; box-shadow: 0 0 0 100vmax var(--test); clip-path: inset(0 -100vmax); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; background: var(--test); color: var(--test-ink); font-size: 0.88rem; }
+.testnet-banner strong { font-family: var(--mono); letter-spacing: 0.14em; }
+.testnet-banner__demo { flex-basis: 100%; font-size: 0.8rem; opacity: 0.95; }
+.net__dot--test { background: var(--test); }
+
+.header { align-items: center; }
+.timer { display: grid; grid-template-columns: auto auto; gap: 2px 10px; align-items: baseline; min-width: 190px; }
+.timer__label { font-size: 0.78rem; color: var(--muted); grid-column: 1 / -1; }
+.timer__clock { font-size: 1.15rem; font-weight: 600; }
+.timer__bar { grid-column: 1 / -1; height: 5px; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 99px; overflow: hidden; }
+.timer__bar > span { display: block; height: 100%; background: var(--test); }
+.timer--over .timer__bar > span { background: var(--warn); }
+
+.steps { margin-top: 16px; }
+.steps__n { font-weight: 700; }
+@media (max-width: 600px) {
+  .steps li { min-width: 0; padding: 8px 6px; text-align: center; }
+  .steps li:not([aria-current='step']) .steps__t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .steps li[aria-current='step'] { flex: 4 1 0; text-align: left; }
+}
+.step-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 860px) { .step-grid { grid-template-columns: minmax(0, 1fr); } }
+.step-head h1 { font-size: clamp(1.9rem, 4.5vw, 2.7rem); }
+.step-head .lede { margin-bottom: 0; }
+.explain { position: sticky; top: 16px; }
+@media (max-width: 860px) { .explain { position: static; } }
+.explain__safety { font-weight: 600; color: var(--test); border-left: 4px solid var(--test); padding-left: 10px; }
+.glossary { margin: 10px 0 0; display: grid; gap: 10px; }
+.glossary dt { font-weight: 600; }
+.glossary dd { margin: 2px 0 0; font-size: 0.9rem; color: var(--ink-2); }
+.onchain { border-color: var(--test); box-shadow: 3px 3px 0 var(--test); }
+.onchain .card__kicker { color: var(--test); }
+.onchain__lead { font-size: 0.95rem; }
+.wallets { list-style: none; margin: 0; padding: 0; }
+.good-text { color: var(--good); }
+.bad-text { color: var(--bad); }
+.quiz-q { border: 1px solid var(--rule); border-radius: var(--radius); padding: 10px 14px; margin: 0; min-width: 0; }
+.quiz-q legend { font-weight: 600; padding: 0 4px; }
+.quiz-q .opt { margin: 6px 0; font-size: 0.95rem; }
+.certificate { border-width: 2px; }
+.json { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--mono); font-size: 0.8rem; background: var(--card); border: 1px solid var(--rule); padding: 14px; }
+input[type='file'] { max-width: 100%; font: inherit; }
+
+@media (max-width: 440px) {
+  .testnet-banner { margin: 0 -14px; padding: 10px 20px; }
+  body::after { border-width: 4px; }
+  .timer { min-width: 0; }
+}

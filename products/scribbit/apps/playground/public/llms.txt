@@ -1,0 +1,28 @@
+# scribb.it Signet Playground
+
+> A guided, free, five-step first inscription on Bitcoin's signet test network, meant to take under five minutes: get a test wallet, get free test coins from a proof-of-work faucet, pick a small file and see its exact cost, commit and reveal, and receive a certificate with a three-question check. Everything happens on signet; coins there have no value. Keys are made and used only in the visitor's browser.
+
+## Machine-readable
+
+- [playground.json](playground.json): the five steps (plain-language explanations, "what happened on chain"), the glossary, the quiz, the configured endpoints and each wallet's signet status from the conformance matrix. Also rendered by the page itself with `?format=json`.
+- [sitemap.xml](sitemap.xml)
+- Faucet API contract: https://github.com/DegentClub/scribbit/blob/main/contracts/openapi/scribbit-signet-faucet.yaml (GET /v1/challenge, POST /v1/drip; SHA-256 leading-zero-bits proof of work bound to the address; signet `tb1` addresses only)
+- MCP: the scribb.it MCP server's `playground_explain_step` tool returns any step's explanation and glossary; `quote_inscription` quotes exact weight and fees. There is deliberately no faucet tool: agents should not spend a shared faucet budget on someone's behalf.
+
+## Steps
+
+1. Get a test wallet: a throwaway signet key in sessionStorage, or a real wallet switched to signet (statuses: verified / assumed / unsupported / unknown, per DegentClub/specs conformance/wallets.yaml).
+2. Get free test coins: solve the faucet's proof of work in a Web Worker, receive a fixed drip.
+3. Pick a small file (50 KB or less by default) or a sample; exact weight, vsize, fee, postage and lane from @bsh/inscription.
+4. Commit and reveal: PSBTs built in the page, signed locally or by the wallet, broadcast to an Esplora-compatible signet API.
+5. Certificate: inscription id, signet explorer and X-Ray links, a three-question explain-check (optional anonymous pass/fail analytics, off by default).
+
+## Anchors
+
+- Steps: #step-wallet, #step-coins, #step-file, #step-inscribe, #step-certificate
+- Glossary terms: #term-<id> (ids in playground.json)
+
+## Not
+
+- Not mainnet. Never send real bitcoin to a playground address.
+- No prices, no accounts, no personal data.

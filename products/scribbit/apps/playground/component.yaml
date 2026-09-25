@@ -1,0 +1,12 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: scribbit-playground
+package: "@bsh/scribbit-playground"
+kind: app
+product: scribbit
+owner: team-scribbit
+summary: Signet Playground - a guided five-step first inscription on signet (test wallet, PoW faucet, exact quote, commit + reveal, certificate and quiz) in under five minutes, for free.
+lifecycle: experimental
+depends_on: ["@bsh/inscription", "@bsh/wallet-kit", "@bsh/scribbit-mint", "@bsh/scribbit-playground-kit"]
+consumes: [contracts/openapi/scribbit-signet-faucet.yaml]
+docs: ./README.md
+commands: { dev: dev, test: test, typecheck: typecheck, build: build }

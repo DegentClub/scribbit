@@ -1,0 +1,45 @@
+{
+  "name": "@bsh/scribbit-playground",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p .",
+    "dev": "tsx scripts/emit-static.ts && vite",
+    "build": "tsx scripts/emit-static.ts && vite build",
+    "preview": "vite preview",
+    "e2e": "node e2e/run.mjs",
+    "sync:wallets": "node scripts/sync-wallet-conformance.mjs"
+  },
+  "dependencies": {
+    "@bsh/inscription": "workspace:*",
+    "@bsh/scribbit-mint": "workspace:*",
+    "@bsh/scribbit-playground-kit": "workspace:*",
+    "@bsh/wallet-kit": "workspace:*",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@scure/base": "^2.4.0",
+    "@scure/btc-signer": "^2.4.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "tsx": "^4.23.15",
+    "jsdom": "^30.1.1",
+    "playwright-core": "1.56.1",
+    "typescript": "^5",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1",
+    "ajv": "^8.20.0",
+    "yaml": "^2.9.1"
+  }
+}

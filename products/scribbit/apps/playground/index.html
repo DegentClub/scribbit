@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#0f6b5f" />
+    <title>Signet Playground · scribb.it</title>
+    <meta name="description" content="Inscribe your first file on Bitcoin's signet test network in under five minutes, for free: a test wallet, free test coins, an exact quote, commit and reveal, and a certificate. Keys stay in your browser." />
+    <link rel="canonical" href="__SITE_URL__" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="scribb.it" />
+    <meta property="og:title" content="Signet Playground · your first inscription in five minutes" />
+    <meta property="og:description" content="A guided, free first inscription on signet, Bitcoin's test network. Learn what a commit, a reveal and an inscription id are by making one." />
+    <meta property="og:url" content="__SITE_URL__" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="alternate" type="application/json" href="playground.json" title="The playground's steps, glossary and quiz as JSON" />
+    <link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f6b5f'/%3E%3Cpath d='M8 23 L22 9 M8 23 h8' stroke='%23ffffff' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='24' cy='24' r='3' fill='%23ffffff'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": ["WebApplication", "LearningResource"],
+        "@id": "__SITE_URL__#app",
+        "name": "scribb.it Signet Playground",
+        "url": "__SITE_URL__",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (web browser)",
+        "isAccessibleForFree": true,
+        "learningResourceType": "interactive tutorial",
+        "educationalLevel": "beginner",
+        "timeRequired": "PT5M",
+        "teaches": ["Bitcoin signet test network", "Ordinals inscriptions", "commit and reveal transactions", "transaction weight and fees"],
+        "inLanguage": "en",
+        "publisher": { "@type": "Organization", "name": "scribb.it" }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>The Signet Playground needs JavaScript: keys are made and transactions signed in your browser. Read the steps as data at <a href="playground.json">playground.json</a>.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
