@@ -42,7 +42,10 @@ export class InMemoryNonceStore implements NonceStore {
   }
 
   async issue(record: NonceRecord): Promise<void> {
-    this.sweep(Date.now());
+    // Do NOT sweep on the wall clock here: consume() is driven by an injected `now`, so a
+    // wall-clock sweep in issue() would drop entries a caller with a test/fixed clock still
+    // treats as live (identity finding 041). Memory is bounded by maxEntries below and by the
+    // clock-consistent sweep in consume().
     if (this.entries.has(record.nonce)) throw new Error('nonce already issued');
     const max = this.opts.maxEntries ?? 100_000;
     if (this.entries.size >= max) throw new Error('nonce store full');
@@ -50,6 +53,7 @@ export class InMemoryNonceStore implements NonceStore {
   }
 
   async consume(nonce: string, binding: { domain: string; address: string }, now: number): Promise<NonceConsumeResult> {
+    this.sweep(now);
     const e = this.entries.get(nonce);
     if (!e) return 'unknown';
     if (e.used) return 'replayed';

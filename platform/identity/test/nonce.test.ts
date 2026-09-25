@@ -40,6 +40,18 @@ describe('InMemoryNonceStore', () => {
     expect(s.size).toBe(0);
   });
 
+  it('is driven by the injected clock, not the wall clock (finding 041)', async () => {
+    // A caller using a fixed/test clock in the past relative to the wall clock must still see
+    // its issued nonce as live: issue() must not sweep on Date.now().
+    const s = new InMemoryNonceStore();
+    const past = Date.parse('2020-01-01T00:00:00.000Z');
+    await s.issue({ nonce: 'p1', expiresAt: past + 60_000, ...b });
+    expect(await s.consume('p1', b, past)).toBe('ok');
+    expect(await s.consume('p1', b, past)).toBe('replayed');
+    // Re-issuing the same nonce still throws even though it is long past on the wall clock.
+    await expect(s.issue({ nonce: 'p1', expiresAt: past + 60_000, ...b })).rejects.toThrow(/already/);
+  });
+
   it('is race-safe under concurrent consumers', async () => {
     const s = new InMemoryNonceStore();
     await s.issue({ nonce: 'race', expiresAt: Date.now() + 60_000, ...b });
