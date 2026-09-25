@@ -1,0 +1,25 @@
+{
+  "name": "@bsh/blockspace-tutor-widget",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22",
+    "jsdom": "^30.1.1",
+    "playwright-core": "1.56.1",
+    "typescript": "^5",
+    "vitest": "^5.0.1"
+  },
+  "main": "./src/ask-blockspace.js",
+  "types": "./src/ask-blockspace.js",
+  "exports": {
+    ".": "./src/ask-blockspace.js",
+    "./ask-blockspace.js": "./src/ask-blockspace.js"
+  }
+}

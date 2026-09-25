@@ -1,8 +1,108 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-24T02:48:04.650Z",
+  "generatedAt": "2026-09-25T21:53:16.834Z",
   "schema": "schemas/component.schema.json",
   "components": [
+    {
+      "name": "blockspace-tutor",
+      "package": "@bsh/blockspace-tutor",
+      "kind": "service",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Ask Blockspace HTTP API (Hono) - retrieval-grounded blockspace answers with citations, guardrails, typed errors, rate limits and an optional labelled live-facts port.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/blockspace-tutor-kb",
+        "@bsh/edge"
+      ],
+      "provides": [
+        "contracts/openapi/scribbit-tutor.yaml"
+      ],
+      "stores": [
+        "memory:rate_limits"
+      ],
+      "env_schema": "./env.schema.json",
+      "slo": {
+        "availability": "99.9",
+        "p95_ms": 200
+      },
+      "runbook": "./RUNBOOK.md",
+      "docs": "./README.md",
+      "commands": {
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/services/tutor",
+      "version": "0.1.0",
+      "scripts": {
+        "dev": "tsx watch src/main.ts",
+        "start": "tsx src/main.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "env_schema": "products/scribbit/services/tutor/env.schema.json",
+        "runbook": "products/scribbit/services/tutor/RUNBOOK.md",
+        "docs": "products/scribbit/services/tutor/README.md"
+      },
+      "dependents": []
+    },
+    {
+      "name": "blockspace-tutor-kb",
+      "package": "@bsh/blockspace-tutor-kb",
+      "kind": "library",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Ask Blockspace knowledge base, BM25 retrieval, product-policy guardrails and the provider-agnostic answering core (extractive by default) shared by the tutor service and the MCP tool.",
+      "lifecycle": "experimental",
+      "depends_on": [],
+      "docs": "./README.md",
+      "commands": {
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/packages/tutor-kb",
+      "version": "0.1.0",
+      "scripts": {
+        "refresh": "tsx scripts/refresh.ts",
+        "snapshot": "tsx scripts/snapshot.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "docs": "products/scribbit/packages/tutor-kb/README.md"
+      },
+      "dependents": [
+        "blockspace-tutor",
+        "scribbit-mcp"
+      ]
+    },
+    {
+      "name": "blockspace-tutor-widget",
+      "package": "@bsh/blockspace-tutor-widget",
+      "kind": "library",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Framework-free embeddable <ask-blockspace> web component (Shadow DOM, under 30KB) for the Ask Blockspace tutor, with an offline fixture mode and a demo page.",
+      "lifecycle": "experimental",
+      "depends_on": [],
+      "docs": "./README.md",
+      "commands": {
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/packages/tutor-widget",
+      "version": "0.1.0",
+      "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "docs": "products/scribbit/packages/tutor-widget/README.md"
+      },
+      "dependents": []
+    },
     {
       "name": "catalog-tool",
       "package": "@bsh/catalog-tool",
@@ -61,6 +161,7 @@
         "docs": "platform/edge/README.md"
       },
       "dependents": [
+        "blockspace-tutor",
         "ledger",
         "scribbit-mcp",
         "scribbit-mint-api",
@@ -361,7 +462,8 @@
         "@bsh/inscription",
         "@bsh/scribbit-fee-oracle",
         "@bsh/edge",
-        "@bsh/scribbit-playground-kit"
+        "@bsh/scribbit-playground-kit",
+        "@bsh/blockspace-tutor-kb"
       ],
       "provides": [
         "contracts/openapi/scribbit-mcp.yaml"
@@ -389,7 +491,7 @@
         "typecheck": "typecheck"
       },
       "path": "products/scribbit/services/mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "scripts": {
         "dev": "tsx watch src/main.ts",
         "mint-key": "tsx src/mint-key.ts",
@@ -730,6 +832,9 @@
     "scribbit": {
       "path": "products/scribbit",
       "components": [
+        "blockspace-tutor",
+        "blockspace-tutor-kb",
+        "blockspace-tutor-widget",
         "scribbit-cli",
         "scribbit-counters",
         "scribbit-fee-oracle",
@@ -745,8 +850,8 @@
       ],
       "kinds": {
         "app": 2,
-        "library": 3,
-        "service": 3,
+        "library": 5,
+        "service": 4,
         "tool": 1
       }
     },
@@ -836,6 +941,15 @@
       ]
     },
     {
+      "path": "contracts/openapi/scribbit-tutor.yaml",
+      "kind": "openapi",
+      "exists": true,
+      "providers": [
+        "blockspace-tutor"
+      ],
+      "consumers": []
+    },
+    {
       "path": "contracts/openapi/signer.yaml",
       "kind": "openapi",
       "exists": true,
@@ -872,6 +986,16 @@
       "type": "consumes"
     },
     {
+      "from": "blockspace-tutor",
+      "to": "blockspace-tutor-kb",
+      "type": "depends_on"
+    },
+    {
+      "from": "blockspace-tutor",
+      "to": "edge",
+      "type": "depends_on"
+    },
+    {
       "from": "ledger",
       "to": "edge",
       "type": "depends_on"
@@ -894,6 +1018,11 @@
     {
       "from": "scribbit-cli",
       "to": "scribbit-fee-oracle",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "blockspace-tutor-kb",
       "type": "depends_on"
     },
     {
@@ -975,6 +1104,11 @@
       "from": "signer",
       "to": "edge",
       "type": "depends_on"
+    },
+    {
+      "from": "blockspace-tutor",
+      "to": "contracts/openapi/scribbit-tutor.yaml",
+      "type": "provides"
     },
     {
       "from": "events",

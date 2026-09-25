@@ -1,0 +1,30 @@
+# Ask Blockspace widget
+
+> A framework-free embeddable web component (`<ask-blockspace>`) that answers Bitcoin blockspace questions with
+> citations, backed by the Ask Blockspace API. It never gives price/investment advice and never asks for keys or
+> seeds.
+
+## Embed
+
+```html
+<script type="module" src="https://cdn.example/ask-blockspace.js"></script>
+<ask-blockspace api-base="https://tutor.example"></ask-blockspace>
+```
+
+- `api-base` — base URL of the Ask Blockspace API (`POST {api-base}/v1/ask`). Omit it, or add the `fixture`
+  attribute, to run the bundled offline demo with no server.
+- `heading` — optional heading text.
+- Emits a DOM `answer` event with the API response as `detail`.
+
+## Backing API
+
+- POST `{api-base}/v1/ask` with `{"question": string}` → `{answer, citations, groundedness, refused, ...}`.
+- Contract: https://github.com/DegentClub/scribbit/blob/main/contracts/openapi/scribbit-tutor.yaml
+- Policy: https://github.com/DegentClub/scribbit/blob/main/products/scribbit/packages/tutor-kb/POLICY.md
+
+## Behaviour
+
+- Answers are grounded in cited sources; refusals (price / keys / mainnet signing) render as a declined notice.
+- All API text is inserted as text, never HTML — a response cannot inject markup.
+- Accessible: keyboard reachable, visible focus, `aria-live` results, respects `prefers-reduced-motion`, WCAG AA
+  contrast in light and dark.

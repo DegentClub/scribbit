@@ -1,0 +1,11 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: blockspace-tutor-widget
+package: "@bsh/blockspace-tutor-widget"
+kind: library
+product: scribbit
+owner: team-scribbit
+summary: Framework-free embeddable <ask-blockspace> web component (Shadow DOM, under 30KB) for the Ask Blockspace tutor, with an offline fixture mode and a demo page.
+lifecycle: experimental
+depends_on: []
+docs: ./README.md
+commands: { test: test, typecheck: typecheck }

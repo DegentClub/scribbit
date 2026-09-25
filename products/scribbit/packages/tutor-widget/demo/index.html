@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ask Blockspace — embeddable tutor widget</title>
+  <meta name="description" content="A framework-free embeddable widget that answers Bitcoin blockspace questions with citations. No price advice, never your keys." />
+  <meta property="og:title" content="Ask Blockspace widget" />
+  <meta property="og:description" content="Grounded, cited answers about Bitcoin blockspace — embed the <ask-blockspace> web component." />
+  <meta property="og:type" content="website" />
+  <link rel="alternate" type="text/plain" href="./llms.txt" title="llms.txt" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Ask Blockspace widget",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Web",
+    "description": "An embeddable web component that answers Bitcoin blockspace questions with citations, refusing price advice and any request for keys.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+  <style>
+    :root { color-scheme: light dark; --bg: #f0f3f5; --fg: #1a1c20; --muted: #55606b; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0e1113; --fg: #eef1f4; --muted: #a3adb7; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 8px; }
+    p.lede { color: var(--muted); margin: 0 0 24px; line-height: 1.5; }
+    a { color: inherit; }
+    footer { color: var(--muted); font-size: .85rem; margin-top: 32px; line-height: 1.6; }
+    code { background: color-mix(in srgb, var(--fg) 10%, transparent); padding: 1px 5px; border-radius: 5px; }
+    :focus-visible { outline: 3px solid #0b6b5e; outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Ask Blockspace</h1>
+    <p class="lede">A retrieval-grounded tutor for Bitcoin blockspace — fees, weight, inscriptions, Taproot, the
+      mempool — that cites its sources. It never gives price or investment advice and never asks for keys or
+      seeds. This page runs the widget in <strong>offline demo mode</strong>.</p>
+
+    <ask-blockspace fixture heading="Try it"></ask-blockspace>
+
+    <noscript><p>This widget needs JavaScript. Read the glossary at
+      <a href="https://block.space/glossary">block.space/glossary</a> instead.</p></noscript>
+
+    <footer>
+      <p>Embed it (see the package README):
+        <code>&lt;script type="module" src="…/ask-blockspace.js"&gt;&lt;/script&gt;</code> then
+        <code>&lt;ask-blockspace api-base="https://your-tutor-api"&gt;&lt;/ask-blockspace&gt;</code>.</p>
+      <p>Machine guide: <a href="./llms.txt">llms.txt</a>. Policy: never price, never keys.</p>
+    </footer>
+  </main>
+  <script type="module" src="../src/ask-blockspace.js"></script>
+</body>
+</html>
