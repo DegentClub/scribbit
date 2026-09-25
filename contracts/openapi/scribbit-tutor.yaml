@@ -1,0 +1,232 @@
+openapi: 3.1.0
+info:
+  title: Ask Blockspace API
+  version: 1.0.0
+  summary: Retrieval-grounded blockspace tutor — grounded answers with citations, guardrails and typed errors.
+  description: |
+    Provided by `blockspace-tutor` (`@bsh/blockspace-tutor`, products/scribbit/services/tutor).
+
+    Ask Blockspace answers questions about Bitcoin blockspace (fees, weight, inscriptions, Taproot, the mempool)
+    grounded in a committed knowledge base, with a citation for every factual claim. It is public, read-only and
+    non-custodial.
+
+    **Guardrails (product policy).** The service refuses price/investment questions (`refused: true`,
+    `refusalReason: "price_advice"`), refuses any request for keys/seeds (`key_material`) or to sign a mainnet
+    transaction (`mainnet_signing`), says it is not sure rather than guess when retrieval is weak
+    (`groundedness: "weak"`), and treats retrieved and user text as data (prompt-injection resistant). A refusal
+    is a normal `200` response with `refused: true` — not an error.
+
+    **Generation.** By default the service runs an extractive fallback (no model, offline) that returns matching
+    passages verbatim. A real, Anthropic-compatible model is used only when configured via env; no model id is
+    hardcoded.
+
+    **Live facts.** Current fee estimate and chain tip height are optional, off by default, and always labelled
+    with a timestamp and source.
+
+    **Errors.** Typed machine codes in a JSON body `{ "error": { "code", "message", "requestId"? } }`; codes are
+    listed under `components/schemas/Error`.
+  license:
+    name: Apache-2.0
+servers:
+  - url: http://localhost:3060
+    description: Local (`pnpm --filter @bsh/blockspace-tutor dev`)
+tags:
+  - name: ask
+  - name: ops
+paths:
+  /:
+    get:
+      tags: [ops]
+      operationId: getIndex
+      summary: Discovery document
+      description: Capabilities (mode, live-facts state), endpoints and limits. Unauthenticated. The JSON twin of the widget/demo page.
+      responses:
+        '200':
+          description: Discovery document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Index' }
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /healthz:
+    get:
+      tags: [ops]
+      operationId: getHealth
+      summary: Liveness
+      responses:
+        '200':
+          description: Service is up.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /llms.txt:
+    get:
+      tags: [ops]
+      operationId: getLlmsTxt
+      summary: Machine-readable guide for agents
+      responses:
+        '200':
+          description: Plain-text llms.txt.
+          content:
+            text/plain: {}
+  /openapi.yaml:
+    get:
+      tags: [ops]
+      operationId: getOpenApi
+      summary: This OpenAPI document
+      responses:
+        '200':
+          description: OpenAPI 3.1 contract.
+          content:
+            application/yaml: {}
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/ask:
+    post:
+      tags: [ask]
+      operationId: ask
+      summary: Ask a blockspace question
+      description: Returns a grounded answer with citations, or a refusal when a guardrail trips.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AskRequest' }
+      responses:
+        '200':
+          description: A grounded answer or a guardrail refusal (both are 200).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AskResponse' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  responses:
+    BadRequest:
+      description: The request was malformed or failed validation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Too many requests.
+      headers:
+        Retry-After: { schema: { type: integer }, description: Seconds to wait. }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    AskRequest:
+      type: object
+      additionalProperties: false
+      required: [question]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 2000, description: The blockspace question. }
+        level: { type: string, enum: [beginner, intermediate, advanced], description: Preferred explanation depth. }
+        lang: { type: string, pattern: '^[a-z]{2}(-[A-Za-z0-9]{2,8})?$', description: BCP-47 language tag (only "en" is served today). }
+        includeLiveFacts: { type: boolean, description: Attach labelled live chain facts when the live-facts port is enabled. }
+        network: { type: string, pattern: '^[a-z0-9]{1,16}$', description: Network label for live facts (default mainnet). }
+    Citation:
+      type: object
+      required: [sourceId, type, title, url, score]
+      properties:
+        sourceId: { type: string, description: Stable id of the source (glossary term, BSS number, BIP, ADR, lesson). }
+        type: { type: string, enum: [glossary, spec, adr, bip, academy] }
+        title: { type: string }
+        url: { type: string, format: uri, description: Public URL for the source. }
+        section: { type: string }
+        authored: { type: boolean, description: True when the cited text is an authored summary, not a verbatim primary excerpt. }
+        score: { type: number, description: BM25 retrieval score. }
+    LiveFact:
+      type: object
+      required: [label, value, observedAt, source]
+      properties:
+        label: { type: string }
+        value: { type: string }
+        observedAt: { type: string, format: date-time }
+        source: { type: string }
+    AskResponse:
+      type: object
+      required: [question, answer, citations, groundedness, groundednessNote, refused, model, injectionNeutralised]
+      properties:
+        question: { type: string }
+        answer: { type: string }
+        citations:
+          type: array
+          items: { $ref: '#/components/schemas/Citation' }
+        groundedness: { type: string, enum: [grounded, weak, refused] }
+        groundednessNote: { type: string }
+        refused: { type: boolean }
+        refusalReason: { type: string, enum: [price_advice, key_material, mainnet_signing] }
+        liveFacts:
+          type: array
+          items: { $ref: '#/components/schemas/LiveFact' }
+        model: { type: string, description: '"extractive" or the configured model id.' }
+        injectionNeutralised: { type: boolean }
+    Capabilities:
+      type: object
+      required: [mode, model, liveFacts, languages]
+      properties:
+        mode: { type: string, enum: [extractive, chat] }
+        model: { type: string }
+        liveFacts: { type: boolean }
+        languages:
+          type: array
+          items: { type: string }
+    Index:
+      type: object
+      required: [name, title, version, endpoints, capabilities, policy, limits]
+      properties:
+        name: { type: string }
+        title: { type: string }
+        version: { type: string }
+        description: { type: string }
+        endpoints:
+          type: object
+          required: [ask, openapi, llms]
+          properties:
+            ask: { type: string }
+            openapi: { type: string }
+            llms: { type: string }
+        capabilities: { $ref: '#/components/schemas/Capabilities' }
+        policy: { type: string, format: uri }
+        limits:
+          type: object
+          properties:
+            maxQuestionChars: { type: integer }
+            maxBodyBytes: { type: integer }
+    Health:
+      type: object
+      required: [status, service, version, mode, model, liveFacts, languages]
+      properties:
+        status: { type: string, enum: [ok] }
+        service: { type: string }
+        version: { type: string }
+        mode: { type: string, enum: [extractive, chat] }
+        model: { type: string }
+        liveFacts: { type: boolean }
+        languages:
+          type: array
+          items: { type: string }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              enum: [invalid_request, question_required, question_too_long, unsupported_level, not_found, method_not_allowed, payload_too_large, rate_limited, internal_error]
+            message: { type: string }
+            requestId:
+              type: [string, 'null']

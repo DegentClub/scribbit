@@ -1,0 +1,16 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: blockspace-tutor
+package: "@bsh/blockspace-tutor"
+kind: service
+product: scribbit
+owner: team-scribbit
+summary: Ask Blockspace HTTP API (Hono) - retrieval-grounded blockspace answers with citations, guardrails, typed errors, rate limits and an optional labelled live-facts port.
+lifecycle: experimental
+depends_on: ["@bsh/blockspace-tutor-kb", "@bsh/edge"]
+provides: [contracts/openapi/scribbit-tutor.yaml]
+stores: ["memory:rate_limits"]
+env_schema: ./env.schema.json
+runbook: ./RUNBOOK.md
+docs: ./README.md
+slo: { availability: "99.9", p95_ms: 200 }
+commands: { dev: dev, test: test, typecheck: typecheck }
