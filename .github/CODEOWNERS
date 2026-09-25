@@ -16,6 +16,7 @@
 /contracts/openapi/scribbit-fees.yaml             @DegentClub/team-scribbit
 /contracts/openapi/scribbit-mcp.yaml              @DegentClub/team-scribbit
 /contracts/openapi/scribbit-mint-api.yaml         @DegentClub/team-scribbit
+/contracts/openapi/scribbit-signet-faucet.yaml    @DegentClub/team-scribbit
 /contracts/openapi/signer.yaml                    @DegentClub/team-platform
 /platform/edge/                                   @DegentClub/team-platform
 /platform/events/                                 @DegentClub/team-platform
@@ -27,8 +28,11 @@
 /platform/wallet-kit/                             @DegentClub/team-platform
 /products/scribbit/apps/cli/                      @DegentClub/team-scribbit
 /products/scribbit/apps/mint/                     @DegentClub/team-scribbit
+/products/scribbit/apps/playground/               @DegentClub/team-scribbit
 /products/scribbit/packages/counters-mint/        @DegentClub/team-scribbit
+/products/scribbit/packages/playground-kit/       @DegentClub/team-scribbit
 /products/scribbit/packages/scribbit-fee-oracle/  @DegentClub/team-scribbit
 /products/scribbit/services/mcp/                  @DegentClub/team-scribbit
 /products/scribbit/services/mint-api/             @DegentClub/team-scribbit
+/products/scribbit/services/signet-faucet/        @DegentClub/team-scribbit
 /tools/catalog/                                   @DegentClub/team-platform

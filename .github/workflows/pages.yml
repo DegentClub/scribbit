@@ -1,13 +1,13 @@
-# GitHub Pages: the scribb.it mint app demo, built fully offline (`VITE_DEMO_DEFAULT=1`: simulated wallet, server and
+# GitHub Pages: the scribb.it mint app demo and, under /playground/, the Signet Playground demo (ADR-0009), both built fully offline (`VITE_DEMO_DEFAULT=1`: simulated wallet, server and
 # chain; no third-party requests). Nothing deploys until the owner enables Pages (Settings → Pages → Source:
 # GitHub Actions) AND sets the repository variable PAGES_ENABLED=true (Settings → Variables → Actions).
-# Expected URL: https://degentclub.github.io/scribbit/
+# Expected URLs: https://degentclub.github.io/scribbit/ and https://degentclub.github.io/scribbit/playground/
 name: pages
 
 on:
   push:
     branches: [main]
-    paths: ['products/scribbit/apps/mint/**', 'products/scribbit/packages/**', 'platform/**', 'pnpm-lock.yaml', '.github/workflows/pages.yml']
+    paths: ['products/scribbit/apps/mint/**', 'products/scribbit/apps/playground/**', 'products/scribbit/packages/**', 'platform/**', 'pnpm-lock.yaml', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 concurrency:
@@ -47,6 +47,15 @@ jobs:
 
       - name: SPA fallback (unknown paths serve the app)
         run: cp products/scribbit/apps/mint/dist/index.html products/scribbit/apps/mint/dist/404.html
+
+      - name: Build the Signet Playground demo into /playground/
+        env:
+          VITE_DEMO_DEFAULT: '1'
+          VITE_SITE_URL: ${{ steps.pages.outputs.base_url }}/playground/
+        run: |
+          pnpm --filter @bsh/scribbit-playground run build --base "${{ steps.pages.outputs.base_path }}/playground/"
+          rm -rf products/scribbit/apps/mint/dist/playground
+          cp -r products/scribbit/apps/playground/dist products/scribbit/apps/mint/dist/playground
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

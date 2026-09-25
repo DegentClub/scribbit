@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-24T01:18:18.997Z",
+  "generatedAt": "2026-09-24T02:48:04.650Z",
   "schema": "schemas/component.schema.json",
   "components": [
     {
@@ -64,6 +64,7 @@
         "ledger",
         "scribbit-mcp",
         "scribbit-mint-api",
+        "scribbit-signet-faucet",
         "signer"
       ]
     },
@@ -152,7 +153,8 @@
       "dependents": [
         "scribbit-cli",
         "scribbit-mcp",
-        "scribbit-mint"
+        "scribbit-mint",
+        "scribbit-playground"
       ]
     },
     {
@@ -358,7 +360,8 @@
       "depends_on": [
         "@bsh/inscription",
         "@bsh/scribbit-fee-oracle",
-        "@bsh/edge"
+        "@bsh/edge",
+        "@bsh/scribbit-playground-kit"
       ],
       "provides": [
         "contracts/openapi/scribbit-mcp.yaml"
@@ -438,7 +441,9 @@
       "files": {
         "docs": "products/scribbit/apps/mint/README.md"
       },
-      "dependents": []
+      "dependents": [
+        "scribbit-playground"
+      ]
     },
     {
       "name": "scribbit-mint-api",
@@ -486,6 +491,126 @@
         "env_schema": "products/scribbit/services/mint-api/env.schema.json",
         "runbook": "products/scribbit/services/mint-api/RUNBOOK.md",
         "docs": "products/scribbit/services/mint-api/README.md"
+      },
+      "dependents": []
+    },
+    {
+      "name": "scribbit-playground",
+      "package": "@bsh/scribbit-playground",
+      "kind": "app",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Signet Playground - a guided five-step first inscription on signet (test wallet, PoW faucet, exact quote, commit + reveal, certificate and quiz) in under five minutes, for free.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/inscription",
+        "@bsh/wallet-kit",
+        "@bsh/scribbit-mint",
+        "@bsh/scribbit-playground-kit"
+      ],
+      "consumes": [
+        "contracts/openapi/scribbit-signet-faucet.yaml"
+      ],
+      "docs": "./README.md",
+      "commands": {
+        "build": "build",
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/apps/playground",
+      "version": "0.1.0",
+      "scripts": {
+        "build": "tsx scripts/emit-static.ts && vite build",
+        "dev": "tsx scripts/emit-static.ts && vite",
+        "e2e": "node e2e/run.mjs",
+        "preview": "vite preview",
+        "sync:wallets": "node scripts/sync-wallet-conformance.mjs",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "docs": "products/scribbit/apps/playground/README.md"
+      },
+      "dependents": []
+    },
+    {
+      "name": "scribbit-playground-kit",
+      "package": "@bsh/scribbit-playground-kit",
+      "kind": "library",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Signet Playground shared kit - the five step explanations, glossary and quiz (one source for the app and the MCP server) plus the faucet's SHA-256 proof-of-work rule.",
+      "lifecycle": "experimental",
+      "depends_on": [],
+      "docs": "./README.md",
+      "commands": {
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/packages/playground-kit",
+      "version": "0.1.0",
+      "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "docs": "products/scribbit/packages/playground-kit/README.md"
+      },
+      "dependents": [
+        "scribbit-mcp",
+        "scribbit-playground",
+        "scribbit-signet-faucet"
+      ]
+    },
+    {
+      "name": "scribbit-signet-faucet",
+      "package": "@bsh/scribbit-signet-faucet",
+      "kind": "service",
+      "product": "scribbit",
+      "owner": "team-scribbit",
+      "summary": "Signet-only faucet for the Signet Playground - fixed drips behind a SHA-256 proof-of-work challenge, per-address/per-IP buckets and a daily budget; bitcoind wallet port, off by default.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/edge",
+        "@bsh/scribbit-playground-kit"
+      ],
+      "provides": [
+        "contracts/openapi/scribbit-signet-faucet.yaml"
+      ],
+      "stores": [
+        "memory:pow_challenges",
+        "memory:rate_limits",
+        "memory:daily_budget"
+      ],
+      "secrets": [
+        "services/scribbit-signet-faucet/bitcoind-rpc-user",
+        "services/scribbit-signet-faucet/bitcoind-rpc-password"
+      ],
+      "env_schema": "./env.schema.json",
+      "slo": {
+        "availability": "99.0",
+        "p95_ms": 800
+      },
+      "runbook": "./RUNBOOK.md",
+      "docs": "./README.md",
+      "commands": {
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "products/scribbit/services/signet-faucet",
+      "version": "0.1.0",
+      "scripts": {
+        "dev": "FAUCET_WALLET=${FAUCET_WALLET:-fake} tsx watch src/main.ts",
+        "start": "tsx src/main.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "env_schema": "products/scribbit/services/signet-faucet/env.schema.json",
+        "runbook": "products/scribbit/services/signet-faucet/RUNBOOK.md",
+        "docs": "products/scribbit/services/signet-faucet/README.md"
       },
       "dependents": []
     },
@@ -564,7 +689,8 @@
         "docs": "platform/wallet-kit/README.md"
       },
       "dependents": [
-        "scribbit-mint"
+        "scribbit-mint",
+        "scribbit-playground"
       ]
     }
   ],
@@ -609,15 +735,18 @@
         "scribbit-fee-oracle",
         "scribbit-mcp",
         "scribbit-mint",
-        "scribbit-mint-api"
+        "scribbit-mint-api",
+        "scribbit-playground",
+        "scribbit-playground-kit",
+        "scribbit-signet-faucet"
       ],
       "owners": [
         "team-scribbit"
       ],
       "kinds": {
-        "app": 1,
-        "library": 2,
-        "service": 2,
+        "app": 2,
+        "library": 3,
+        "service": 3,
         "tool": 1
       }
     },
@@ -696,6 +825,17 @@
       ]
     },
     {
+      "path": "contracts/openapi/scribbit-signet-faucet.yaml",
+      "kind": "openapi",
+      "exists": true,
+      "providers": [
+        "scribbit-signet-faucet"
+      ],
+      "consumers": [
+        "scribbit-playground"
+      ]
+    },
+    {
       "path": "contracts/openapi/signer.yaml",
       "kind": "openapi",
       "exists": true,
@@ -724,6 +864,11 @@
     {
       "from": "scribbit-mint-api",
       "to": "contracts/openapi/scribbit-fees.yaml",
+      "type": "consumes"
+    },
+    {
+      "from": "scribbit-playground",
+      "to": "contracts/openapi/scribbit-signet-faucet.yaml",
       "type": "consumes"
     },
     {
@@ -767,6 +912,11 @@
       "type": "depends_on"
     },
     {
+      "from": "scribbit-mcp",
+      "to": "scribbit-playground-kit",
+      "type": "depends_on"
+    },
+    {
       "from": "scribbit-mint",
       "to": "inscription",
       "type": "depends_on"
@@ -789,6 +939,36 @@
     {
       "from": "scribbit-mint-api",
       "to": "scribbit-fee-oracle",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-playground",
+      "to": "inscription",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-playground",
+      "to": "scribbit-mint",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-playground",
+      "to": "scribbit-playground-kit",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-playground",
+      "to": "wallet-kit",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-signet-faucet",
+      "to": "edge",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-signet-faucet",
+      "to": "scribbit-playground-kit",
       "type": "depends_on"
     },
     {
@@ -824,6 +1004,11 @@
     {
       "from": "scribbit-mint-api",
       "to": "contracts/openapi/scribbit-mint-api.yaml",
+      "type": "provides"
+    },
+    {
+      "from": "scribbit-signet-faucet",
+      "to": "contracts/openapi/scribbit-signet-faucet.yaml",
       "type": "provides"
     },
     {
