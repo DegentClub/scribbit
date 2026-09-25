@@ -1,0 +1,1011 @@
+{
+  "provenance": {
+    "upstream": "DegentClub/blockspace-holdings portal/content/glossary.yaml",
+    "version": 1,
+    "snapshotOf": "portal glossary"
+  },
+  "terms": [
+    {
+      "id": "blockspace",
+      "term": "Blockspace",
+      "aliases": [],
+      "category": "units",
+      "short": "The room inside Bitcoin blocks, measured in weight units and sold to whoever pays the highest fee rate.",
+      "long": "Every block may carry at most 4,000,000 weight units of transactions, and a new block arrives roughly every ten minutes, so the supply of blockspace is fixed and predictable. Everything that wants to be on Bitcoin - payments, channel opens, inscriptions, token transfers - competes for the same weight, and miners choose transactions by fee rate. Blockspace is therefore the scarce resource underneath every Bitcoin product: block.space measures it, scribb.it writes into it, and degent.club owns a very large piece of it.",
+      "related": [
+        "weight-unit",
+        "block-weight-limit",
+        "fee-rate",
+        "vbyte"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki"
+      ]
+    },
+    {
+      "id": "weight-unit",
+      "term": "Weight unit",
+      "aliases": [
+        "WU"
+      ],
+      "category": "units",
+      "short": "The unit Bitcoin uses to size transactions - 4 WU per non-witness byte, 1 WU per witness byte.",
+      "long": "Segregated Witness (BIP 141) replaced the one-megabyte block size limit with a weight limit. A transaction's weight is its non-witness bytes times four plus its witness bytes times one (equivalently, base size × 3 + total size). Because signatures and other witness data are cheaper per byte, a block full of witness data can be close to 4 MB on the wire while a block with no witness data at all is at most 1 MB.",
+      "related": [
+        "block-weight-limit",
+        "vbyte",
+        "witness-discount",
+        "witness"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki"
+      ]
+    },
+    {
+      "id": "block-weight-limit",
+      "term": "Block weight limit",
+      "aliases": [],
+      "category": "units",
+      "short": "A block may weigh at most 4,000,000 weight units; this is a consensus rule.",
+      "long": "The limit is enforced by every full node: a block over 4,000,000 WU is invalid, whoever mined it. In virtual bytes that is 1,000,000 vB. The block header, the transaction count and the coinbase transaction all use some of it, which is why a single transaction that wants a whole block to itself (a Full Block Degent, for example) has to stay a little under 4,000,000 WU.",
+      "related": [
+        "weight-unit",
+        "blockspace",
+        "max-standard-tx-weight",
+        "full-block-degent"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki"
+      ]
+    },
+    {
+      "id": "vbyte",
+      "term": "Virtual byte",
+      "aliases": [
+        "vB",
+        "vbyte",
+        "vsize"
+      ],
+      "category": "units",
+      "short": "Weight divided by four, rounded up - the unit fee rates are quoted in.",
+      "long": "Virtual size lets wallets keep thinking in bytes after SegWit: a transaction of weight W has a virtual size of ceil(W / 4) vbytes, so a non-witness byte counts as one vbyte and a witness byte as a quarter. Fee rates are quoted in satoshis per vbyte (sat/vB), and the fee a transaction pays is its fee rate times its virtual size. Bitcoin Core also adjusts vsize upwards for transactions with unusually many signature operations.",
+      "related": [
+        "weight-unit",
+        "fee-rate",
+        "witness-discount"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki"
+      ]
+    },
+    {
+      "id": "witness-discount",
+      "term": "Witness discount",
+      "aliases": [],
+      "category": "units",
+      "short": "Witness bytes weigh 1 WU instead of 4, so data in the witness costs a quarter as much per byte.",
+      "long": "The discount was introduced with SegWit so that spending an output (which needs signatures, stored in the witness) became cheaper relative to creating outputs, which grow the UTXO set that every node keeps. It is also why inscriptions put their content in the witness of a taproot script-path spend: one byte of content costs about 0.25 vbytes there, against a full vbyte anywhere else in the transaction.",
+      "related": [
+        "weight-unit",
+        "witness",
+        "segwit",
+        "inscription",
+        "envelope"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki"
+      ]
+    },
+    {
+      "id": "witness",
+      "term": "Witness",
+      "aliases": [],
+      "category": "transactions",
+      "short": "The per-input data that proves a spend is authorised - signatures, keys, scripts - kept apart from the transaction's other fields.",
+      "long": "Since SegWit, each input has a witness: a list of byte strings (stack items) that satisfies the conditions of the output being spent. Witness data is excluded from the transaction id (txid), which fixed third-party malleability, and it is discounted in weight. For a taproot key-path spend the witness is one 64- or 65-byte Schnorr signature; for a script-path spend it is the script's inputs, the script itself and a control block.",
+      "related": [
+        "segwit",
+        "witness-discount",
+        "control-block",
+        "script-path-spend"
+      ],
+      "sources": []
+    },
+    {
+      "id": "segwit",
+      "term": "SegWit",
+      "aliases": [
+        "Segregated Witness"
+      ],
+      "category": "protocols",
+      "short": "The 2017 soft fork that moved signatures into a separate witness and introduced block weight.",
+      "long": "Segregated Witness (BIPs 141, 143, 144) activated at block 481,824 in August 2017. It introduced witness programs (version 0 for P2WPKH and P2WSH), the weight metric and its 4,000,000 WU block limit, and a new signature-hash algorithm. Its version mechanism is what taproot later used as witness version 1.",
+      "related": [
+        "witness",
+        "weight-unit",
+        "taproot",
+        "witness-discount"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki"
+      ]
+    },
+    {
+      "id": "taproot",
+      "term": "Taproot",
+      "aliases": [],
+      "category": "protocols",
+      "short": "The 2021 soft fork (BIPs 340-342) adding Schnorr signatures and pay-to-taproot outputs with hidden script trees.",
+      "long": "Taproot activated at block 709,632 in November 2021. A pay-to-taproot (P2TR) output commits to a single public key that is tweaked with the root of an optional tree of scripts. It can be spent either with a signature for the tweaked key (key path) or by revealing one script from the tree and satisfying it (script path), and only the branch actually used is ever published. Ordinals inscriptions depend on taproot: the envelope lives in a tapscript that is revealed when the commit output is spent.",
+      "related": [
+        "tapscript",
+        "p2tr",
+        "schnorr-signature",
+        "key-path-spend",
+        "script-path-spend"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki"
+      ]
+    },
+    {
+      "id": "tapscript",
+      "term": "Tapscript",
+      "aliases": [],
+      "category": "scripts",
+      "short": "The script language used inside taproot script-path spends, defined by BIP 342.",
+      "long": "Tapscript is Bitcoin Script with changes: signature opcodes verify BIP 340 Schnorr signatures, OP_CHECKSIGADD replaces OP_CHECKMULTISIG, the 10,000-byte script size limit and the 201 non-push opcode limit no longer apply, and undefined opcodes became OP_SUCCESS for future upgrades. Individual data pushes are still limited to 520 bytes, so large inscription content is split into many pushes inside one envelope.",
+      "related": [
+        "taproot",
+        "script-path-spend",
+        "push-limit",
+        "envelope"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki"
+      ]
+    },
+    {
+      "id": "schnorr-signature",
+      "term": "Schnorr signature",
+      "aliases": [
+        "BIP 340"
+      ],
+      "category": "scripts",
+      "short": "The 64-byte signature scheme taproot uses, over x-only 32-byte public keys.",
+      "long": "BIP 340 specifies Schnorr signatures on secp256k1 with 32-byte x-only public keys and 64-byte signatures (65 bytes when a non-default sighash flag byte is appended). Schnorr signatures are linear, which enables key aggregation schemes such as MuSig2, and they are what both key-path and tapscript signature checks verify.",
+      "related": [
+        "taproot",
+        "sighash",
+        "key-path-spend"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki"
+      ]
+    },
+    {
+      "id": "p2tr",
+      "term": "P2TR",
+      "aliases": [
+        "pay-to-taproot"
+      ],
+      "category": "scripts",
+      "short": "A taproot output - OP_1 followed by a 32-byte tweaked public key; addresses start with bc1p.",
+      "long": "A P2TR output script is 34 bytes (`OP_1 <32-byte key>`), encoded as a bech32m address beginning with `bc1p` on mainnet. Its dust threshold under Bitcoin Core's default policy is 330 sats. Ordinals wallets keep inscriptions on P2TR outputs, and inscription commit transactions pay to a P2TR output whose script tree holds the envelope.",
+      "related": [
+        "taproot",
+        "dust-limit",
+        "key-path-spend",
+        "commit-reveal"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki"
+      ]
+    },
+    {
+      "id": "key-path-spend",
+      "term": "Key-path spend",
+      "aliases": [],
+      "category": "scripts",
+      "short": "Spending a taproot output with one signature for its tweaked key, revealing nothing about any scripts.",
+      "long": "The key path is the cheap, private way to spend P2TR: the witness is a single Schnorr signature. An observer cannot tell whether a script tree existed at all. Holding wallets usually spend inscriptions this way; the blockspace-holdings stacker signs its consolidations with key-path signatures.",
+      "related": [
+        "p2tr",
+        "script-path-spend",
+        "schnorr-signature"
+      ],
+      "sources": []
+    },
+    {
+      "id": "script-path-spend",
+      "term": "Script-path spend",
+      "aliases": [],
+      "category": "scripts",
+      "short": "Spending a taproot output by revealing one leaf script, its inputs and a control block proving the leaf is committed.",
+      "long": "In a script-path spend the witness ends with the leaf script and the control block; before them come the items the script consumes. The inscription reveal is a script-path spend: the leaf script contains the envelope, so revealing it publishes the content on chain, in the witness, at the witness discount.",
+      "related": [
+        "tapscript",
+        "control-block",
+        "envelope",
+        "commit-reveal"
+      ],
+      "sources": []
+    },
+    {
+      "id": "control-block",
+      "term": "Control block",
+      "aliases": [],
+      "category": "scripts",
+      "short": "The last witness item of a script-path spend - leaf version, internal key and the Merkle path to the leaf.",
+      "long": "A control block is 33 + 32m bytes: one byte combining the leaf version with the output key's parity, the 32-byte internal public key, and m 32-byte hashes forming the Merkle path from the revealed leaf to the root committed in the output. A single-leaf tree, as most inscription commits use, has a 33-byte control block.",
+      "related": [
+        "script-path-spend",
+        "taproot",
+        "tapscript"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki"
+      ]
+    },
+    {
+      "id": "push-limit",
+      "term": "520-byte push limit",
+      "aliases": [
+        "MAX_SCRIPT_ELEMENT_SIZE"
+      ],
+      "category": "scripts",
+      "short": "No single data push in a script may exceed 520 bytes; this is a consensus rule.",
+      "long": "Bitcoin Script rejects any stack element larger than 520 bytes, and tapscript keeps that rule. An envelope therefore carries content as a sequence of pushes of at most 520 bytes each; a 400 KB image becomes about 770 pushes, each costing its bytes plus one to three bytes of push opcode.",
+      "related": [
+        "envelope",
+        "tapscript",
+        "inscription"
+      ],
+      "sources": []
+    },
+    {
+      "id": "envelope",
+      "term": "Envelope",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "The OP_FALSE OP_IF … OP_ENDIF block in a tapscript that carries an inscription without executing it.",
+      "long": "Because `OP_FALSE OP_IF` never runs its branch, anything inside is inert data. The ord envelope pushes the protocol tag `ord`, then tag/value pairs (tag 1 content type, 2 pointer, 3 parent, 5 metadata, 7 metaprotocol, 9 content encoding, 11 delegate), then an empty push (tag 0) followed by the body in pushes of at most 520 bytes. The envelope must sit in a tapscript revealed by a script-path spend. The Blockspace Standards specify it exactly as BSS-0004, with test vectors.",
+      "related": [
+        "inscription",
+        "tapscript",
+        "commit-reveal",
+        "push-limit",
+        "parent-child-provenance"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/inscriptions.html",
+        "https://github.com/DegentClub/specs"
+      ]
+    },
+    {
+      "id": "commit-reveal",
+      "term": "Commit / reveal",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "The two transactions that make an inscription - one pays to a script containing it, the next spends that script and publishes it.",
+      "long": "The commit transaction creates a P2TR output whose taproot tree contains the envelope script; nothing about the content is visible yet. The reveal transaction spends that output through the script path, which places the envelope in the witness and inscribes the content. Two steps are necessary because a taproot output only commits to a hash of its scripts; the script itself can only appear when the output is spent.",
+      "related": [
+        "envelope",
+        "inscription",
+        "script-path-spend",
+        "postage",
+        "sighash-all-anyonecanpay"
+      ],
+      "sources": []
+    },
+    {
+      "id": "postage",
+      "term": "Postage",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "The sats that travel with an inscription in its output, usually a few hundred, never below the dust limit for standard relay.",
+      "long": "An inscription lives on one sat, but a UTXO needs value to be relayed and spent economically, so the output holding it carries extra sats called postage. Common choices are 546, 330 or 10,000 sats. Postage is not burned; it stays with the inscription and is spent along with it. The buffer777 job in blockspace-holdings exists precisely to strip that postage from 21,329 inscriptions and pack them into one output.",
+      "related": [
+        "dust-limit",
+        "sat",
+        "ordinal-theory",
+        "fifo-sat-assignment"
+      ],
+      "sources": []
+    },
+    {
+      "id": "lane",
+      "term": "Lane",
+      "aliases": [],
+      "category": "products",
+      "short": "How a reveal travels to a miner - the standard lane (public mempool) or the block lane (direct to a pool).",
+      "long": "In the degent.club mint (ADR-0005) the lane is decided by the exact reveal weight: a reveal of at most 400,000 WU is standard and relays through ordinary nodes; anything heavier goes through the block lane, which budgets 3,990,000 WU per block slot and submits through relays that accept nonstandard transactions, such as Libre Relay or MARA Slipstream. Tiers are a product decision on content bytes; lanes are transport.",
+      "related": [
+        "max-standard-tx-weight",
+        "full-block-degent",
+        "slipstream",
+        "libre-relay"
+      ],
+      "sources": []
+    },
+    {
+      "id": "full-block-degent",
+      "term": "Full Block Degent",
+      "aliases": [],
+      "category": "products",
+      "short": "A degent.club inscription of 3.5-3.9 MB of content that fills a whole Bitcoin block on its own.",
+      "long": "The fullblock tier of the degent.club mint covers content of 3,500,000 to 3,900,000 bytes. Such a reveal weighs close to the 4,000,000 WU block limit, never shares a block, and always travels the block lane. It is the collection's statement that blockspace is the asset: one inscription, one block.",
+      "related": [
+        "block-weight-limit",
+        "lane",
+        "degent",
+        "slipstream"
+      ],
+      "sources": []
+    },
+    {
+      "id": "sat",
+      "term": "Sat",
+      "aliases": [
+        "satoshi"
+      ],
+      "category": "units",
+      "short": "The smallest unit of bitcoin - one hundred-millionth of a bitcoin.",
+      "long": "One bitcoin is 100,000,000 sats. All amounts on chain are integers of sats, and fee rates are sats per vbyte. Ordinal theory gives every individual sat a serial number, which is what makes it possible to say that an inscription lives on one particular sat.",
+      "related": [
+        "ordinal-theory",
+        "fee-rate",
+        "dust-limit"
+      ],
+      "sources": []
+    },
+    {
+      "id": "ordinal-theory",
+      "term": "Ordinal theory",
+      "aliases": [],
+      "category": "protocols",
+      "short": "A numbering scheme that gives every sat a serial number and tracks it from input to output.",
+      "long": "Proposed by Casey Rodarmor and implemented in the `ord` indexer, ordinal theory numbers sats in the order they were mined and follows them through transactions first-in-first-out. It needs no change to Bitcoin: it is a convention about how to read transactions. Inscriptions, sat rarity and parent/child provenance are all built on it. The first inscription was made in December 2022.",
+      "related": [
+        "sat",
+        "fifo-sat-assignment",
+        "inscription",
+        "sat-rarity"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/"
+      ]
+    },
+    {
+      "id": "fifo-sat-assignment",
+      "term": "FIFO sat assignment",
+      "aliases": [],
+      "category": "protocols",
+      "short": "Ord's rule - input sats are concatenated in order and poured into outputs in order; the leftover tail is the fee.",
+      "long": "Take every input's sats, in input order, as one stream; fill each output in order with the next contiguous run of exactly its value; whatever is left goes to the miner as fee (and is assigned to the coinbase). Each output therefore receives one contiguous slice of the stream, which is why packing postage-padded inscriptions into a single gapless output takes two transactions (shave, then pack). The blockspace-holdings simulator implements this rule exactly.",
+      "related": [
+        "ordinal-theory",
+        "postage",
+        "utxo",
+        "inscription"
+      ],
+      "sources": []
+    },
+    {
+      "id": "inscription",
+      "term": "Inscription",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "Content - an image, text, HTML, anything with a MIME type - written into a Bitcoin transaction and bound to one sat.",
+      "long": "An inscription is created by a reveal transaction whose witness carries an envelope. The content is stored fully on chain, in the witness, and belongs to the sat it was inscribed on (by default the first sat of the reveal's first output), so whoever controls that sat controls the inscription. Inscriptions are numbered in the order they are indexed and identified permanently by an inscription id.",
+      "related": [
+        "envelope",
+        "commit-reveal",
+        "inscription-id",
+        "sat",
+        "witness-discount"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/inscriptions.html"
+      ]
+    },
+    {
+      "id": "inscription-id",
+      "term": "Inscription id",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "The permanent name of an inscription - the reveal txid, the letter i, and the index of the envelope.",
+      "long": "An id looks like `<txid>i0`: the reveal transaction's id followed by `i` and the envelope's index in that transaction (0 for the first). Ids never change, unlike inscription numbers, which depend on indexing rules. The parent tag stores a parent's id in a compact binary form: the txid's 32 bytes in internal byte order (the reverse of the hex shown by explorers) followed by the index as a little-endian integer with trailing zero bytes removed.",
+      "related": [
+        "inscription",
+        "parent-child-provenance",
+        "envelope"
+      ],
+      "sources": []
+    },
+    {
+      "id": "parent-child-provenance",
+      "term": "Parent/child provenance",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "Proof that a collection's creator made an inscription - the child's reveal spends the parent inscription.",
+      "long": "A child inscription carries a parent tag (tag 3) naming the parent's inscription id, and its reveal transaction spends the output holding the parent. Only the holder of the parent can do that, so the link proves authorship on chain rather than in an off-chain list. degent.club mints every Degent as a child of the collection parent; block.space's certification checks these links.",
+      "related": [
+        "inscription-id",
+        "envelope",
+        "commit-reveal",
+        "degent"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/inscriptions/provenance.html"
+      ]
+    },
+    {
+      "id": "utxo",
+      "term": "UTXO",
+      "aliases": [
+        "unspent transaction output"
+      ],
+      "category": "transactions",
+      "short": "An output not yet spent - the unit in which bitcoin, and every inscription, is held.",
+      "long": "Bitcoin has no accounts; a wallet's balance is the sum of the UTXOs it can spend. Each UTXO is identified by an outpoint (`txid:vout`). An inscription is always inside exactly one UTXO, together with its postage and possibly other sats, which is why wallets that are not ordinals-aware can accidentally spend inscriptions as fees or change.",
+      "related": [
+        "postage",
+        "fifo-sat-assignment",
+        "dust-limit"
+      ],
+      "sources": []
+    },
+    {
+      "id": "psbt",
+      "term": "PSBT",
+      "aliases": [
+        "partially signed bitcoin transaction"
+      ],
+      "category": "transactions",
+      "short": "A standard container (BIP 174) for a transaction that is still being built or signed by several parties.",
+      "long": "A PSBT carries the unsigned transaction plus everything a signer needs - previous outputs, scripts, taproot leaf data (BIP 371) and derivation paths - and collects signatures as they arrive. Wallets can sign a PSBT without the service ever seeing a key, which is how scribb.it and degent.club mint without custody. BIP 370 defines version 2, where inputs and outputs can be added after creation.",
+      "related": [
+        "sighash",
+        "sighash-all-anyonecanpay",
+        "commit-reveal"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki"
+      ]
+    },
+    {
+      "id": "sighash",
+      "term": "Sighash flag",
+      "aliases": [],
+      "category": "transactions",
+      "short": "A byte on a signature saying which parts of the transaction it commits to.",
+      "long": "SIGHASH_ALL (0x01) commits to every input and output; SIGHASH_NONE (0x02) to no outputs; SIGHASH_SINGLE (0x03) to the output at the same index as the input. Adding ANYONECANPAY (0x80) commits to only the signer's own input, so others may add inputs. Taproot adds SIGHASH_DEFAULT (0x00), which behaves like ALL and saves a byte by omitting the flag. Choosing the flag is a security decision: whatever the signature does not cover, anyone holding the transaction can change.",
+      "related": [
+        "sighash-all-anyonecanpay",
+        "psbt",
+        "schnorr-signature"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki"
+      ]
+    },
+    {
+      "id": "sighash-all-anyonecanpay",
+      "term": "SIGHASH_ALL|ANYONECANPAY",
+      "aliases": [
+        "0x81"
+      ],
+      "category": "transactions",
+      "short": "A signature that fixes every output but only its own input, so others may add inputs and nothing else.",
+      "long": "With flag 0x81 the signer commits to all outputs and its own input. degent.club reveals use it (ADR-0005): the half-signed reveal cannot be redirected, have outputs added or removed, or have fees skimmed, because every output is fixed; the replaced 0x83 (SINGLE|ANYONECANPAY) covered only the output at its own index. The price of 0x81 is that the half-signed reveal no longer doubles as a rescue transaction, so the user holds a separate rescue key.",
+      "related": [
+        "sighash",
+        "psbt",
+        "commit-reveal",
+        "lane"
+      ],
+      "sources": []
+    },
+    {
+      "id": "fee-rate",
+      "term": "Fee rate",
+      "aliases": [],
+      "category": "transactions",
+      "short": "Fee divided by virtual size, in sats per vbyte - what miners sort transactions by.",
+      "long": "Miners fill a block to maximise fees within 4,000,000 WU, so they rank transactions (and packages of related transactions) by fee rate rather than absolute fee. A 400,000 WU reveal is 100,000 vB; at 5 sat/vB it pays 500,000 sats. Fee rates swing with demand: the Meter on block.space predicts what rate gets included when.",
+      "related": [
+        "vbyte",
+        "mempool",
+        "rbf",
+        "cpfp",
+        "blockspace-meter"
+      ],
+      "sources": []
+    },
+    {
+      "id": "mempool",
+      "term": "Mempool",
+      "aliases": [],
+      "category": "policy",
+      "short": "A node's pool of valid, unconfirmed transactions waiting to be mined - each node has its own.",
+      "long": "There is no single mempool: every node keeps its own, filtered by its policy (standardness, minimum relay fee, size limit). Transactions spread peer to peer, and miners build block templates from theirs. Nonstandard transactions never enter default mempools, which is why they must reach a miner directly.",
+      "related": [
+        "standardness",
+        "fee-rate",
+        "rbf",
+        "slipstream"
+      ],
+      "sources": []
+    },
+    {
+      "id": "standardness",
+      "term": "Standardness",
+      "aliases": [
+        "policy"
+      ],
+      "category": "policy",
+      "short": "The extra rules nodes apply before relaying a transaction, stricter than consensus.",
+      "long": "Consensus decides what may be in a block; policy decides what a node will relay and mine by default. A nonstandard transaction - too heavy, with a dust output, an unusual script - is still valid in a block, but Bitcoin Core nodes will not relay it. Policy protects nodes from denial of service and keeps the UTXO set lean; relays such as Libre Relay and services such as Slipstream exist for transactions outside it.",
+      "related": [
+        "max-standard-tx-weight",
+        "dust-limit",
+        "nonstandard-transaction",
+        "mempool"
+      ],
+      "sources": []
+    },
+    {
+      "id": "nonstandard-transaction",
+      "term": "Nonstandard transaction",
+      "aliases": [],
+      "category": "policy",
+      "short": "A consensus-valid transaction that default nodes refuse to relay, so it must be sent to a miner directly.",
+      "long": "Examples are transactions heavier than 400,000 WU, transactions with outputs below the dust limit, and scripts outside the standard templates. They are mined when a pool accepts them directly. Very large inscriptions and the buffer777 shave transactions (1-sat outputs) are nonstandard and travel through Slipstream.",
+      "related": [
+        "standardness",
+        "slipstream",
+        "max-standard-tx-weight",
+        "dust-limit"
+      ],
+      "sources": []
+    },
+    {
+      "id": "max-standard-tx-weight",
+      "term": "Max standard transaction weight",
+      "aliases": [
+        "MAX_STANDARD_TX_WEIGHT"
+      ],
+      "category": "policy",
+      "short": "Bitcoin Core relays transactions of at most 400,000 WU - a tenth of a block.",
+      "long": "400,000 WU is 100,000 vB. It caps a standard inscription reveal at roughly 390-400 KB of content once the envelope and the rest of the transaction are counted; the degent.club mint measures that a reveal above about 396,700 content bytes crosses the line. Heavier reveals are valid but nonstandard and go through the block lane.",
+      "related": [
+        "standardness",
+        "lane",
+        "block-weight-limit",
+        "weight-unit"
+      ],
+      "sources": []
+    },
+    {
+      "id": "dust-limit",
+      "term": "Dust limit",
+      "aliases": [],
+      "category": "policy",
+      "short": "The smallest output value nodes relay, by script type - 330 sats for P2TR, 294 for P2WPKH, 546 for P2PKH.",
+      "long": "An output is dust when spending it would cost more than it is worth at the dust relay fee rate (3 sat/vB by default). Bitcoin Core derives the threshold from the output's size plus the size of a typical input spending it, which gives exactly 330 sats for P2TR. A transaction with a dust output is nonstandard. Postage is normally at or above the dust limit for this reason.",
+      "related": [
+        "postage",
+        "p2tr",
+        "standardness",
+        "nonstandard-transaction"
+      ],
+      "sources": []
+    },
+    {
+      "id": "op-return",
+      "term": "OP_RETURN",
+      "aliases": [],
+      "category": "scripts",
+      "short": "A provably unspendable output used to embed data; it never enters the UTXO set.",
+      "long": "An output whose script starts with OP_RETURN can never be spent, so nodes can forget it immediately. Protocols such as Runes and Counterparty place data there. Before Bitcoin Core 30, default policy relayed a single OP_RETURN output of up to 83 bytes of script (80 bytes of data); version 30 raised that default substantially. OP_RETURN bytes are not witness data, so they cost 4 WU each.",
+      "related": [
+        "runes",
+        "counterparty",
+        "witness-discount",
+        "standardness"
+      ],
+      "sources": []
+    },
+    {
+      "id": "rbf",
+      "term": "Replace-by-fee",
+      "aliases": [
+        "RBF"
+      ],
+      "category": "policy",
+      "short": "Replacing an unconfirmed transaction with a conflicting one that pays a higher fee.",
+      "long": "A replacement must pay more in absolute fee and a higher fee rate than what it evicts. BIP 125 made it opt-in; Bitcoin Core has since made full RBF (any unconfirmed transaction is replaceable) the default. For inscriptions RBF cuts both ways: it lets a stuck commit be bumped, and it is the attack a strict sighash defends against when a half-signed reveal leaks.",
+      "related": [
+        "cpfp",
+        "fee-rate",
+        "mempool"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0125.mediawiki"
+      ]
+    },
+    {
+      "id": "cpfp",
+      "term": "Child pays for parent",
+      "aliases": [
+        "CPFP"
+      ],
+      "category": "policy",
+      "short": "Speeding up a stuck transaction by spending its output in a new transaction with a high fee.",
+      "long": "Miners evaluate a parent and child together as a package, so a child with a high fee rate pulls its low-fee parent into a block. Commit/reveal pairs are naturally a parent and child: a reveal paying a generous fee helps its commit confirm.",
+      "related": [
+        "rbf",
+        "fee-rate",
+        "commit-reveal"
+      ],
+      "sources": []
+    },
+    {
+      "id": "libre-relay",
+      "term": "Libre Relay",
+      "aliases": [],
+      "category": "policy",
+      "short": "A Bitcoin Core fork by Peter Todd that relaxes several standardness rules and peers with like-minded nodes.",
+      "long": "Libre Relay nodes relay some consensus-valid transactions that default Bitcoin Core policy rejects, and they advertise themselves so that relaxed transactions can find a path to miners that accept them. It is one of the routes the degent.club block lane can use for nonstandard reveals; relay capacity through it is an operational concern tracked in ADR-0005.",
+      "related": [
+        "standardness",
+        "nonstandard-transaction",
+        "slipstream",
+        "lane"
+      ],
+      "sources": [
+        "https://github.com/petertodd/bitcoin"
+      ]
+    },
+    {
+      "id": "slipstream",
+      "term": "Slipstream",
+      "aliases": [],
+      "category": "policy",
+      "short": "MARA's service for submitting consensus-valid but nonstandard transactions straight to its mining pool.",
+      "long": "Slipstream accepts transactions that ordinary nodes will not relay - very large inscriptions, sub-dust outputs - and includes them in blocks MARA Pool mines, for a fee. Because it bypasses the public mempool, the only authority on whether a submitted transaction was mined is your own node. The buffer777 shave transactions in blockspace-holdings and the degent.club block lane both use it.",
+      "related": [
+        "nonstandard-transaction",
+        "lane",
+        "full-block-degent",
+        "libre-relay"
+      ],
+      "sources": [
+        "https://slipstream.mara.com/"
+      ]
+    },
+    {
+      "id": "counterparty",
+      "term": "Counterparty",
+      "aliases": [
+        "XCP"
+      ],
+      "category": "protocols",
+      "short": "A protocol, running since 2014, that issues assets and tokens by embedding data in Bitcoin transactions.",
+      "long": "Counterparty created its XCP token by proof-of-burn in January 2014 and lets anyone issue assets whose balances are tracked by Counterparty nodes reading Bitcoin. The Rare Pepe cards of 2016 were Counterparty assets, which makes them the ancestors of degent.club's Pepes in tuxedos. scribb.it's mint composes Counterparty issuances through an allowlisted proxy and signs them in the user's wallet.",
+      "related": [
+        "op-return",
+        "degent",
+        "runes",
+        "brc-20"
+      ],
+      "sources": [
+        "https://docs.counterparty.io/"
+      ]
+    },
+    {
+      "id": "runes",
+      "term": "Runes",
+      "aliases": [],
+      "category": "protocols",
+      "short": "A fungible-token protocol on Bitcoin using OP_RETURN messages, launched at block 840,000.",
+      "long": "Designed by Casey Rodarmor, Runes went live at the April 2024 halving (block 840,000). Balances live in UTXOs and are moved by a \"runestone\" message in an OP_RETURN output, which avoids the extra UTXOs and off-chain state that earlier token schemes created.",
+      "related": [
+        "op-return",
+        "brc-20",
+        "ordinal-theory",
+        "counterparty"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/runes.html"
+      ]
+    },
+    {
+      "id": "brc-20",
+      "term": "BRC-20",
+      "aliases": [],
+      "category": "protocols",
+      "short": "An experimental token standard in which JSON inscriptions deploy, mint and transfer balances.",
+      "long": "BRC-20 appeared in March 2023. Its state is not in Bitcoin at all but in indexers that read JSON inscriptions in order and apply the rules, so every indexer must agree on those rules exactly. It drove a large share of inscription volume in 2023 and a lot of the fee pressure blockspace users remember.",
+      "related": [
+        "inscription",
+        "runes",
+        "counterparty"
+      ],
+      "sources": []
+    },
+    {
+      "id": "sat-rarity",
+      "term": "Sat rarity",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "Ord's names for special sats - uncommon, rare, epic, legendary, mythic - by where they fall in Bitcoin's schedule.",
+      "long": "The first sat of each block is uncommon, of each difficulty adjustment period rare, of each halving epoch epic, of each cycle (six halvings) legendary, and the first sat of the genesis block mythic. Everything else is common. Rarity is a collector convention on top of ordinal theory; it changes nothing on chain.",
+      "related": [
+        "sat",
+        "ordinal-theory"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/overview.html"
+      ]
+    },
+    {
+      "id": "delegate",
+      "term": "Delegate",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "An inscription that shows another inscription's content instead of carrying its own (tag 11).",
+      "long": "A delegate tag names another inscription id; the delegating inscription renders that content. It lets a collection put one copy of a large file on chain and mint many cheap inscriptions that display it.",
+      "related": [
+        "envelope",
+        "inscription-id",
+        "recursion"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/inscriptions/delegate.html"
+      ]
+    },
+    {
+      "id": "recursion",
+      "term": "Recursion",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "Inscriptions that load other inscriptions, so large works are assembled from on-chain parts.",
+      "long": "Ord's explorer serves recursive endpoints such as `/content/<inscription id>`; an HTML or SVG inscription that requests them can combine libraries, images and code already inscribed. The pieces are paid for once and reused by everything that references them.",
+      "related": [
+        "delegate",
+        "inscription",
+        "inscription-id"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/inscriptions/recursion.html"
+      ]
+    },
+    {
+      "id": "pointer",
+      "term": "Pointer",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "An envelope tag (2) that puts the inscription on a chosen sat of the reveal's outputs instead of the first.",
+      "long": "The pointer is an offset into the concatenated output sats of the reveal. With it, one reveal can inscribe several envelopes onto different sats or outputs, which is how batch inscribing assigns each inscription its own destination.",
+      "related": [
+        "envelope",
+        "fifo-sat-assignment",
+        "inscription"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/inscriptions/pointer.html"
+      ]
+    },
+    {
+      "id": "metadata",
+      "term": "Metadata",
+      "aliases": [],
+      "category": "inscriptions",
+      "short": "CBOR-encoded data attached to an inscription with envelope tag 5, separate from its content.",
+      "long": "Metadata can carry attributes, a name or anything structured without changing the content. It is stored in the envelope like content, in pushes of at most 520 bytes, and is read by indexers and explorers.",
+      "related": [
+        "envelope",
+        "inscription"
+      ],
+      "sources": [
+        "https://docs.ordinals.com/inscriptions/metadata.html"
+      ]
+    },
+    {
+      "id": "bip-322",
+      "term": "BIP 322",
+      "aliases": [
+        "Sign in with Bitcoin",
+        "SIWB"
+      ],
+      "category": "transactions",
+      "short": "Generic signed messages for any address type, used to prove control of an address without spending.",
+      "long": "BIP 322 signs a message by constructing a virtual transaction that spends from the address, so it works for P2TR and P2WPKH where the old signmessage (P2PKH only) does not. block.space's Sign in with Bitcoin verifies a BIP 322 (or legacy) signature over a single-use challenge; the message format is specified as BSS-0006.",
+      "related": [
+        "p2tr",
+        "schnorr-signature",
+        "psbt"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0322.mediawiki"
+      ]
+    },
+    {
+      "id": "blockspace-meter",
+      "term": "Blockspace Meter",
+      "aliases": [],
+      "category": "products",
+      "short": "block.space's measurement of what blockspace costs now and next, from the real mempool and pool policy.",
+      "long": "The Meter prices blockspace: it predicts inclusion by fee rate, reports how blocks are being used by protocol, and exposes the numbers through the Meter API and block.space's public API. It reuses the platform's inscription weight maths so that quotes on scribb.it and degent.club agree with what block.space measures.",
+      "related": [
+        "blockspace",
+        "fee-rate",
+        "mempool",
+        "vbyte"
+      ],
+      "sources": []
+    },
+    {
+      "id": "degent",
+      "term": "Degent",
+      "aliases": [
+        "Decentralized Gentlemen Club",
+        "DGC"
+      ],
+      "category": "products",
+      "short": "One of 10,000 Pepes in tuxedos inscribed on Bitcoin - the degent.club ordinals collection.",
+      "long": "degent.club is the Decentralized Gentlemen Club, a 10,000-piece ordinals collection that is also a claim on blockspace: the collection is sized to take more than 3 GB of it. Degents are minted non-custodially as children of the collection parent, in three tiers by content size - Standard, Large and Full Block.",
+      "related": [
+        "full-block-degent",
+        "parent-child-provenance",
+        "lane",
+        "counterparty"
+      ],
+      "sources": []
+    },
+    {
+      "id": "full-block",
+      "term": "Full block",
+      "aliases": [
+        "full-block schedule"
+      ],
+      "category": "units",
+      "short": "A block whose weight is at or near 4,000,000 WU; at most about 144 are mined per day.",
+      "long": "With a block every ten minutes on average, Bitcoin produces about 144 blocks a day, so at most about 144 full-block transactions can confirm daily whatever anyone pays. block.space publishes a full-block schedule against that ceiling, and the degent.club block lane plans its slots around it.",
+      "related": [
+        "block-weight-limit",
+        "full-block-degent",
+        "lane",
+        "blockspace"
+      ],
+      "sources": []
+    },
+    {
+      "id": "block",
+      "term": "Block",
+      "aliases": [],
+      "category": "units",
+      "short": "A batch of transactions with an 80-byte header, chained to the block before it by that block's hash.",
+      "long": "A block is an 80-byte header followed by a list of transactions, the first of which is always the coinbase transaction. The header commits to the previous block's hash, to all of the block's transactions (through a merkle root), to a timestamp, to the difficulty target and to a nonce. A block is valid only if its header hash is below the target and its transactions weigh at most 4,000,000 weight units in total.",
+      "related": [
+        "block-header",
+        "coinbase-transaction",
+        "block-weight-limit",
+        "blockspace"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bitcoin/blob/master/src/primitives/block.h"
+      ]
+    },
+    {
+      "id": "block-header",
+      "term": "Block header",
+      "aliases": [],
+      "category": "units",
+      "short": "The 80 bytes at the top of a block - version, previous hash, merkle root, time, target and nonce.",
+      "long": "The header is what miners hash over and over while searching for a valid block: 4 bytes of version, the 32-byte hash of the previous block, the 32-byte merkle root of the block's transactions, a 4-byte timestamp, the 4-byte encoded difficulty target (`bits`) and a 4-byte nonce. Because it includes the previous block's hash, changing any old block would change every header after it.",
+      "related": [
+        "block",
+        "coinbase-transaction",
+        "blockspace"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bitcoin/blob/master/src/primitives/block.h"
+      ]
+    },
+    {
+      "id": "coinbase-transaction",
+      "term": "Coinbase transaction",
+      "aliases": [
+        "coinbase"
+      ],
+      "category": "transactions",
+      "short": "The first transaction in every block - the one that pays the miner the subsidy plus the fees.",
+      "long": "The coinbase transaction has a single input that spends nothing and creates the miner's reward: the block subsidy plus every fee paid by the block's other transactions. When a block contains segwit transactions, the coinbase also carries the witness commitment (BIP 141) in an OP_RETURN output. Like any transaction it takes up weight, which is part of why a single transaction cannot use a whole 4,000,000 WU block.",
+      "related": [
+        "block",
+        "fee-rate",
+        "op-return",
+        "block-weight-limit"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki"
+      ]
+    },
+    {
+      "id": "recovery-phrase",
+      "term": "Recovery phrase",
+      "aliases": [
+        "seed phrase",
+        "mnemonic",
+        "BIP 39 words"
+      ],
+      "category": "transactions",
+      "short": "Twelve or twenty-four words (BIP 39) from which a wallet rebuilds every key it controls.",
+      "long": "A recovery phrase encodes random entropy as words from a 2,048-word list: 12 words carry 128 bits of entropy plus a 4-bit checksum, 24 words carry 256 bits plus 8. The phrase (and an optional passphrase) is stretched into a seed, and BIP 32 derives every private key from it. Whoever has the words has the wallet, so they are written down offline and never typed into a website, a chat or a support form.",
+      "related": [
+        "private-key",
+        "extended-public-key",
+        "psbt"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki"
+      ]
+    },
+    {
+      "id": "private-key",
+      "term": "Private key",
+      "aliases": [],
+      "category": "transactions",
+      "short": "The secret number that produces signatures; whoever knows it can spend what it controls.",
+      "long": "A private key is a 256-bit secret. Its public key is derived from it, and addresses are derived from the public key, so sharing an address or a public key is safe while sharing the private key hands over the coins and inscriptions it controls. Non-custodial services never see it: they send a PSBT and the wallet signs.",
+      "related": [
+        "recovery-phrase",
+        "extended-public-key",
+        "schnorr-signature",
+        "psbt"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki"
+      ]
+    },
+    {
+      "id": "extended-public-key",
+      "term": "Extended public key",
+      "aliases": [
+        "xpub"
+      ],
+      "category": "transactions",
+      "short": "A public key plus chain code (BIP 32) that derives every address of a wallet account, but no private key.",
+      "long": "An xpub lets watch-only software list a wallet's addresses and balances without being able to spend. That makes it private rather than secret: it cannot move funds, but anyone holding it can see every address the account will ever use, and so its whole history. Its private counterpart, the xprv, is as sensitive as the recovery phrase.",
+      "related": [
+        "private-key",
+        "recovery-phrase",
+        "utxo"
+      ],
+      "sources": [
+        "https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki"
+      ]
+    },
+    {
+      "id": "collection-certification",
+      "term": "Collection certification",
+      "aliases": [
+        "Verified by block.space",
+        "attestation"
+      ],
+      "category": "products",
+      "short": "A signed, reproducible statement (BSS-0003) of which inscriptions belong to a collection at a block height.",
+      "long": "block.space resolves a collection's members from on-chain evidence only - the children of its parent inscription and an inscribed membership manifest - computes statistics such as item count, total content bytes and total reveal vbytes, and signs the result with a BIP 340 key. Anyone can verify the signature offline and re-run the resolution against their own ord server to reproduce every number.",
+      "related": [
+        "parent-child-provenance",
+        "blockspace-meter",
+        "inscription-id",
+        "schnorr-signature"
+      ],
+      "sources": []
+    }
+  ]
+}

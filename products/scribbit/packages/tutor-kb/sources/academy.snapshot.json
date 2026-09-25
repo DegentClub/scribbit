@@ -1,0 +1,241 @@
+{
+  "provenance": {
+    "upstream": "DegentClub/blockspace-holdings portal/content/academy/*/lesson.yaml",
+    "snapshotOf": "portal Academy lessons"
+  },
+  "lessons": [
+    {
+      "id": "what-is-a-block",
+      "number": 1,
+      "title": "What is a block",
+      "summary": "A block is a header plus a list of transactions, and its room - 4,000,000 weight units - is the blockspace everyone competes for.",
+      "level": "beginner",
+      "objectives": [
+        "Name the parts of a block - the 80-byte header, the coinbase transaction and the other transactions.",
+        "State the consensus limit on a block's size - 4,000,000 weight units.",
+        "Explain why a miner fills a block with the transactions that pay the highest fee rate."
+      ],
+      "glossary": [
+        "block",
+        "block-header",
+        "coinbase-transaction",
+        "block-weight-limit",
+        "blockspace",
+        "fee-rate",
+        "mempool"
+      ]
+    },
+    {
+      "id": "weight-units",
+      "number": 2,
+      "title": "Weight units and the 4,000,000 WU limit",
+      "summary": "Bitcoin measures transactions in weight units - 4 per non-witness byte, 1 per witness byte - and wallets quote virtual bytes, weight divided by four.",
+      "level": "beginner",
+      "objectives": [
+        "Compute a transaction's weight from its non-witness and witness bytes.",
+        "Convert weight to virtual bytes (vbytes), rounding up.",
+        "Explain why a block with no witness data holds at most 1,000,000 bytes."
+      ],
+      "glossary": [
+        "weight-unit",
+        "witness",
+        "vbyte",
+        "block-weight-limit",
+        "segwit",
+        "max-standard-tx-weight"
+      ]
+    },
+    {
+      "id": "witness-discount",
+      "number": 3,
+      "title": "Why witness bytes weigh less",
+      "summary": "SegWit made signature data four times cheaper than the data that creates outputs - which is why modern transactions are smaller and inscriptions live in the witness.",
+      "level": "beginner",
+      "objectives": [
+        "Explain why witness data is discounted relative to non-witness data.",
+        "Compare the virtual size of the same payment made with P2PKH, P2WPKH and P2TR.",
+        "Explain why inscription content is placed in the witness."
+      ],
+      "glossary": [
+        "witness-discount",
+        "witness",
+        "utxo",
+        "segwit",
+        "taproot",
+        "inscription"
+      ]
+    },
+    {
+      "id": "fees-and-vbytes",
+      "number": 4,
+      "title": "Fees, vbytes and the fee market",
+      "summary": "A fee is whatever the inputs hold beyond the outputs; miners rank it per virtual byte, so fee = fee rate x vsize, rounded up.",
+      "level": "beginner",
+      "objectives": [
+        "Compute a fee from a fee rate and a virtual size, rounding up.",
+        "Explain why the fee is implicit - inputs minus outputs.",
+        "Describe how replace-by-fee and child-pays-for-parent speed up a stuck transaction."
+      ],
+      "glossary": [
+        "fee-rate",
+        "vbyte",
+        "mempool",
+        "rbf",
+        "cpfp",
+        "blockspace-meter"
+      ]
+    },
+    {
+      "id": "utxos-and-sats",
+      "number": 5,
+      "title": "UTXOs and sats",
+      "summary": "Bitcoin has no accounts - a wallet holds unspent outputs, each spent whole, measured in sats, with change coming back as a new output.",
+      "level": "beginner",
+      "objectives": [
+        "Explain what a UTXO is and how an outpoint identifies it.",
+        "Work out the change output of a payment, including when change is too small to keep.",
+        "State the P2TR dust limit and why it exists."
+      ],
+      "glossary": [
+        "utxo",
+        "sat",
+        "dust-limit",
+        "postage",
+        "inscription"
+      ]
+    },
+    {
+      "id": "ordinal-theory",
+      "number": 6,
+      "title": "Ordinal theory and sat order (FIFO)",
+      "summary": "Ordinal theory numbers every sat in the order it was mined and tracks it through transactions first in, first out.",
+      "level": "intermediate",
+      "objectives": [
+        "State the first-in-first-out rule for how input sats flow into outputs.",
+        "Predict which output, and at which offset, an inscribed sat lands in.",
+        "Explain why putting a funding input first can burn an inscription to the fee."
+      ],
+      "glossary": [
+        "ordinal-theory",
+        "fifo-sat-assignment",
+        "sat",
+        "inscription",
+        "postage"
+      ]
+    },
+    {
+      "id": "inscriptions-and-the-envelope",
+      "number": 7,
+      "title": "Inscriptions and the envelope",
+      "summary": "An inscription is content carried in an inert OP_FALSE OP_IF envelope inside a tapscript, split into pushes of at most 520 bytes.",
+      "level": "intermediate",
+      "objectives": [
+        "Read the parts of an envelope - the ord marker, the tags and the body.",
+        "Explain why content is split into chunks of at most 520 bytes.",
+        "Explain why an envelope must live in a tapscript."
+      ],
+      "glossary": [
+        "inscription",
+        "envelope",
+        "push-limit",
+        "tapscript",
+        "taproot",
+        "metadata",
+        "pointer"
+      ]
+    },
+    {
+      "id": "commit-and-reveal",
+      "number": 8,
+      "title": "Commit and reveal",
+      "summary": "Inscribing takes two transactions - a commit that pays to a taproot output hiding the envelope, and a reveal that spends it and publishes the content.",
+      "level": "intermediate",
+      "objectives": [
+        "Explain why an inscription needs a commit transaction and a reveal transaction.",
+        "Name the three witness items of a script-path spend.",
+        "Compute a reveal's weight, lane and fee from its envelope length."
+      ],
+      "glossary": [
+        "commit-reveal",
+        "script-path-spend",
+        "control-block",
+        "postage",
+        "lane",
+        "max-standard-tx-weight",
+        "nonstandard-transaction"
+      ]
+    },
+    {
+      "id": "parents-and-provenance",
+      "number": 9,
+      "title": "Parents, children and provenance",
+      "summary": "A child inscription names its parent in tag 3 and its reveal spends the parent - on-chain proof that the collection's holder made it.",
+      "level": "intermediate",
+      "objectives": [
+        "Encode a parent inscription id into the bytes of the parent tag.",
+        "Explain why spending the parent in the reveal proves authorship.",
+        "Explain why the parent-return output must carry exactly the parent's value."
+      ],
+      "glossary": [
+        "parent-child-provenance",
+        "inscription-id",
+        "envelope",
+        "collection-certification"
+      ]
+    },
+    {
+      "id": "psbts",
+      "number": 10,
+      "title": "PSBTs: what your wallet signs",
+      "summary": "A PSBT lets a service build a transaction and your wallet sign it; the sighash flag on each signature decides what can still be changed.",
+      "level": "intermediate",
+      "objectives": [
+        "Describe what a PSBT carries and why it lets a service stay non-custodial.",
+        "Read a sighash flag and say which inputs and outputs a signature covers.",
+        "List what to check before signing a PSBT."
+      ],
+      "glossary": [
+        "psbt",
+        "sighash",
+        "sighash-all-anyonecanpay",
+        "private-key"
+      ]
+    },
+    {
+      "id": "custody",
+      "number": 11,
+      "title": "Custody: keys, seeds and what never to share",
+      "summary": "Your recovery words and private keys are the wallet; addresses are safe to share, extended public keys are private, and no honest service ever asks for the words.",
+      "level": "beginner",
+      "objectives": [
+        "Sort wallet data into safe to share, private, and never to share.",
+        "Compute how much entropy a 12- or 24-word recovery phrase carries.",
+        "Recognise requests for recovery words as a scam, whoever makes them."
+      ],
+      "glossary": [
+        "recovery-phrase",
+        "private-key",
+        "extended-public-key",
+        "psbt"
+      ]
+    },
+    {
+      "id": "measuring-blockspace",
+      "number": 12,
+      "title": "Measuring blockspace (the Meter and certification)",
+      "summary": "block.space's Meter attributes the chain's bytes to protocols in books and denominations, and its certification signs reproducible statistics about collections.",
+      "level": "advanced",
+      "objectives": [
+        "Explain why bytes and vbytes are reported separately and cannot be converted without the witness split.",
+        "Compute a collection's statistics the way a certification attestation defines them.",
+        "Describe how anyone can verify and reproduce a certification."
+      ],
+      "glossary": [
+        "blockspace-meter",
+        "vbyte",
+        "collection-certification",
+        "schnorr-signature"
+      ]
+    }
+  ]
+}

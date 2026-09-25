@@ -1,0 +1,1717 @@
+{
+  "version": 1,
+  "builtFrom": {
+    "glossary": "DegentClub/blockspace-holdings portal/content/glossary.yaml",
+    "academy": "DegentClub/blockspace-holdings portal/content/academy/*/lesson.yaml",
+    "specs": "DegentClub/specs specs/bss-*.md",
+    "bips": "authored summaries of BIP340/341/342 and the ordinals inscription envelope",
+    "adrs": "authored summaries of estate ADRs (docs/adr/*.md)"
+  },
+  "chunks": [
+    {
+      "id": "academy:commit-and-reveal",
+      "title": "Academy — Commit and reveal",
+      "text": "Commit and reveal. Inscribing takes two transactions - a commit that pays to a taproot output hiding the envelope, and a reveal that spends it and publishes the content. Explain why an inscription needs a commit transaction and a reveal transaction. Name the three witness items of a script-path spend. Compute a reveal's weight, lane and fee from its envelope length.",
+      "source": {
+        "type": "academy",
+        "id": "commit-and-reveal",
+        "url": "https://block.space/learn/commit-and-reveal",
+        "section": "Lesson 8"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "intermediate",
+        "commit-reveal",
+        "script-path-spend",
+        "control-block",
+        "postage",
+        "lane",
+        "max-standard-tx-weight",
+        "nonstandard-transaction"
+      ]
+    },
+    {
+      "id": "academy:custody",
+      "title": "Academy — Custody: keys, seeds and what never to share",
+      "text": "Custody: keys, seeds and what never to share. Your recovery words and private keys are the wallet; addresses are safe to share, extended public keys are private, and no honest service ever asks for the words. Sort wallet data into safe to share, private, and never to share. Compute how much entropy a 12- or 24-word recovery phrase carries. Recognise requests for recovery words as a scam, whoever makes them.",
+      "source": {
+        "type": "academy",
+        "id": "custody",
+        "url": "https://block.space/learn/custody",
+        "section": "Lesson 11"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "beginner",
+        "recovery-phrase",
+        "private-key",
+        "extended-public-key",
+        "psbt"
+      ]
+    },
+    {
+      "id": "academy:fees-and-vbytes",
+      "title": "Academy — Fees, vbytes and the fee market",
+      "text": "Fees, vbytes and the fee market. A fee is whatever the inputs hold beyond the outputs; miners rank it per virtual byte, so fee = fee rate x vsize, rounded up. Compute a fee from a fee rate and a virtual size, rounding up. Explain why the fee is implicit - inputs minus outputs. Describe how replace-by-fee and child-pays-for-parent speed up a stuck transaction.",
+      "source": {
+        "type": "academy",
+        "id": "fees-and-vbytes",
+        "url": "https://block.space/learn/fees-and-vbytes",
+        "section": "Lesson 4"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "beginner",
+        "fee-rate",
+        "vbyte",
+        "mempool",
+        "rbf",
+        "cpfp",
+        "blockspace-meter"
+      ]
+    },
+    {
+      "id": "academy:inscriptions-and-the-envelope",
+      "title": "Academy — Inscriptions and the envelope",
+      "text": "Inscriptions and the envelope. An inscription is content carried in an inert OP_FALSE OP_IF envelope inside a tapscript, split into pushes of at most 520 bytes. Read the parts of an envelope - the ord marker, the tags and the body. Explain why content is split into chunks of at most 520 bytes. Explain why an envelope must live in a tapscript.",
+      "source": {
+        "type": "academy",
+        "id": "inscriptions-and-the-envelope",
+        "url": "https://block.space/learn/inscriptions-and-the-envelope",
+        "section": "Lesson 7"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "intermediate",
+        "inscription",
+        "envelope",
+        "push-limit",
+        "tapscript",
+        "taproot",
+        "metadata",
+        "pointer"
+      ]
+    },
+    {
+      "id": "academy:measuring-blockspace",
+      "title": "Academy — Measuring blockspace (the Meter and certification)",
+      "text": "Measuring blockspace (the Meter and certification). block.space's Meter attributes the chain's bytes to protocols in books and denominations, and its certification signs reproducible statistics about collections. Explain why bytes and vbytes are reported separately and cannot be converted without the witness split. Compute a collection's statistics the way a certification attestation defines them. Describe how anyone can verify and reproduce a certification.",
+      "source": {
+        "type": "academy",
+        "id": "measuring-blockspace",
+        "url": "https://block.space/learn/measuring-blockspace",
+        "section": "Lesson 12"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "advanced",
+        "blockspace-meter",
+        "vbyte",
+        "collection-certification",
+        "schnorr-signature"
+      ]
+    },
+    {
+      "id": "academy:ordinal-theory",
+      "title": "Academy — Ordinal theory and sat order (FIFO)",
+      "text": "Ordinal theory and sat order (FIFO). Ordinal theory numbers every sat in the order it was mined and tracks it through transactions first in, first out. State the first-in-first-out rule for how input sats flow into outputs. Predict which output, and at which offset, an inscribed sat lands in. Explain why putting a funding input first can burn an inscription to the fee.",
+      "source": {
+        "type": "academy",
+        "id": "ordinal-theory",
+        "url": "https://block.space/learn/ordinal-theory",
+        "section": "Lesson 6"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "intermediate",
+        "ordinal-theory",
+        "fifo-sat-assignment",
+        "sat",
+        "inscription",
+        "postage"
+      ]
+    },
+    {
+      "id": "academy:parents-and-provenance",
+      "title": "Academy — Parents, children and provenance",
+      "text": "Parents, children and provenance. A child inscription names its parent in tag 3 and its reveal spends the parent - on-chain proof that the collection's holder made it. Encode a parent inscription id into the bytes of the parent tag. Explain why spending the parent in the reveal proves authorship. Explain why the parent-return output must carry exactly the parent's value.",
+      "source": {
+        "type": "academy",
+        "id": "parents-and-provenance",
+        "url": "https://block.space/learn/parents-and-provenance",
+        "section": "Lesson 9"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "intermediate",
+        "parent-child-provenance",
+        "inscription-id",
+        "envelope",
+        "collection-certification"
+      ]
+    },
+    {
+      "id": "academy:psbts",
+      "title": "Academy — PSBTs: what your wallet signs",
+      "text": "PSBTs: what your wallet signs. A PSBT lets a service build a transaction and your wallet sign it; the sighash flag on each signature decides what can still be changed. Describe what a PSBT carries and why it lets a service stay non-custodial. Read a sighash flag and say which inputs and outputs a signature covers. List what to check before signing a PSBT.",
+      "source": {
+        "type": "academy",
+        "id": "psbts",
+        "url": "https://block.space/learn/psbts",
+        "section": "Lesson 10"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "intermediate",
+        "psbt",
+        "sighash",
+        "sighash-all-anyonecanpay",
+        "private-key"
+      ]
+    },
+    {
+      "id": "academy:utxos-and-sats",
+      "title": "Academy — UTXOs and sats",
+      "text": "UTXOs and sats. Bitcoin has no accounts - a wallet holds unspent outputs, each spent whole, measured in sats, with change coming back as a new output. Explain what a UTXO is and how an outpoint identifies it. Work out the change output of a payment, including when change is too small to keep. State the P2TR dust limit and why it exists.",
+      "source": {
+        "type": "academy",
+        "id": "utxos-and-sats",
+        "url": "https://block.space/learn/utxos-and-sats",
+        "section": "Lesson 5"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "beginner",
+        "utxo",
+        "sat",
+        "dust-limit",
+        "postage",
+        "inscription"
+      ]
+    },
+    {
+      "id": "academy:weight-units",
+      "title": "Academy — Weight units and the 4,000,000 WU limit",
+      "text": "Weight units and the 4,000,000 WU limit. Bitcoin measures transactions in weight units - 4 per non-witness byte, 1 per witness byte - and wallets quote virtual bytes, weight divided by four. Compute a transaction's weight from its non-witness and witness bytes. Convert weight to virtual bytes (vbytes), rounding up. Explain why a block with no witness data holds at most 1,000,000 bytes.",
+      "source": {
+        "type": "academy",
+        "id": "weight-units",
+        "url": "https://block.space/learn/weight-units",
+        "section": "Lesson 2"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "beginner",
+        "weight-unit",
+        "witness",
+        "vbyte",
+        "block-weight-limit",
+        "segwit",
+        "max-standard-tx-weight"
+      ]
+    },
+    {
+      "id": "academy:what-is-a-block",
+      "title": "Academy — What is a block",
+      "text": "What is a block. A block is a header plus a list of transactions, and its room - 4,000,000 weight units - is the blockspace everyone competes for. Name the parts of a block - the 80-byte header, the coinbase transaction and the other transactions. State the consensus limit on a block's size - 4,000,000 weight units. Explain why a miner fills a block with the transactions that pay the highest fee rate.",
+      "source": {
+        "type": "academy",
+        "id": "what-is-a-block",
+        "url": "https://block.space/learn/what-is-a-block",
+        "section": "Lesson 1"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "beginner",
+        "block",
+        "block-header",
+        "coinbase-transaction",
+        "block-weight-limit",
+        "blockspace",
+        "fee-rate",
+        "mempool"
+      ]
+    },
+    {
+      "id": "academy:witness-discount",
+      "title": "Academy — Why witness bytes weigh less",
+      "text": "Why witness bytes weigh less. SegWit made signature data four times cheaper than the data that creates outputs - which is why modern transactions are smaller and inscriptions live in the witness. Explain why witness data is discounted relative to non-witness data. Compare the virtual size of the same payment made with P2PKH, P2WPKH and P2TR. Explain why inscription content is placed in the witness.",
+      "source": {
+        "type": "academy",
+        "id": "witness-discount",
+        "url": "https://block.space/learn/witness-discount",
+        "section": "Lesson 3"
+      },
+      "tags": [
+        "academy",
+        "lesson",
+        "beginner",
+        "witness-discount",
+        "witness",
+        "utxo",
+        "segwit",
+        "taproot",
+        "inscription"
+      ]
+    },
+    {
+      "id": "adr:adr-0002",
+      "title": "ADR-0002 — Non-custodial, parent-linked, block-sized mint",
+      "text": "The estate mint architecture is non-custodial: libraries and services never hold a user’s private key. The user generates an ephemeral reveal key in their own environment, funds the commit address, and builds a half-signed reveal PSBT; the service only attaches the parent input and broadcasts. A server therefore never asks for or accepts a seed or private key. This is the security model the tutor points to when asked about signing, keys or what a service can change.",
+      "source": {
+        "type": "adr",
+        "id": "adr-0002",
+        "url": "https://github.com/DegentClub/scribbit/blob/main/docs/adr/0002-degent-mint-architecture.md",
+        "section": "ADR",
+        "authored": true
+      },
+      "tags": [
+        "adr",
+        "custody",
+        "non-custodial",
+        "mint",
+        "reveal",
+        "psbt",
+        "policy"
+      ]
+    },
+    {
+      "id": "adr:adr-0009",
+      "title": "ADR-0009 — Signet Playground: throwaway keys on signet, proof of work, five-minute target",
+      "text": "The Signet Playground lets a stranger with no wallet and no bitcoin make a real inscription on signet, where mistakes cost nothing. It uses signet only (never mainnet), an optional throwaway browser key that never leaves the device, and a proof-of-work faucet instead of a captcha. The point is to learn the commit/reveal flow safely; the same explanatory words are served to agents by the MCP server. It is the place the tutor sends people who want to try inscribing without risk.",
+      "source": {
+        "type": "adr",
+        "id": "adr-0009",
+        "url": "https://github.com/DegentClub/scribbit/blob/main/docs/adr/0009-signet-playground.md",
+        "section": "ADR",
+        "authored": true
+      },
+      "tags": [
+        "adr",
+        "signet",
+        "playground",
+        "learn",
+        "faucet",
+        "products"
+      ]
+    },
+    {
+      "id": "adr:adr-0012",
+      "title": "ADR-0012 — Ask Blockspace: retrieval-grounded tutor, provider-agnostic ChatPort, extractive fallback",
+      "text": "Ask Blockspace answers blockspace questions grounded in a committed knowledge base with citations, never by free generation. Generation is a provider-agnostic ChatPort with a deterministic extractive fallback that returns matching passages verbatim, so the service works with no model configured. It refuses price/investment questions and any request for keys or mainnet signing, treats retrieved text as data (prompt-injection resistant), and says it is not sure rather than guess when retrieval is weak.",
+      "source": {
+        "type": "adr",
+        "id": "adr-0012",
+        "url": "https://github.com/DegentClub/scribbit/blob/main/docs/adr/0012-ask-blockspace-retrieval-grounded-tutor.md",
+        "section": "ADR",
+        "authored": true
+      },
+      "tags": [
+        "adr",
+        "tutor",
+        "retrieval",
+        "guardrails",
+        "grounding",
+        "policy"
+      ]
+    },
+    {
+      "id": "bip:bip340",
+      "title": "BIP340 — Schnorr signatures for secp256k1",
+      "text": "BIP340 defines Schnorr signatures over the secp256k1 curve, the signature scheme Taproot spends use. A signature is 64 bytes: a 32-byte x-only public key point R and a 32-byte scalar s; public keys are the 32-byte x-only encoding (the y coordinate is taken to be even). Schnorr signatures are linear, which makes key and signature aggregation (many signers producing one signature) possible, and they are provably secure under simpler assumptions than ECDSA. The message is hashed with a tagged hash (BIP340 defines the tagged-hash construction) so signatures for one purpose cannot be replayed for another. scribb.it reveal transactions are Taproot script-path spends and therefore carry BIP340 Schnorr signatures in their witness.",
+      "source": {
+        "type": "bip",
+        "id": "BIP340",
+        "url": "https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki",
+        "section": "BIP340",
+        "authored": true
+      },
+      "tags": [
+        "bip",
+        "bip340",
+        "schnorr",
+        "signature",
+        "taproot",
+        "crypto",
+        "protocols"
+      ]
+    },
+    {
+      "id": "bip:bip341",
+      "title": "BIP341 — Taproot: SegWit version 1 spending rules",
+      "text": "BIP341 defines Taproot, SegWit version 1 outputs (P2TR, addresses starting bc1p / tb1p). The output commits to an internal public key tweaked by the merkle root of a tree of alternative scripts. It can be spent two ways: a key-path spend, a single Schnorr signature against the tweaked key that reveals no scripts and is indistinguishable from an ordinary payment; or a script-path spend, which reveals one leaf script, the leaf version, and a control block proving the leaf is in the committed tree. The control block is 33 bytes plus 32 bytes per merkle sibling. Inscriptions use a script-path spend: the inscription envelope is the revealed leaf script, and the internal key is a fixed unspendable NUMS point so the only way to spend is to reveal the envelope. Taproot uses the BIP340 Schnorr scheme for its signatures.",
+      "source": {
+        "type": "bip",
+        "id": "BIP341",
+        "url": "https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki",
+        "section": "BIP341",
+        "authored": true
+      },
+      "tags": [
+        "bip",
+        "bip341",
+        "taproot",
+        "p2tr",
+        "script-path",
+        "key-path",
+        "merkle",
+        "scripts"
+      ]
+    },
+    {
+      "id": "bip:bip342",
+      "title": "BIP342 — Tapscript: validation of Taproot leaf scripts",
+      "text": "BIP342 (Tapscript) is the script language used inside a Taproot script-path spend. It keeps most of the legacy Bitcoin Script opcodes but changes signature checking to use Schnorr (BIP340) and replaces OP_CHECKMULTISIG with OP_CHECKSIGADD. Crucially for inscriptions, Tapscript removes the 10,000-byte script size limit that applied to legacy scripts: a tapscript can be arbitrarily large, bounded only by the transaction weight limits. Individual data pushes are still limited to 520 bytes (the script element size limit), so an inscription body larger than 520 bytes is split across many OP_PUSHBYTES pushes inside one OP_FALSE OP_IF … OP_ENDIF envelope. This is what lets an inscription carry megabytes of data in a single leaf script.",
+      "source": {
+        "type": "bip",
+        "id": "BIP342",
+        "url": "https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki",
+        "section": "BIP342",
+        "authored": true
+      },
+      "tags": [
+        "bip",
+        "bip342",
+        "tapscript",
+        "script",
+        "opcodes",
+        "push-limit",
+        "scripts"
+      ]
+    },
+    {
+      "id": "bip:ordinals-envelope",
+      "title": "Ordinals inscription envelope",
+      "text": "An ordinals inscription is data embedded in a Taproot tapscript \"envelope\": the pattern OP_FALSE OP_IF, a series of tagged pushes, then OP_ENDIF, wrapped in a script the OP_IF branch never executes so the data is inert and costs only witness weight. Tag 1 is the content type (a MIME string), the body follows an empty data push and is chunked into pushes of at most 520 bytes each. Optional tags include the parent (tag 3, linking a child to a parent inscription for provenance), metadata (tag 5, CBOR), a pointer, a content encoding, and a delegate. Because witness bytes weigh one weight unit instead of four, putting the data in the reveal witness is the cheapest place to write it. The inscription is created in two transactions: a commit that pays to the envelope’s Taproot address, and a reveal that spends it and exposes the envelope.",
+      "source": {
+        "type": "bip",
+        "id": "ordinals-envelope",
+        "url": "https://docs.ordinals.com/inscriptions.html",
+        "section": "Ordinals docs",
+        "authored": true
+      },
+      "tags": [
+        "bip",
+        "inscription",
+        "envelope",
+        "ordinals",
+        "tapscript",
+        "inscriptions"
+      ]
+    },
+    {
+      "id": "glossary:bip-322",
+      "title": "BIP 322",
+      "text": "BIP 322 (also: Sign in with Bitcoin, SIWB). Generic signed messages for any address type, used to prove control of an address without spending. BIP 322 signs a message by constructing a virtual transaction that spends from the address, so it works for P2TR and P2WPKH where the old signmessage (P2PKH only) does not. block.space's Sign in with Bitcoin verifies a BIP 322 (or legacy) signature over a single-use challenge; the message format is specified as BSS-0006.",
+      "source": {
+        "type": "glossary",
+        "id": "bip-322",
+        "url": "https://block.space/glossary#bip-322",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "p2tr",
+        "schnorr-signature",
+        "psbt",
+        "sign in with bitcoin",
+        "siwb"
+      ]
+    },
+    {
+      "id": "glossary:block",
+      "title": "Block",
+      "text": "Block. A batch of transactions with an 80-byte header, chained to the block before it by that block's hash. A block is an 80-byte header followed by a list of transactions, the first of which is always the coinbase transaction. The header commits to the previous block's hash, to all of the block's transactions (through a merkle root), to a timestamp, to the difficulty target and to a nonce. A block is valid only if its header hash is below the target and its transactions weigh at most 4,000,000 weight units in total.",
+      "source": {
+        "type": "glossary",
+        "id": "block",
+        "url": "https://block.space/glossary#block",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "block-header",
+        "coinbase-transaction",
+        "block-weight-limit",
+        "blockspace"
+      ]
+    },
+    {
+      "id": "glossary:block-header",
+      "title": "Block header",
+      "text": "Block header. The 80 bytes at the top of a block - version, previous hash, merkle root, time, target and nonce. The header is what miners hash over and over while searching for a valid block: 4 bytes of version, the 32-byte hash of the previous block, the 32-byte merkle root of the block's transactions, a 4-byte timestamp, the 4-byte encoded difficulty target (`bits`) and a 4-byte nonce. Because it includes the previous block's hash, changing any old block would change every header after it.",
+      "source": {
+        "type": "glossary",
+        "id": "block-header",
+        "url": "https://block.space/glossary#block-header",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "block",
+        "coinbase-transaction",
+        "blockspace"
+      ]
+    },
+    {
+      "id": "glossary:block-weight-limit",
+      "title": "Block weight limit",
+      "text": "Block weight limit. A block may weigh at most 4,000,000 weight units; this is a consensus rule. The limit is enforced by every full node: a block over 4,000,000 WU is invalid, whoever mined it. In virtual bytes that is 1,000,000 vB. The block header, the transaction count and the coinbase transaction all use some of it, which is why a single transaction that wants a whole block to itself (a Full Block Degent, for example) has to stay a little under 4,000,000 WU.",
+      "source": {
+        "type": "glossary",
+        "id": "block-weight-limit",
+        "url": "https://block.space/glossary#block-weight-limit",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "weight-unit",
+        "blockspace",
+        "max-standard-tx-weight",
+        "full-block-degent"
+      ]
+    },
+    {
+      "id": "glossary:blockspace",
+      "title": "Blockspace",
+      "text": "Blockspace. The room inside Bitcoin blocks, measured in weight units and sold to whoever pays the highest fee rate. Every block may carry at most 4,000,000 weight units of transactions, and a new block arrives roughly every ten minutes, so the supply of blockspace is fixed and predictable. Everything that wants to be on Bitcoin - payments, channel opens, inscriptions, token transfers - competes for the same weight, and miners choose transactions by fee rate. Blockspace is therefore the scarce resource underneath every Bitcoin product: block.space measures it, scribb.it writes into it, and degent.club owns a very large piece of it.",
+      "source": {
+        "type": "glossary",
+        "id": "blockspace",
+        "url": "https://block.space/glossary#blockspace",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "weight-unit",
+        "block-weight-limit",
+        "fee-rate",
+        "vbyte"
+      ]
+    },
+    {
+      "id": "glossary:blockspace-meter",
+      "title": "Blockspace Meter",
+      "text": "Blockspace Meter. block.space's measurement of what blockspace costs now and next, from the real mempool and pool policy. The Meter prices blockspace: it predicts inclusion by fee rate, reports how blocks are being used by protocol, and exposes the numbers through the Meter API and block.space's public API. It reuses the platform's inscription weight maths so that quotes on scribb.it and degent.club agree with what block.space measures.",
+      "source": {
+        "type": "glossary",
+        "id": "blockspace-meter",
+        "url": "https://block.space/glossary#blockspace-meter",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "products",
+        "blockspace",
+        "fee-rate",
+        "mempool",
+        "vbyte"
+      ]
+    },
+    {
+      "id": "glossary:brc-20",
+      "title": "BRC-20",
+      "text": "BRC-20. An experimental token standard in which JSON inscriptions deploy, mint and transfer balances. BRC-20 appeared in March 2023. Its state is not in Bitcoin at all but in indexers that read JSON inscriptions in order and apply the rules, so every indexer must agree on those rules exactly. It drove a large share of inscription volume in 2023 and a lot of the fee pressure blockspace users remember.",
+      "source": {
+        "type": "glossary",
+        "id": "brc-20",
+        "url": "https://block.space/glossary#brc-20",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "protocols",
+        "inscription",
+        "runes",
+        "counterparty"
+      ]
+    },
+    {
+      "id": "glossary:coinbase-transaction",
+      "title": "Coinbase transaction",
+      "text": "Coinbase transaction (also: coinbase). The first transaction in every block - the one that pays the miner the subsidy plus the fees. The coinbase transaction has a single input that spends nothing and creates the miner's reward: the block subsidy plus every fee paid by the block's other transactions. When a block contains segwit transactions, the coinbase also carries the witness commitment (BIP 141) in an OP_RETURN output. Like any transaction it takes up weight, which is part of why a single transaction cannot use a whole 4,000,000 WU block.",
+      "source": {
+        "type": "glossary",
+        "id": "coinbase-transaction",
+        "url": "https://block.space/glossary#coinbase-transaction",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "block",
+        "fee-rate",
+        "op-return",
+        "block-weight-limit",
+        "coinbase"
+      ]
+    },
+    {
+      "id": "glossary:collection-certification",
+      "title": "Collection certification",
+      "text": "Collection certification (also: Verified by block.space, attestation). A signed, reproducible statement (BSS-0003) of which inscriptions belong to a collection at a block height. block.space resolves a collection's members from on-chain evidence only - the children of its parent inscription and an inscribed membership manifest - computes statistics such as item count, total content bytes and total reveal vbytes, and signs the result with a BIP 340 key. Anyone can verify the signature offline and re-run the resolution against their own ord server to reproduce every number.",
+      "source": {
+        "type": "glossary",
+        "id": "collection-certification",
+        "url": "https://block.space/glossary#collection-certification",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "products",
+        "parent-child-provenance",
+        "blockspace-meter",
+        "inscription-id",
+        "schnorr-signature",
+        "verified by block.space",
+        "attestation"
+      ]
+    },
+    {
+      "id": "glossary:commit-reveal",
+      "title": "Commit / reveal",
+      "text": "Commit / reveal. The two transactions that make an inscription - one pays to a script containing it, the next spends that script and publishes it. The commit transaction creates a P2TR output whose taproot tree contains the envelope script; nothing about the content is visible yet. The reveal transaction spends that output through the script path, which places the envelope in the witness and inscribes the content. Two steps are necessary because a taproot output only commits to a hash of its scripts; the script itself can only appear when the output is spent.",
+      "source": {
+        "type": "glossary",
+        "id": "commit-reveal",
+        "url": "https://block.space/glossary#commit-reveal",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "envelope",
+        "inscription",
+        "script-path-spend",
+        "postage",
+        "sighash-all-anyonecanpay"
+      ]
+    },
+    {
+      "id": "glossary:control-block",
+      "title": "Control block",
+      "text": "Control block. The last witness item of a script-path spend - leaf version, internal key and the Merkle path to the leaf. A control block is 33 + 32m bytes: one byte combining the leaf version with the output key's parity, the 32-byte internal public key, and m 32-byte hashes forming the Merkle path from the revealed leaf to the root committed in the output. A single-leaf tree, as most inscription commits use, has a 33-byte control block.",
+      "source": {
+        "type": "glossary",
+        "id": "control-block",
+        "url": "https://block.space/glossary#control-block",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "script-path-spend",
+        "taproot",
+        "tapscript"
+      ]
+    },
+    {
+      "id": "glossary:counterparty",
+      "title": "Counterparty",
+      "text": "Counterparty (also: XCP). A protocol, running since 2014, that issues assets and tokens by embedding data in Bitcoin transactions. Counterparty created its XCP token by proof-of-burn in January 2014 and lets anyone issue assets whose balances are tracked by Counterparty nodes reading Bitcoin. The Rare Pepe cards of 2016 were Counterparty assets, which makes them the ancestors of degent.club's Pepes in tuxedos. scribb.it's mint composes Counterparty issuances through an allowlisted proxy and signs them in the user's wallet.",
+      "source": {
+        "type": "glossary",
+        "id": "counterparty",
+        "url": "https://block.space/glossary#counterparty",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "protocols",
+        "op-return",
+        "degent",
+        "runes",
+        "brc-20",
+        "xcp"
+      ]
+    },
+    {
+      "id": "glossary:cpfp",
+      "title": "Child pays for parent",
+      "text": "Child pays for parent (also: CPFP). Speeding up a stuck transaction by spending its output in a new transaction with a high fee. Miners evaluate a parent and child together as a package, so a child with a high fee rate pulls its low-fee parent into a block. Commit/reveal pairs are naturally a parent and child: a reveal paying a generous fee helps its commit confirm.",
+      "source": {
+        "type": "glossary",
+        "id": "cpfp",
+        "url": "https://block.space/glossary#cpfp",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "rbf",
+        "fee-rate",
+        "commit-reveal",
+        "cpfp"
+      ]
+    },
+    {
+      "id": "glossary:degent",
+      "title": "Degent",
+      "text": "Degent (also: Decentralized Gentlemen Club, DGC). One of 10,000 Pepes in tuxedos inscribed on Bitcoin - the degent.club ordinals collection. degent.club is the Decentralized Gentlemen Club, a 10,000-piece ordinals collection that is also a claim on blockspace: the collection is sized to take more than 3 GB of it. Degents are minted non-custodially as children of the collection parent, in three tiers by content size - Standard, Large and Full Block.",
+      "source": {
+        "type": "glossary",
+        "id": "degent",
+        "url": "https://block.space/glossary#degent",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "products",
+        "full-block-degent",
+        "parent-child-provenance",
+        "lane",
+        "counterparty",
+        "decentralized gentlemen club",
+        "dgc"
+      ]
+    },
+    {
+      "id": "glossary:delegate",
+      "title": "Delegate",
+      "text": "Delegate. An inscription that shows another inscription's content instead of carrying its own (tag 11). A delegate tag names another inscription id; the delegating inscription renders that content. It lets a collection put one copy of a large file on chain and mint many cheap inscriptions that display it.",
+      "source": {
+        "type": "glossary",
+        "id": "delegate",
+        "url": "https://block.space/glossary#delegate",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "envelope",
+        "inscription-id",
+        "recursion"
+      ]
+    },
+    {
+      "id": "glossary:dust-limit",
+      "title": "Dust limit",
+      "text": "Dust limit. The smallest output value nodes relay, by script type - 330 sats for P2TR, 294 for P2WPKH, 546 for P2PKH. An output is dust when spending it would cost more than it is worth at the dust relay fee rate (3 sat/vB by default). Bitcoin Core derives the threshold from the output's size plus the size of a typical input spending it, which gives exactly 330 sats for P2TR. A transaction with a dust output is nonstandard. Postage is normally at or above the dust limit for this reason.",
+      "source": {
+        "type": "glossary",
+        "id": "dust-limit",
+        "url": "https://block.space/glossary#dust-limit",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "postage",
+        "p2tr",
+        "standardness",
+        "nonstandard-transaction"
+      ]
+    },
+    {
+      "id": "glossary:envelope",
+      "title": "Envelope",
+      "text": "Envelope. The OP_FALSE OP_IF … OP_ENDIF block in a tapscript that carries an inscription without executing it. Because `OP_FALSE OP_IF` never runs its branch, anything inside is inert data. The ord envelope pushes the protocol tag `ord`, then tag/value pairs (tag 1 content type, 2 pointer, 3 parent, 5 metadata, 7 metaprotocol, 9 content encoding, 11 delegate), then an empty push (tag 0) followed by the body in pushes of at most 520 bytes. The envelope must sit in a tapscript revealed by a script-path spend. The Blockspace Standards specify it exactly as BSS-0004, with test vectors.",
+      "source": {
+        "type": "glossary",
+        "id": "envelope",
+        "url": "https://block.space/glossary#envelope",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "inscription",
+        "tapscript",
+        "commit-reveal",
+        "push-limit",
+        "parent-child-provenance"
+      ]
+    },
+    {
+      "id": "glossary:extended-public-key",
+      "title": "Extended public key",
+      "text": "Extended public key (also: xpub). A public key plus chain code (BIP 32) that derives every address of a wallet account, but no private key. An xpub lets watch-only software list a wallet's addresses and balances without being able to spend. That makes it private rather than secret: it cannot move funds, but anyone holding it can see every address the account will ever use, and so its whole history. Its private counterpart, the xprv, is as sensitive as the recovery phrase.",
+      "source": {
+        "type": "glossary",
+        "id": "extended-public-key",
+        "url": "https://block.space/glossary#extended-public-key",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "private-key",
+        "recovery-phrase",
+        "utxo",
+        "xpub"
+      ]
+    },
+    {
+      "id": "glossary:fee-rate",
+      "title": "Fee rate",
+      "text": "Fee rate. Fee divided by virtual size, in sats per vbyte - what miners sort transactions by. Miners fill a block to maximise fees within 4,000,000 WU, so they rank transactions (and packages of related transactions) by fee rate rather than absolute fee. A 400,000 WU reveal is 100,000 vB; at 5 sat/vB it pays 500,000 sats. Fee rates swing with demand: the Meter on block.space predicts what rate gets included when.",
+      "source": {
+        "type": "glossary",
+        "id": "fee-rate",
+        "url": "https://block.space/glossary#fee-rate",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "vbyte",
+        "mempool",
+        "rbf",
+        "cpfp",
+        "blockspace-meter"
+      ]
+    },
+    {
+      "id": "glossary:fifo-sat-assignment",
+      "title": "FIFO sat assignment",
+      "text": "FIFO sat assignment. Ord's rule - input sats are concatenated in order and poured into outputs in order; the leftover tail is the fee. Take every input's sats, in input order, as one stream; fill each output in order with the next contiguous run of exactly its value; whatever is left goes to the miner as fee (and is assigned to the coinbase). Each output therefore receives one contiguous slice of the stream, which is why packing postage-padded inscriptions into a single gapless output takes two transactions (shave, then pack). The blockspace-holdings simulator implements this rule exactly.",
+      "source": {
+        "type": "glossary",
+        "id": "fifo-sat-assignment",
+        "url": "https://block.space/glossary#fifo-sat-assignment",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "protocols",
+        "ordinal-theory",
+        "postage",
+        "utxo",
+        "inscription"
+      ]
+    },
+    {
+      "id": "glossary:full-block",
+      "title": "Full block",
+      "text": "Full block (also: full-block schedule). A block whose weight is at or near 4,000,000 WU; at most about 144 are mined per day. With a block every ten minutes on average, Bitcoin produces about 144 blocks a day, so at most about 144 full-block transactions can confirm daily whatever anyone pays. block.space publishes a full-block schedule against that ceiling, and the degent.club block lane plans its slots around it.",
+      "source": {
+        "type": "glossary",
+        "id": "full-block",
+        "url": "https://block.space/glossary#full-block",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "block-weight-limit",
+        "full-block-degent",
+        "lane",
+        "blockspace",
+        "full-block schedule"
+      ]
+    },
+    {
+      "id": "glossary:full-block-degent",
+      "title": "Full Block Degent",
+      "text": "Full Block Degent. A degent.club inscription of 3.5-3.9 MB of content that fills a whole Bitcoin block on its own. The fullblock tier of the degent.club mint covers content of 3,500,000 to 3,900,000 bytes. Such a reveal weighs close to the 4,000,000 WU block limit, never shares a block, and always travels the block lane. It is the collection's statement that blockspace is the asset: one inscription, one block.",
+      "source": {
+        "type": "glossary",
+        "id": "full-block-degent",
+        "url": "https://block.space/glossary#full-block-degent",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "products",
+        "block-weight-limit",
+        "lane",
+        "degent",
+        "slipstream"
+      ]
+    },
+    {
+      "id": "glossary:inscription",
+      "title": "Inscription",
+      "text": "Inscription. Content - an image, text, HTML, anything with a MIME type - written into a Bitcoin transaction and bound to one sat. An inscription is created by a reveal transaction whose witness carries an envelope. The content is stored fully on chain, in the witness, and belongs to the sat it was inscribed on (by default the first sat of the reveal's first output), so whoever controls that sat controls the inscription. Inscriptions are numbered in the order they are indexed and identified permanently by an inscription id.",
+      "source": {
+        "type": "glossary",
+        "id": "inscription",
+        "url": "https://block.space/glossary#inscription",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "envelope",
+        "commit-reveal",
+        "inscription-id",
+        "sat",
+        "witness-discount"
+      ]
+    },
+    {
+      "id": "glossary:inscription-id",
+      "title": "Inscription id",
+      "text": "Inscription id. The permanent name of an inscription - the reveal txid, the letter i, and the index of the envelope. An id looks like `<txid>i0`: the reveal transaction's id followed by `i` and the envelope's index in that transaction (0 for the first). Ids never change, unlike inscription numbers, which depend on indexing rules. The parent tag stores a parent's id in a compact binary form: the txid's 32 bytes in internal byte order (the reverse of the hex shown by explorers) followed by the index as a little-endian integer with trailing zero bytes removed.",
+      "source": {
+        "type": "glossary",
+        "id": "inscription-id",
+        "url": "https://block.space/glossary#inscription-id",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "inscription",
+        "parent-child-provenance",
+        "envelope"
+      ]
+    },
+    {
+      "id": "glossary:key-path-spend",
+      "title": "Key-path spend",
+      "text": "Key-path spend. Spending a taproot output with one signature for its tweaked key, revealing nothing about any scripts. The key path is the cheap, private way to spend P2TR: the witness is a single Schnorr signature. An observer cannot tell whether a script tree existed at all. Holding wallets usually spend inscriptions this way; the blockspace-holdings stacker signs its consolidations with key-path signatures.",
+      "source": {
+        "type": "glossary",
+        "id": "key-path-spend",
+        "url": "https://block.space/glossary#key-path-spend",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "p2tr",
+        "script-path-spend",
+        "schnorr-signature"
+      ]
+    },
+    {
+      "id": "glossary:lane",
+      "title": "Lane",
+      "text": "Lane. How a reveal travels to a miner - the standard lane (public mempool) or the block lane (direct to a pool). In the degent.club mint (ADR-0005) the lane is decided by the exact reveal weight: a reveal of at most 400,000 WU is standard and relays through ordinary nodes; anything heavier goes through the block lane, which budgets 3,990,000 WU per block slot and submits through relays that accept nonstandard transactions, such as Libre Relay or MARA Slipstream. Tiers are a product decision on content bytes; lanes are transport.",
+      "source": {
+        "type": "glossary",
+        "id": "lane",
+        "url": "https://block.space/glossary#lane",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "products",
+        "max-standard-tx-weight",
+        "full-block-degent",
+        "slipstream",
+        "libre-relay"
+      ]
+    },
+    {
+      "id": "glossary:libre-relay",
+      "title": "Libre Relay",
+      "text": "Libre Relay. A Bitcoin Core fork by Peter Todd that relaxes several standardness rules and peers with like-minded nodes. Libre Relay nodes relay some consensus-valid transactions that default Bitcoin Core policy rejects, and they advertise themselves so that relaxed transactions can find a path to miners that accept them. It is one of the routes the degent.club block lane can use for nonstandard reveals; relay capacity through it is an operational concern tracked in ADR-0005.",
+      "source": {
+        "type": "glossary",
+        "id": "libre-relay",
+        "url": "https://block.space/glossary#libre-relay",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "standardness",
+        "nonstandard-transaction",
+        "slipstream",
+        "lane"
+      ]
+    },
+    {
+      "id": "glossary:max-standard-tx-weight",
+      "title": "Max standard transaction weight",
+      "text": "Max standard transaction weight (also: MAX_STANDARD_TX_WEIGHT). Bitcoin Core relays transactions of at most 400,000 WU - a tenth of a block. 400,000 WU is 100,000 vB. It caps a standard inscription reveal at roughly 390-400 KB of content once the envelope and the rest of the transaction are counted; the degent.club mint measures that a reveal above about 396,700 content bytes crosses the line. Heavier reveals are valid but nonstandard and go through the block lane.",
+      "source": {
+        "type": "glossary",
+        "id": "max-standard-tx-weight",
+        "url": "https://block.space/glossary#max-standard-tx-weight",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "standardness",
+        "lane",
+        "block-weight-limit",
+        "weight-unit",
+        "max_standard_tx_weight"
+      ]
+    },
+    {
+      "id": "glossary:mempool",
+      "title": "Mempool",
+      "text": "Mempool. A node's pool of valid, unconfirmed transactions waiting to be mined - each node has its own. There is no single mempool: every node keeps its own, filtered by its policy (standardness, minimum relay fee, size limit). Transactions spread peer to peer, and miners build block templates from theirs. Nonstandard transactions never enter default mempools, which is why they must reach a miner directly.",
+      "source": {
+        "type": "glossary",
+        "id": "mempool",
+        "url": "https://block.space/glossary#mempool",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "standardness",
+        "fee-rate",
+        "rbf",
+        "slipstream"
+      ]
+    },
+    {
+      "id": "glossary:metadata",
+      "title": "Metadata",
+      "text": "Metadata. CBOR-encoded data attached to an inscription with envelope tag 5, separate from its content. Metadata can carry attributes, a name or anything structured without changing the content. It is stored in the envelope like content, in pushes of at most 520 bytes, and is read by indexers and explorers.",
+      "source": {
+        "type": "glossary",
+        "id": "metadata",
+        "url": "https://block.space/glossary#metadata",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "envelope",
+        "inscription"
+      ]
+    },
+    {
+      "id": "glossary:nonstandard-transaction",
+      "title": "Nonstandard transaction",
+      "text": "Nonstandard transaction. A consensus-valid transaction that default nodes refuse to relay, so it must be sent to a miner directly. Examples are transactions heavier than 400,000 WU, transactions with outputs below the dust limit, and scripts outside the standard templates. They are mined when a pool accepts them directly. Very large inscriptions and the buffer777 shave transactions (1-sat outputs) are nonstandard and travel through Slipstream.",
+      "source": {
+        "type": "glossary",
+        "id": "nonstandard-transaction",
+        "url": "https://block.space/glossary#nonstandard-transaction",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "standardness",
+        "slipstream",
+        "max-standard-tx-weight",
+        "dust-limit"
+      ]
+    },
+    {
+      "id": "glossary:op-return",
+      "title": "OP_RETURN",
+      "text": "OP_RETURN. A provably unspendable output used to embed data; it never enters the UTXO set. An output whose script starts with OP_RETURN can never be spent, so nodes can forget it immediately. Protocols such as Runes and Counterparty place data there. Before Bitcoin Core 30, default policy relayed a single OP_RETURN output of up to 83 bytes of script (80 bytes of data); version 30 raised that default substantially. OP_RETURN bytes are not witness data, so they cost 4 WU each.",
+      "source": {
+        "type": "glossary",
+        "id": "op-return",
+        "url": "https://block.space/glossary#op-return",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "runes",
+        "counterparty",
+        "witness-discount",
+        "standardness"
+      ]
+    },
+    {
+      "id": "glossary:ordinal-theory",
+      "title": "Ordinal theory",
+      "text": "Ordinal theory. A numbering scheme that gives every sat a serial number and tracks it from input to output. Proposed by Casey Rodarmor and implemented in the `ord` indexer, ordinal theory numbers sats in the order they were mined and follows them through transactions first-in-first-out. It needs no change to Bitcoin: it is a convention about how to read transactions. Inscriptions, sat rarity and parent/child provenance are all built on it. The first inscription was made in December 2022.",
+      "source": {
+        "type": "glossary",
+        "id": "ordinal-theory",
+        "url": "https://block.space/glossary#ordinal-theory",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "protocols",
+        "sat",
+        "fifo-sat-assignment",
+        "inscription",
+        "sat-rarity"
+      ]
+    },
+    {
+      "id": "glossary:p2tr",
+      "title": "P2TR",
+      "text": "P2TR (also: pay-to-taproot). A taproot output - OP_1 followed by a 32-byte tweaked public key; addresses start with bc1p. A P2TR output script is 34 bytes (`OP_1 <32-byte key>`), encoded as a bech32m address beginning with `bc1p` on mainnet. Its dust threshold under Bitcoin Core's default policy is 330 sats. Ordinals wallets keep inscriptions on P2TR outputs, and inscription commit transactions pay to a P2TR output whose script tree holds the envelope.",
+      "source": {
+        "type": "glossary",
+        "id": "p2tr",
+        "url": "https://block.space/glossary#p2tr",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "taproot",
+        "dust-limit",
+        "key-path-spend",
+        "commit-reveal",
+        "pay-to-taproot"
+      ]
+    },
+    {
+      "id": "glossary:parent-child-provenance",
+      "title": "Parent/child provenance",
+      "text": "Parent/child provenance. Proof that a collection's creator made an inscription - the child's reveal spends the parent inscription. A child inscription carries a parent tag (tag 3) naming the parent's inscription id, and its reveal transaction spends the output holding the parent. Only the holder of the parent can do that, so the link proves authorship on chain rather than in an off-chain list. degent.club mints every Degent as a child of the collection parent; block.space's certification checks these links.",
+      "source": {
+        "type": "glossary",
+        "id": "parent-child-provenance",
+        "url": "https://block.space/glossary#parent-child-provenance",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "inscription-id",
+        "envelope",
+        "commit-reveal",
+        "degent"
+      ]
+    },
+    {
+      "id": "glossary:pointer",
+      "title": "Pointer",
+      "text": "Pointer. An envelope tag (2) that puts the inscription on a chosen sat of the reveal's outputs instead of the first. The pointer is an offset into the concatenated output sats of the reveal. With it, one reveal can inscribe several envelopes onto different sats or outputs, which is how batch inscribing assigns each inscription its own destination.",
+      "source": {
+        "type": "glossary",
+        "id": "pointer",
+        "url": "https://block.space/glossary#pointer",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "envelope",
+        "fifo-sat-assignment",
+        "inscription"
+      ]
+    },
+    {
+      "id": "glossary:postage",
+      "title": "Postage",
+      "text": "Postage. The sats that travel with an inscription in its output, usually a few hundred, never below the dust limit for standard relay. An inscription lives on one sat, but a UTXO needs value to be relayed and spent economically, so the output holding it carries extra sats called postage. Common choices are 546, 330 or 10,000 sats. Postage is not burned; it stays with the inscription and is spent along with it. The buffer777 job in blockspace-holdings exists precisely to strip that postage from 21,329 inscriptions and pack them into one output.",
+      "source": {
+        "type": "glossary",
+        "id": "postage",
+        "url": "https://block.space/glossary#postage",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "dust-limit",
+        "sat",
+        "ordinal-theory",
+        "fifo-sat-assignment"
+      ]
+    },
+    {
+      "id": "glossary:private-key",
+      "title": "Private key",
+      "text": "Private key. The secret number that produces signatures; whoever knows it can spend what it controls. A private key is a 256-bit secret. Its public key is derived from it, and addresses are derived from the public key, so sharing an address or a public key is safe while sharing the private key hands over the coins and inscriptions it controls. Non-custodial services never see it: they send a PSBT and the wallet signs.",
+      "source": {
+        "type": "glossary",
+        "id": "private-key",
+        "url": "https://block.space/glossary#private-key",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "recovery-phrase",
+        "extended-public-key",
+        "schnorr-signature",
+        "psbt"
+      ]
+    },
+    {
+      "id": "glossary:psbt",
+      "title": "PSBT",
+      "text": "PSBT (also: partially signed bitcoin transaction). A standard container (BIP 174) for a transaction that is still being built or signed by several parties. A PSBT carries the unsigned transaction plus everything a signer needs - previous outputs, scripts, taproot leaf data (BIP 371) and derivation paths - and collects signatures as they arrive. Wallets can sign a PSBT without the service ever seeing a key, which is how scribb.it and degent.club mint without custody. BIP 370 defines version 2, where inputs and outputs can be added after creation.",
+      "source": {
+        "type": "glossary",
+        "id": "psbt",
+        "url": "https://block.space/glossary#psbt",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "sighash",
+        "sighash-all-anyonecanpay",
+        "commit-reveal",
+        "partially signed bitcoin transaction"
+      ]
+    },
+    {
+      "id": "glossary:push-limit",
+      "title": "520-byte push limit",
+      "text": "520-byte push limit (also: MAX_SCRIPT_ELEMENT_SIZE). No single data push in a script may exceed 520 bytes; this is a consensus rule. Bitcoin Script rejects any stack element larger than 520 bytes, and tapscript keeps that rule. An envelope therefore carries content as a sequence of pushes of at most 520 bytes each; a 400 KB image becomes about 770 pushes, each costing its bytes plus one to three bytes of push opcode.",
+      "source": {
+        "type": "glossary",
+        "id": "push-limit",
+        "url": "https://block.space/glossary#push-limit",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "envelope",
+        "tapscript",
+        "inscription",
+        "max_script_element_size"
+      ]
+    },
+    {
+      "id": "glossary:rbf",
+      "title": "Replace-by-fee",
+      "text": "Replace-by-fee (also: RBF). Replacing an unconfirmed transaction with a conflicting one that pays a higher fee. A replacement must pay more in absolute fee and a higher fee rate than what it evicts. BIP 125 made it opt-in; Bitcoin Core has since made full RBF (any unconfirmed transaction is replaceable) the default. For inscriptions RBF cuts both ways: it lets a stuck commit be bumped, and it is the attack a strict sighash defends against when a half-signed reveal leaks.",
+      "source": {
+        "type": "glossary",
+        "id": "rbf",
+        "url": "https://block.space/glossary#rbf",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "cpfp",
+        "fee-rate",
+        "mempool",
+        "rbf"
+      ]
+    },
+    {
+      "id": "glossary:recovery-phrase",
+      "title": "Recovery phrase",
+      "text": "Recovery phrase (also: seed phrase, mnemonic, BIP 39 words). Twelve or twenty-four words (BIP 39) from which a wallet rebuilds every key it controls. A recovery phrase encodes random entropy as words from a 2,048-word list: 12 words carry 128 bits of entropy plus a 4-bit checksum, 24 words carry 256 bits plus 8. The phrase (and an optional passphrase) is stretched into a seed, and BIP 32 derives every private key from it. Whoever has the words has the wallet, so they are written down offline and never typed into a website, a chat or a support form.",
+      "source": {
+        "type": "glossary",
+        "id": "recovery-phrase",
+        "url": "https://block.space/glossary#recovery-phrase",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "private-key",
+        "extended-public-key",
+        "psbt",
+        "seed phrase",
+        "mnemonic",
+        "bip 39 words"
+      ]
+    },
+    {
+      "id": "glossary:recursion",
+      "title": "Recursion",
+      "text": "Recursion. Inscriptions that load other inscriptions, so large works are assembled from on-chain parts. Ord's explorer serves recursive endpoints such as `/content/<inscription id>`; an HTML or SVG inscription that requests them can combine libraries, images and code already inscribed. The pieces are paid for once and reused by everything that references them.",
+      "source": {
+        "type": "glossary",
+        "id": "recursion",
+        "url": "https://block.space/glossary#recursion",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "delegate",
+        "inscription",
+        "inscription-id"
+      ]
+    },
+    {
+      "id": "glossary:runes",
+      "title": "Runes",
+      "text": "Runes. A fungible-token protocol on Bitcoin using OP_RETURN messages, launched at block 840,000. Designed by Casey Rodarmor, Runes went live at the April 2024 halving (block 840,000). Balances live in UTXOs and are moved by a \"runestone\" message in an OP_RETURN output, which avoids the extra UTXOs and off-chain state that earlier token schemes created.",
+      "source": {
+        "type": "glossary",
+        "id": "runes",
+        "url": "https://block.space/glossary#runes",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "protocols",
+        "op-return",
+        "brc-20",
+        "ordinal-theory",
+        "counterparty"
+      ]
+    },
+    {
+      "id": "glossary:sat",
+      "title": "Sat",
+      "text": "Sat (also: satoshi). The smallest unit of bitcoin - one hundred-millionth of a bitcoin. One bitcoin is 100,000,000 sats. All amounts on chain are integers of sats, and fee rates are sats per vbyte. Ordinal theory gives every individual sat a serial number, which is what makes it possible to say that an inscription lives on one particular sat.",
+      "source": {
+        "type": "glossary",
+        "id": "sat",
+        "url": "https://block.space/glossary#sat",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "ordinal-theory",
+        "fee-rate",
+        "dust-limit",
+        "satoshi"
+      ]
+    },
+    {
+      "id": "glossary:sat-rarity",
+      "title": "Sat rarity",
+      "text": "Sat rarity. Ord's names for special sats - uncommon, rare, epic, legendary, mythic - by where they fall in Bitcoin's schedule. The first sat of each block is uncommon, of each difficulty adjustment period rare, of each halving epoch epic, of each cycle (six halvings) legendary, and the first sat of the genesis block mythic. Everything else is common. Rarity is a collector convention on top of ordinal theory; it changes nothing on chain.",
+      "source": {
+        "type": "glossary",
+        "id": "sat-rarity",
+        "url": "https://block.space/glossary#sat-rarity",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "inscriptions",
+        "sat",
+        "ordinal-theory"
+      ]
+    },
+    {
+      "id": "glossary:schnorr-signature",
+      "title": "Schnorr signature",
+      "text": "Schnorr signature (also: BIP 340). The 64-byte signature scheme taproot uses, over x-only 32-byte public keys. BIP 340 specifies Schnorr signatures on secp256k1 with 32-byte x-only public keys and 64-byte signatures (65 bytes when a non-default sighash flag byte is appended). Schnorr signatures are linear, which enables key aggregation schemes such as MuSig2, and they are what both key-path and tapscript signature checks verify.",
+      "source": {
+        "type": "glossary",
+        "id": "schnorr-signature",
+        "url": "https://block.space/glossary#schnorr-signature",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "taproot",
+        "sighash",
+        "key-path-spend",
+        "bip 340"
+      ]
+    },
+    {
+      "id": "glossary:script-path-spend",
+      "title": "Script-path spend",
+      "text": "Script-path spend. Spending a taproot output by revealing one leaf script, its inputs and a control block proving the leaf is committed. In a script-path spend the witness ends with the leaf script and the control block; before them come the items the script consumes. The inscription reveal is a script-path spend: the leaf script contains the envelope, so revealing it publishes the content on chain, in the witness, at the witness discount.",
+      "source": {
+        "type": "glossary",
+        "id": "script-path-spend",
+        "url": "https://block.space/glossary#script-path-spend",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "tapscript",
+        "control-block",
+        "envelope",
+        "commit-reveal"
+      ]
+    },
+    {
+      "id": "glossary:segwit",
+      "title": "SegWit",
+      "text": "SegWit (also: Segregated Witness). The 2017 soft fork that moved signatures into a separate witness and introduced block weight. Segregated Witness (BIPs 141, 143, 144) activated at block 481,824 in August 2017. It introduced witness programs (version 0 for P2WPKH and P2WSH), the weight metric and its 4,000,000 WU block limit, and a new signature-hash algorithm. Its version mechanism is what taproot later used as witness version 1.",
+      "source": {
+        "type": "glossary",
+        "id": "segwit",
+        "url": "https://block.space/glossary#segwit",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "protocols",
+        "witness",
+        "weight-unit",
+        "taproot",
+        "witness-discount",
+        "segregated witness"
+      ]
+    },
+    {
+      "id": "glossary:sighash",
+      "title": "Sighash flag",
+      "text": "Sighash flag. A byte on a signature saying which parts of the transaction it commits to. SIGHASH_ALL (0x01) commits to every input and output; SIGHASH_NONE (0x02) to no outputs; SIGHASH_SINGLE (0x03) to the output at the same index as the input. Adding ANYONECANPAY (0x80) commits to only the signer's own input, so others may add inputs. Taproot adds SIGHASH_DEFAULT (0x00), which behaves like ALL and saves a byte by omitting the flag. Choosing the flag is a security decision: whatever the signature does not cover, anyone holding the transaction can change.",
+      "source": {
+        "type": "glossary",
+        "id": "sighash",
+        "url": "https://block.space/glossary#sighash",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "sighash-all-anyonecanpay",
+        "psbt",
+        "schnorr-signature"
+      ]
+    },
+    {
+      "id": "glossary:sighash-all-anyonecanpay",
+      "title": "SIGHASH_ALL|ANYONECANPAY",
+      "text": "SIGHASH_ALL|ANYONECANPAY (also: 0x81). A signature that fixes every output but only its own input, so others may add inputs and nothing else. With flag 0x81 the signer commits to all outputs and its own input. degent.club reveals use it (ADR-0005): the half-signed reveal cannot be redirected, have outputs added or removed, or have fees skimmed, because every output is fixed; the replaced 0x83 (SINGLE|ANYONECANPAY) covered only the output at its own index. The price of 0x81 is that the half-signed reveal no longer doubles as a rescue transaction, so the user holds a separate rescue key.",
+      "source": {
+        "type": "glossary",
+        "id": "sighash-all-anyonecanpay",
+        "url": "https://block.space/glossary#sighash-all-anyonecanpay",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "sighash",
+        "psbt",
+        "commit-reveal",
+        "lane",
+        "0x81"
+      ]
+    },
+    {
+      "id": "glossary:slipstream",
+      "title": "Slipstream",
+      "text": "Slipstream. MARA's service for submitting consensus-valid but nonstandard transactions straight to its mining pool. Slipstream accepts transactions that ordinary nodes will not relay - very large inscriptions, sub-dust outputs - and includes them in blocks MARA Pool mines, for a fee. Because it bypasses the public mempool, the only authority on whether a submitted transaction was mined is your own node. The buffer777 shave transactions in blockspace-holdings and the degent.club block lane both use it.",
+      "source": {
+        "type": "glossary",
+        "id": "slipstream",
+        "url": "https://block.space/glossary#slipstream",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "nonstandard-transaction",
+        "lane",
+        "full-block-degent",
+        "libre-relay"
+      ]
+    },
+    {
+      "id": "glossary:standardness",
+      "title": "Standardness",
+      "text": "Standardness (also: policy). The extra rules nodes apply before relaying a transaction, stricter than consensus. Consensus decides what may be in a block; policy decides what a node will relay and mine by default. A nonstandard transaction - too heavy, with a dust output, an unusual script - is still valid in a block, but Bitcoin Core nodes will not relay it. Policy protects nodes from denial of service and keeps the UTXO set lean; relays such as Libre Relay and services such as Slipstream exist for transactions outside it.",
+      "source": {
+        "type": "glossary",
+        "id": "standardness",
+        "url": "https://block.space/glossary#standardness",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "policy",
+        "max-standard-tx-weight",
+        "dust-limit",
+        "nonstandard-transaction",
+        "mempool"
+      ]
+    },
+    {
+      "id": "glossary:taproot",
+      "title": "Taproot",
+      "text": "Taproot. The 2021 soft fork (BIPs 340-342) adding Schnorr signatures and pay-to-taproot outputs with hidden script trees. Taproot activated at block 709,632 in November 2021. A pay-to-taproot (P2TR) output commits to a single public key that is tweaked with the root of an optional tree of scripts. It can be spent either with a signature for the tweaked key (key path) or by revealing one script from the tree and satisfying it (script path), and only the branch actually used is ever published. Ordinals inscriptions depend on taproot: the envelope lives in a tapscript that is revealed when the commit output is spent.",
+      "source": {
+        "type": "glossary",
+        "id": "taproot",
+        "url": "https://block.space/glossary#taproot",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "protocols",
+        "tapscript",
+        "p2tr",
+        "schnorr-signature",
+        "key-path-spend",
+        "script-path-spend"
+      ]
+    },
+    {
+      "id": "glossary:tapscript",
+      "title": "Tapscript",
+      "text": "Tapscript. The script language used inside taproot script-path spends, defined by BIP 342. Tapscript is Bitcoin Script with changes: signature opcodes verify BIP 340 Schnorr signatures, OP_CHECKSIGADD replaces OP_CHECKMULTISIG, the 10,000-byte script size limit and the 201 non-push opcode limit no longer apply, and undefined opcodes became OP_SUCCESS for future upgrades. Individual data pushes are still limited to 520 bytes, so large inscription content is split into many pushes inside one envelope.",
+      "source": {
+        "type": "glossary",
+        "id": "tapscript",
+        "url": "https://block.space/glossary#tapscript",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "scripts",
+        "taproot",
+        "script-path-spend",
+        "push-limit",
+        "envelope"
+      ]
+    },
+    {
+      "id": "glossary:utxo",
+      "title": "UTXO",
+      "text": "UTXO (also: unspent transaction output). An output not yet spent - the unit in which bitcoin, and every inscription, is held. Bitcoin has no accounts; a wallet's balance is the sum of the UTXOs it can spend. Each UTXO is identified by an outpoint (`txid:vout`). An inscription is always inside exactly one UTXO, together with its postage and possibly other sats, which is why wallets that are not ordinals-aware can accidentally spend inscriptions as fees or change.",
+      "source": {
+        "type": "glossary",
+        "id": "utxo",
+        "url": "https://block.space/glossary#utxo",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "postage",
+        "fifo-sat-assignment",
+        "dust-limit",
+        "unspent transaction output"
+      ]
+    },
+    {
+      "id": "glossary:vbyte",
+      "title": "Virtual byte",
+      "text": "Virtual byte (also: vB, vbyte, vsize). Weight divided by four, rounded up - the unit fee rates are quoted in. Virtual size lets wallets keep thinking in bytes after SegWit: a transaction of weight W has a virtual size of ceil(W / 4) vbytes, so a non-witness byte counts as one vbyte and a witness byte as a quarter. Fee rates are quoted in satoshis per vbyte (sat/vB), and the fee a transaction pays is its fee rate times its virtual size. Bitcoin Core also adjusts vsize upwards for transactions with unusually many signature operations.",
+      "source": {
+        "type": "glossary",
+        "id": "vbyte",
+        "url": "https://block.space/glossary#vbyte",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "weight-unit",
+        "fee-rate",
+        "witness-discount",
+        "vb",
+        "vbyte",
+        "vsize"
+      ]
+    },
+    {
+      "id": "glossary:weight-unit",
+      "title": "Weight unit",
+      "text": "Weight unit (also: WU). The unit Bitcoin uses to size transactions - 4 WU per non-witness byte, 1 WU per witness byte. Segregated Witness (BIP 141) replaced the one-megabyte block size limit with a weight limit. A transaction's weight is its non-witness bytes times four plus its witness bytes times one (equivalently, base size × 3 + total size). Because signatures and other witness data are cheaper per byte, a block full of witness data can be close to 4 MB on the wire while a block with no witness data at all is at most 1 MB.",
+      "source": {
+        "type": "glossary",
+        "id": "weight-unit",
+        "url": "https://block.space/glossary#weight-unit",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "block-weight-limit",
+        "vbyte",
+        "witness-discount",
+        "witness",
+        "wu"
+      ]
+    },
+    {
+      "id": "glossary:witness",
+      "title": "Witness",
+      "text": "Witness. The per-input data that proves a spend is authorised - signatures, keys, scripts - kept apart from the transaction's other fields. Since SegWit, each input has a witness: a list of byte strings (stack items) that satisfies the conditions of the output being spent. Witness data is excluded from the transaction id (txid), which fixed third-party malleability, and it is discounted in weight. For a taproot key-path spend the witness is one 64- or 65-byte Schnorr signature; for a script-path spend it is the script's inputs, the script itself and a control block.",
+      "source": {
+        "type": "glossary",
+        "id": "witness",
+        "url": "https://block.space/glossary#witness",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "transactions",
+        "segwit",
+        "witness-discount",
+        "control-block",
+        "script-path-spend"
+      ]
+    },
+    {
+      "id": "glossary:witness-discount",
+      "title": "Witness discount",
+      "text": "Witness discount. Witness bytes weigh 1 WU instead of 4, so data in the witness costs a quarter as much per byte. The discount was introduced with SegWit so that spending an output (which needs signatures, stored in the witness) became cheaper relative to creating outputs, which grow the UTXO set that every node keeps. It is also why inscriptions put their content in the witness of a taproot script-path spend: one byte of content costs about 0.25 vbytes there, against a full vbyte anywhere else in the transaction.",
+      "source": {
+        "type": "glossary",
+        "id": "witness-discount",
+        "url": "https://block.space/glossary#witness-discount",
+        "section": "Glossary"
+      },
+      "tags": [
+        "glossary",
+        "units",
+        "weight-unit",
+        "witness",
+        "segwit",
+        "inscription",
+        "envelope"
+      ]
+    },
+    {
+      "id": "spec:bss-0001",
+      "title": "BSS-0001: Blockspace Standards Specification process",
+      "text": "BSS-0001: Blockspace Standards Specification process. This document defines how Blockspace Standards Specifications (BSS) are proposed, numbered, reviewed, tested and advanced. It fixes the status lifecycle, the required sections of every specification, the rules for test vectors, and the role of the editors.",
+      "source": {
+        "type": "spec",
+        "id": "bss-0001",
+        "url": "https://github.com/DegentClub/specs/blob/main/specs/bss-0001.md#abstract",
+        "anchor": "abstract",
+        "section": "Abstract"
+      },
+      "tags": [
+        "spec",
+        "bss",
+        "bss0001",
+        "blockspace",
+        "standards",
+        "specification",
+        "process"
+      ]
+    },
+    {
+      "id": "spec:bss-0002",
+      "title": "BSS-0002: Blockspace attribution (the Meter)",
+      "text": "BSS-0002: Blockspace attribution (the Meter). The block.space Meter assigns (\"attributes\") the bytes of the Bitcoin chain to protocols and tokens, and reports them in three **books** (A, B, C) and two **denominations** (`bytes`, `vbytes`). This document fixes the vocabulary, the identifiers and the response shapes that consumers of the Meter API rely on. It also records, as open questions, every attribution rule that the available sources do not define. It does not specify an attribution algorithm: none is written down anywhere the editors could find.",
+      "source": {
+        "type": "spec",
+        "id": "bss-0002",
+        "url": "https://github.com/DegentClub/specs/blob/main/specs/bss-0002.md#abstract",
+        "anchor": "abstract",
+        "section": "Abstract"
+      },
+      "tags": [
+        "spec",
+        "bss",
+        "bss0002",
+        "blockspace",
+        "attribution",
+        "meter"
+      ]
+    },
+    {
+      "id": "spec:bss-0003",
+      "title": "BSS-0003: Collection certification attestation",
+      "text": "BSS-0003: Collection certification attestation. A collection attestation is a signed JSON statement. It says which inscriptions belong to a collection as of a block height, and gives statistics over them that anyone can recompute with their own ord server. Membership comes from on-chain evidence only: children of the collection's parent inscription, and a membership manifest that is itself inscribed as a child of that parent. The attestation is serialised with a canonical JSON profile of RFC 8785 and hashed with the BIP340 tagged hash `block.space/collection-attestation/v1`. The digest is signed with BIP340 Schnorr. This document specifies the JSON structure, the canonicalisation, the digest, the signature, key publication, the membership methods and the verification procedure.",
+      "source": {
+        "type": "spec",
+        "id": "bss-0003",
+        "url": "https://github.com/DegentClub/specs/blob/main/specs/bss-0003.md#abstract",
+        "anchor": "abstract",
+        "section": "Abstract"
+      },
+      "tags": [
+        "spec",
+        "bss",
+        "bss0003",
+        "collection",
+        "certification",
+        "attestation"
+      ]
+    },
+    {
+      "id": "spec:bss-0004",
+      "title": "BSS-0004: Parent-linked collection standard (Degent collection profile)",
+      "text": "BSS-0004: Parent-linked collection standard (Degent collection profile). This document specifies how items of an Ordinals collection are minted so that membership is provable on chain. Every new item is inscribed with a parent tag that names the collection's parent inscription. The reveal transaction spends the parent UTXO and returns it to the collection, so ord records the parent/child link. The document fixes the envelope bytes, the parent-tag encoding, the commit output, the reveal layout and the sat-placement rule, and the checks the collection's parent signer makes. For the degent.club profile it also fixes three product tiers by content bytes, two transport lanes by exact transaction weight, and the per-block weight budget of the block lane. Items minted before parent links existed join the collection through an inscribed membership manifest (BSS-0003 §3).",
+      "source": {
+        "type": "spec",
+        "id": "bss-0004",
+        "url": "https://github.com/DegentClub/specs/blob/main/specs/bss-0004.md#abstract",
+        "anchor": "abstract",
+        "section": "Abstract"
+      },
+      "tags": [
+        "spec",
+        "bss",
+        "bss0004",
+        "parent",
+        "linked",
+        "collection",
+        "standard",
+        "degent",
+        "profile"
+      ]
+    },
+    {
+      "id": "spec:bss-0005",
+      "title": "BSS-0005: Reveal PSBT profiles (half-signed 0x81, wallet-signed, rescue)",
+      "text": "BSS-0005: Reveal PSBT profiles (half-signed 0x81, wallet-signed, rescue). A parent-linked inscription (BSS-0004) needs two signatures that come from two parties at different times. The minter signs the commit input when it orders. The collection's parent signer signs the parent input later. This document specifies the PSBTs that carry the minter's half of the reveal, in two models: - **K_e model (half-signed)**: the browser signs the commit input with an ephemeral key K_e and `SIGHASH_ALL|SIGHASH_ANYONECANPAY` (**0x81**). The signature fixes every output, and the parent input can still be attached. The legacy `SIGHASH_SINGLE|SIGHASH_ANYONECANPAY` (**0x83**) profile is described for compatibility and is deprecated. Rescue is a fresh transaction re-signed with K_e. - **Wallet-signed model**: the leaf key is a key the user's wallet controls, the internal key is NUMS, and the wallet signs an ordinary tapscript PSBT with a sighash its software accepts. The document fixes the transaction template, the PSBT fields (also in machine-readable form in `profiles/bss-0005-psbt-profile.json`), the verification a service performs before storing a reveal, and the rescue paths.",
+      "source": {
+        "type": "spec",
+        "id": "bss-0005",
+        "url": "https://github.com/DegentClub/specs/blob/main/specs/bss-0005.md#abstract",
+        "anchor": "abstract",
+        "section": "Abstract"
+      },
+      "tags": [
+        "spec",
+        "bss",
+        "bss0005",
+        "reveal",
+        "psbt",
+        "profiles",
+        "half",
+        "signed",
+        "0x81",
+        "wallet",
+        "rescue"
+      ]
+    },
+    {
+      "id": "spec:bss-0006",
+      "title": "BSS-0006: Sign in with Bitcoin (SIWB) message format",
+      "text": "BSS-0006: Sign in with Bitcoin (SIWB) message format. Sign in with Bitcoin (SIWB) adapts EIP-4361 (\"Sign-In with Ethereum\") to Bitcoin wallets. A server issues a challenge message that binds a domain, an address, a network, a single-use nonce and a validity window. The wallet signs the message with a BIP-322 *simple* signature (P2TR key path or P2WPKH), or with a legacy `signmessage` signature (P2PKH, P2WPKH, P2SH-P2WPKH). The server verifies the fields in a fixed order and consumes the nonce last. This document fixes the exact message text, the field syntax, the canonical-form rule and the verification order that `@bsh/identity` implements.",
+      "source": {
+        "type": "spec",
+        "id": "bss-0006",
+        "url": "https://github.com/DegentClub/specs/blob/main/specs/bss-0006.md#abstract",
+        "anchor": "abstract",
+        "section": "Abstract"
+      },
+      "tags": [
+        "spec",
+        "bss",
+        "bss0006",
+        "sign",
+        "with",
+        "bitcoin",
+        "siwb",
+        "message",
+        "format"
+      ]
+    },
+    {
+      "id": "spec:bss-0007",
+      "title": "BSS-0007: Component manifest and estate catalog",
+      "text": "BSS-0007: Component manifest and estate catalog. Every package, service and app in a Blockspace repository declares itself in a `component.yaml`: its name, owner, kind, lifecycle, allowed dependencies, the contracts it provides and consumes, its stores and its secret *paths*. A generator compiles the manifests of a repository into a committed `catalog/catalog.json`. Repositories vendored into each other (git submodules) appear there as *external* components with their origin, which joins the catalogs of the estate. This document specifies the manifest (`schemas/component.schema.json`, vendored byte-identical from the reference), the catalog (`schemas/catalog.schema.json`), and the validation rules.",
+      "source": {
+        "type": "spec",
+        "id": "bss-0007",
+        "url": "https://github.com/DegentClub/specs/blob/main/specs/bss-0007.md#abstract",
+        "anchor": "abstract",
+        "section": "Abstract"
+      },
+      "tags": [
+        "spec",
+        "bss",
+        "bss0007",
+        "component",
+        "manifest",
+        "estate",
+        "catalog"
+      ]
+    }
+  ]
+}

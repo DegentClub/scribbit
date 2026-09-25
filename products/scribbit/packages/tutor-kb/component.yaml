@@ -1,0 +1,11 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: blockspace-tutor-kb
+package: "@bsh/blockspace-tutor-kb"
+kind: library
+product: scribbit
+owner: team-scribbit
+summary: Ask Blockspace knowledge base, BM25 retrieval, product-policy guardrails and the provider-agnostic answering core (extractive by default) shared by the tutor service and the MCP tool.
+lifecycle: experimental
+depends_on: []
+docs: ./README.md
+commands: { test: test, typecheck: typecheck }
