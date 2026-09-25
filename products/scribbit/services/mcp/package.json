@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p .",
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",
+    "build": "tsc --noEmit -p . && pnpm exec esbuild src/main.ts --bundle --platform=node --format=esm --target=node22 --outfile=dist/main.js",
     "stdio": "tsx src/stdio.ts",
     "mint-key": "tsx src/mint-key.ts"
   },

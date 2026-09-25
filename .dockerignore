@@ -1,0 +1,25 @@
+# Root .dockerignore for the scribbit workspace. Docker builds in this repo use the
+# repository root as build context (see deploy/docker/*.Dockerfile) so the pnpm
+# workspace resolves; this keeps that context small and never ships local secrets
+# or build artifacts into an image layer.
+
+**/.git
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+**/.cache
+**/*.log
+
+# Local env files: secret VALUES must never enter a build context or image.
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+.DS_Store
+**/*.tsbuildinfo
+
+.vscode
+.idea
+.github
