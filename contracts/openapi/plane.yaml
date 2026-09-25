@@ -1,0 +1,675 @@
+openapi: 3.1.0
+info:
+  title: Blockspace authorization plane
+  version: 0.1.0
+  summary: An open, minimal spend-authorization plane for our agents - FlashyOS's five checks, verdicts and SpendAuthorization, independent of FlashyOS's own plane.
+  description: |
+    Provided by `plane` (`@bsh/plane`, platform/plane). Decision: ADR-0014.
+
+    Shapes and names mirror FlashyOS's published wallet contract, `docs/wallet/openapi.wallet.json` and
+    `docs/wallet/schema/*.json` in github.com/FlashyLabs/flashyos-wdk (Apache-2.0), wherever they apply:
+    `OperationRecord`, `SpendEnvelopeInput`, `SpendAuthorization` and `Verdict` keep their field names, codes and
+    semantics (the five checks identity -> authority -> envelope -> budget -> grading; verdicts `ALLOW | ESCALATE |
+    DENY`; denial codes `SCOPE_MISSING`, `NO_ENVELOPE`, `ENVELOPE_INACTIVE`, `KIND_NOT_PERMITTED`,
+    `ASSET_NOT_PERMITTED`, `DESTINATION_NOT_PERMITTED`, `PER_TX_CAP`, `DAILY_CAP`, `INVALID_AMOUNT`, `INVALID_RECORD`;
+    201 ALLOW / 202 ESCALATE / 200 DENY). The design is additive: every document FlashyOS's schemas accept is accepted
+    here (with two marked exceptions: a `btc:` destination must be a segwit address for its network, and
+    `delegable: true` is refused because delegation is not implemented), and our responses carry extra members
+    (`reasons`, `decisionId` on DENY, `impact` on ALLOW, `replayed`) a FlashyOS client ignores.
+
+    Differences from FlashyOS's paths, on purpose: routes are `/v1/orgs/{org}/wallet/...` (no `/api` prefix);
+    proposals are `POST .../wallet/propose`; settlement names the authorization in the body
+    (`POST .../wallet/settle`); an envelope is addressed per agent (`.../wallet/envelopes/{agent}`, one per chain in
+    the body); the audit surface is a hash-chained log (`GET .../wallet/decisions`, entries shaped like FlashyOS's
+    `ProvenanceEntry`).
+
+    Authentication: API keys from the platform edge (`X-API-Key: bsh_live_...` or `Authorization: Bearer bsh_...`).
+    Each key belongs to one organisation and one name (an agent, the signer, or a person). Scopes:
+    `wallet:propose` (agents), `wallet:settle` (the signer only), `wallet:delegate` (people: envelopes and decision
+    resolution), `wallet:read` (the audit log). `wallet:propose` and `wallet:settle` are never held by one key, and
+    `wallet:delegate` is never held together with either: the plane refuses such a key when it loads its
+    configuration. A key of another organisation than the route's is `403 org_mismatch`.
+
+    Human approval: `PUT .../wallet/envelopes/{agent}` and `POST .../wallet/decisions/{id}/resolve` additionally
+    require an `X-Approval` header, an Ed25519 signature by an approver key the plane's configuration lists for the
+    organisation (the second factor; see the `X-Approval` parameter for the exact bytes). The approval is bound to
+    the method, path, body and API key, is valid for 300 seconds, and is single use.
+
+    Errors use the platform edge body `{ "error": { "code", "message", "requestId" } }` (FlashyOS's `Error` is
+    `{ error, code }`; the codes are theirs where they have one, e.g. `AUTHORIZATION_NOT_FOUND`).
+  license:
+    name: Proprietary
+servers:
+  - url: http://localhost:3070
+    description: Local (`pnpm --filter @bsh/plane dev`)
+tags:
+  - name: wallet
+  - name: envelopes
+  - name: audit
+  - name: system
+security:
+  - apiKey: []
+  - bearer: []
+paths:
+  /v1/health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Liveness
+      security: []
+      responses:
+        '200':
+          description: Process is up.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+  /.well-known/flashyos-plane.json:
+    get:
+      tags: [system]
+      operationId: getPlaneDocument
+      summary: The plane document (FlashyOS Phase 23 PlaneDocument)
+      description: |
+        Public, never cached. The plane's Ed25519 authorization keys (the active one and every retired one, each
+        `kid` = sha256 of its SPKI DER), the chains it authorizes, and the `$id` of every schema it enforces. An
+        organisation owner pastes this document into FlashyOS's trusted-plane registry to accept receipts and
+        authorizations signed by this plane. Nothing in it can sign.
+      security: []
+      responses:
+        '200':
+          description: The plane document.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlaneDocument' }
+  /v1/orgs/{org}/wallet/propose:
+    post:
+      tags: [wallet]
+      operationId: propose
+      summary: Run the five checks on an OperationRecord
+      description: |
+        FlashyOS `POST /api/v1/orgs/{orgId}/wallet/proposals`. 201 ALLOW (with a SpendAuthorization), 202 ESCALATE
+        (reservation held, a human resolves the decision), 200 DENY. A refusal is an answer, not an error, and is
+        recorded in the audit log like every verdict. The agent is taken from the key, never from the body. A key
+        without `wallet:propose` gets DENY `SCOPE_MISSING`. With `Idempotency-Key`, a replay of the same record
+        returns the decision's current verdict (`replayed: true`) and reserves nothing new.
+      x-required-scopes: ['wallet:propose']
+      parameters:
+        - $ref: '#/components/parameters/Org'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperationRecord' }
+      responses:
+        '200':
+          description: DENY.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Verdict' }
+        '201':
+          description: ALLOW.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Verdict' }
+        '202':
+          description: ESCALATE.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Verdict' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422':
+          description: '`idempotency_conflict`: the key was used for a different record.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/orgs/{org}/wallet/settle:
+    post:
+      tags: [wallet]
+      operationId: settle
+      summary: The signer reports what the chain did
+      description: |
+        FlashyOS `POST .../wallet/authorizations/{authorizationId}/settle`, with the authorization named in the
+        body. `CONFIRMED` commits: the authorization becomes `SPENT` and its reservation `COMMITTED` (it keeps counting
+        against today's cap); with a `ledger` observation and a ledger configured, the plane also reports the
+        transaction to the ledger (`POST /v1/payments/{id}/observations`). `REVERTED` rolls back: the authorization
+        becomes `REVOKED` and its reservation `RELEASED`. Reporting the same outcome and transaction again is `200`
+        with the same state; a different one is `409 SETTLEMENT_CONFLICT`. A `CONFIRMED` report after the
+        authorization expired is still recorded - the chain is a fact, and the amount counts against the day again even
+        if that exceeds `dailyMax` - and carries `anomaly: EXPIRED_BEFORE_SETTLE`.
+      x-required-scopes: ['wallet:settle']
+      parameters:
+        - $ref: '#/components/parameters/Org'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SettleRequest' }
+      responses:
+        '200':
+          description: Settled (or the same settlement replayed).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SettleResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`AUTHORIZATION_NOT_FOUND` (also for another organisation''s authorization).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: '`SETTLEMENT_CONFLICT`: already settled with another outcome or transaction.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /v1/orgs/{org}/wallet/envelopes/{agent}:
+    get:
+      tags: [envelopes]
+      operationId: getEnvelopes
+      summary: The agent's current envelopes, one per chain
+      description: Readable with `wallet:delegate`; no approval header is needed to read.
+      x-required-scopes: ['wallet:delegate']
+      parameters:
+        - $ref: '#/components/parameters/Org'
+        - $ref: '#/components/parameters/Agent'
+      responses:
+        '200':
+          description: Current envelopes (empty when the agent has none - it may then do nothing).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnvelopeList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [envelopes]
+      operationId: putEnvelope
+      summary: Create or supersede the agent's envelope on one chain (people only)
+      description: |
+        FlashyOS `POST .../wallet/envelopes` (OWNER/ADMIN). The body is a `SpendEnvelopeInput`; its `chain` selects
+        which of the agent's envelopes is replaced. A change is a new version; the previous one is kept
+        (`supersededAt`). Requires `wallet:delegate` and a valid `X-Approval`. To revoke, put the same envelope with
+        `active: false`.
+      x-required-scopes: ['wallet:delegate']
+      parameters:
+        - $ref: '#/components/parameters/Org'
+        - $ref: '#/components/parameters/Agent'
+        - $ref: '#/components/parameters/Approval'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SpendEnvelopeInput' }
+      responses:
+        '200':
+          description: The new current envelope.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SpendEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/orgs/{org}/wallet/decisions:
+    get:
+      tags: [audit]
+      operationId: listDecisions
+      summary: The audit log - every verdict, authorization, settlement, resolution, envelope change and expiry
+      description: |
+        Append-only and hash-chained per organisation, in FlashyOS's `ProvenanceEntry` shape:
+        `hash = sha256(canonical({seq, at, kind, id, data, prev}))`, `prev` the previous entry's hash, 64 zeros for
+        the first. `since` returns entries with `seq > since`; verify a page with the `prev` of its first entry and
+        the signed `head`. `head` is the newest entry's hash signed with the plane's active key.
+      x-required-scopes: ['wallet:read', 'wallet:delegate']
+      parameters:
+        - $ref: '#/components/parameters/Org'
+        - name: since
+          in: query
+          required: false
+          description: Return entries with a `seq` greater than this (default -1 = from the first).
+          schema: { type: integer, minimum: -1 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 200 }
+      responses:
+        '200':
+          description: A page of the log.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditLog' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/orgs/{org}/wallet/decisions/{decisionId}/resolve:
+    post:
+      tags: [audit]
+      operationId: resolveDecision
+      summary: A person approves or rejects an escalated decision
+      description: |
+        FlashyOS reuses `POST /api/v1/decisions/{id}/resolve`. Approving a `PENDING` decision issues the held
+        SpendAuthorization (a fresh five-minute window); rejecting releases the reservation. Requires
+        `wallet:delegate` and a valid `X-Approval`. A decision that is not `PENDING` is `409 DECISION_NOT_PENDING`.
+      x-required-scopes: ['wallet:delegate']
+      parameters:
+        - $ref: '#/components/parameters/Org'
+        - name: decisionId
+          in: path
+          required: true
+          schema: { type: string, pattern: '^dec_[A-Za-z0-9-]+$' }
+        - $ref: '#/components/parameters/Approval'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResolveRequest' }
+      responses:
+        '200':
+          description: Resolved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResolveResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`DECISION_NOT_FOUND`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: '`DECISION_NOT_PENDING`.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: A platform API key (`bsh_<live|test>_...`) bound to one organisation and one name.
+    bearer:
+      type: http
+      scheme: bearer
+      description: 'The same key as `Authorization: Bearer bsh_...`.'
+  parameters:
+    Org:
+      name: org
+      in: path
+      required: true
+      description: The organisation slug (the charter's `slug`, e.g. `scribbit`).
+      schema: { type: string, pattern: '^[a-z0-9][a-z0-9-]{0,63}$' }
+    Agent:
+      name: agent
+      in: path
+      required: true
+      description: The agent's name (a charter role name, e.g. `settlement`).
+      schema: { type: string, pattern: '^[a-z0-9][a-z0-9._-]{0,63}$' }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Scoped to the calling agent. Replays within 24 hours return the decision's current verdict.
+      schema: { type: string, pattern: '^[A-Za-z0-9._:-]{1,128}$' }
+    Approval:
+      name: X-Approval
+      in: header
+      required: true
+      description: |
+        `kid=<hex sha256 of the approver's SPKI DER>, at=<ISO-8601 time>, sig=<base64url>` where `sig` is Ed25519,
+        under the approver's private key, over the canonical JSON (keys sorted, no whitespace) of
+        `{"v":"plane-approval/1","method":"PUT"|"POST","path":<URL path>,"bodySha256":<hex sha256 of the raw body>,"apiKeyId":<the calling key's id>,"at":<the same time>}`.
+        Valid within 300 s of `at`, once. `signApproval` in `@bsh/plane` produces it.
+      schema: { type: string, maxLength: 512 }
+  responses:
+    BadRequest:
+      description: '`invalid_json`, `invalid_request`, `unsupported_media_type`, `invalid_envelope`, `SETTLEMENT_INVALID`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: '`missing_api_key` / `invalid_api_key`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: '`insufficient_scope`, `org_mismatch`, `approval_required`, `approval_invalid`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: '`rate_limited`.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: { type: string }
+            message: { type: string }
+            requestId: { type: [string, 'null'] }
+    Health:
+      type: object
+      required: [status, version, chains, time]
+      properties:
+        status: { const: ok }
+        version: { type: string }
+        chains: { type: array, items: { $ref: '#/components/schemas/Chain' } }
+        ledger: { type: boolean, description: Whether settlements are reported to a ledger. }
+        time: { type: string, format: date-time }
+    Chain:
+      type: string
+      pattern: '^(evm|tron|ton|solana|btc):[A-Za-z0-9_-]+$'
+      description: '`<family>:<chainId>`. This plane authorizes `btc:mainnet`, `btc:signet` and `btc:testnet`.'
+    Amount:
+      type: string
+      pattern: '^(0|[1-9][0-9]*)$'
+      description: Non-negative integer in base units (satoshis on `btc:` chains), as a decimal string.
+    OperationKind:
+      enum: [transfer, swap, bridge, meter]
+    Impact:
+      enum: [LOW, MEDIUM, HIGH, CRITICAL]
+    DenialCode:
+      enum: [SCOPE_MISSING, NO_ENVELOPE, ENVELOPE_INACTIVE, KIND_NOT_PERMITTED, ASSET_NOT_PERMITTED, DESTINATION_NOT_PERMITTED, PER_TX_CAP, DAILY_CAP, INVALID_AMOUNT, INVALID_RECORD]
+    Payee:
+      type: object
+      additionalProperties: false
+      required: [kind, ref]
+      description: 'Ours (not in FlashyOS''s record): which ledger payee the destination is. Matches `payee:<kind>` entries of an envelope''s destinations. Asserted by the proposer - see the README on why grading exists.'
+      properties:
+        kind: { enum: [artist, club, platform, other] }
+        ref: { type: string, minLength: 1, maxLength: 128 }
+    OperationRecord:
+      type: object
+      additionalProperties: false
+      description: |
+        FlashyOS `operation-record.json` (the shape of tetherto/wdk PR #88), plus the optional `payee`. On `btc:`
+        chains `amount` is satoshis, `asset` is `native`, and `destination` must be a bech32/bech32m segwit address
+        for the network (else DENY `INVALID_RECORD`). Shape problems are DENY `INVALID_RECORD`; a bad amount is DENY
+        `INVALID_AMOUNT` - verdicts, not 400s.
+      required: [kind, chain, asset, amount, destination]
+      properties:
+        kind: { $ref: '#/components/schemas/OperationKind' }
+        chain: { $ref: '#/components/schemas/Chain' }
+        asset: { type: string, minLength: 1, description: 'Exact contract address, or "native".' }
+        amount: { $ref: '#/components/schemas/Amount' }
+        destination: { type: [string, 'null'], minLength: 1, description: 'Exact address; null only for kind swap.' }
+        raw: { type: object, description: The originating call. Opaque to the plane; never used for a decision (only its digest is audited). }
+        payee: { $ref: '#/components/schemas/Payee' }
+    SpendEnvelopeInput:
+      type: object
+      additionalProperties: false
+      description: |
+        FlashyOS `spend-envelope-input.json`, plus `active` and `humanApprovalAtOrAbove` (ours). `destinations`
+        entries are exact addresses or `payee:<kind>` classes (ours). Grading: at or below `autoApproveMax` the
+        impact is LOW; above it (or always, with `alwaysEscalate`) it is `escalationImpact`. The proposal escalates
+        when `alwaysEscalate`, or when its impact is at or above `humanApprovalAtOrAbove` (default MEDIUM, i.e.
+        anything above `autoApproveMax` - FlashyOS's rule). Set `humanApprovalAtOrAbove` from the charter role the
+        agent performs.
+      required: [chain, kinds, assets, destinations, perTxMax, dailyMax, autoApproveMax]
+      properties:
+        chain: { $ref: '#/components/schemas/Chain' }
+        kinds: { type: array, uniqueItems: true, items: { $ref: '#/components/schemas/OperationKind' } }
+        assets: { type: array, uniqueItems: true, items: { type: string, minLength: 1 } }
+        destinations:
+          type: array
+          uniqueItems: true
+          maxItems: 1000
+          items: { type: string, minLength: 1 }
+          description: Exact addresses, or `payee:artist | payee:club | payee:platform | payee:other`. Empty means no destination is permitted.
+        perTxMax: { $ref: '#/components/schemas/Amount' }
+        dailyMax: { $ref: '#/components/schemas/Amount' }
+        autoApproveMax: { $ref: '#/components/schemas/Amount' }
+        alwaysEscalate: { type: boolean, default: false }
+        escalationImpact: { enum: [MEDIUM, HIGH, CRITICAL], default: MEDIUM }
+        delegable: { const: false, description: 'Delegation (FlashyOS Phase 10) is not implemented; only false is accepted.' }
+        active: { type: boolean, default: true, description: Ours. An inactive envelope refuses everything (`ENVELOPE_INACTIVE`). }
+        humanApprovalAtOrAbove: { $ref: '#/components/schemas/Impact', description: 'Ours: the charter role''s threshold.' }
+    SpendEnvelope:
+      type: object
+      required: [orgId, agentName, chain, kinds, assets, destinations, perTxMax, dailyMax, autoApproveMax, alwaysEscalate, escalationImpact, active, version, setAt, setBy, supersededAt]
+      properties:
+        orgId: { type: string }
+        agentName: { type: string }
+        chain: { $ref: '#/components/schemas/Chain' }
+        kinds: { type: array, items: { $ref: '#/components/schemas/OperationKind' } }
+        assets: { type: array, items: { type: string } }
+        destinations: { type: array, items: { type: string } }
+        perTxMax: { $ref: '#/components/schemas/Amount' }
+        dailyMax: { $ref: '#/components/schemas/Amount' }
+        autoApproveMax: { $ref: '#/components/schemas/Amount' }
+        alwaysEscalate: { type: boolean }
+        escalationImpact: { enum: [MEDIUM, HIGH, CRITICAL] }
+        humanApprovalAtOrAbove: { $ref: '#/components/schemas/Impact' }
+        active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        setAt: { type: string, format: date-time }
+        setBy:
+          type: object
+          required: [apiKeyId, approver]
+          properties:
+            apiKeyId: { type: string }
+            approver: { type: string, description: The approver's name from the plane's configuration. }
+            approverKid: { type: string }
+        supersededAt: { type: [string, 'null'], format: date-time }
+    EnvelopeList:
+      type: object
+      required: [orgId, agentName, envelopes]
+      properties:
+        orgId: { type: string }
+        agentName: { type: string }
+        envelopes: { type: array, items: { $ref: '#/components/schemas/SpendEnvelope' } }
+    SpendAuthorization:
+      type: object
+      additionalProperties: false
+      description: FlashyOS `spend-authorization.json`, unchanged. Single use, 300 s, Ed25519 over the canonical JSON without `sig`, under the plane's active key.
+      required: [id, orgId, agentName, chain, kind, asset, maxAmount, destination, reservationId, decisionId, issuedAt, expiresAt, sig]
+      properties:
+        id: { type: string, minLength: 1, description: The nonce. Single use. }
+        orgId: { type: string, minLength: 1 }
+        agentName: { type: string, minLength: 1 }
+        chain: { $ref: '#/components/schemas/Chain' }
+        kind: { $ref: '#/components/schemas/OperationKind' }
+        asset: { type: string, minLength: 1 }
+        maxAmount: { $ref: '#/components/schemas/Amount' }
+        destination: { type: [string, 'null'], minLength: 1 }
+        reservationId: { type: string, minLength: 1 }
+        decisionId: { type: string, minLength: 1 }
+        issuedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        sig: { type: string, minLength: 1 }
+    Verdict:
+      description: FlashyOS `verdict.json` plus `reasons` on every verdict, `impact` on ALLOW, `decisionId` on DENY and `replayed` on an idempotent replay.
+      oneOf:
+        - type: object
+          required: [verdict, authorization, decisionId, reasons, impact]
+          properties:
+            verdict: { const: ALLOW }
+            authorization: { $ref: '#/components/schemas/SpendAuthorization' }
+            decisionId: { type: string }
+            impact: { $ref: '#/components/schemas/Impact' }
+            reasons: { type: array, items: { type: string } }
+            replayed: { type: boolean }
+        - type: object
+          required: [verdict, decisionId, reservationId, impact, reasons]
+          properties:
+            verdict: { const: ESCALATE }
+            decisionId: { type: string }
+            reservationId: { type: string }
+            impact: { enum: [LOW, MEDIUM, HIGH, CRITICAL] }
+            reasons: { type: array, items: { type: string } }
+            replayed: { type: boolean }
+        - type: object
+          required: [verdict, code, reason, reasons, decisionId]
+          properties:
+            verdict: { const: DENY }
+            code: { $ref: '#/components/schemas/DenialCode' }
+            reason: { type: string }
+            reasons: { type: array, items: { type: string } }
+            decisionId: { type: string }
+            replayed: { type: boolean }
+    LedgerObservation:
+      type: object
+      additionalProperties: false
+      description: 'What `POST /v1/payments/{id}/observations` of contracts/openapi/ledger.yaml takes, plus the payment id.'
+      required: [paymentId, outputs]
+      properties:
+        paymentId: { type: string, pattern: '^pay_[A-Za-z0-9-]+$' }
+        outputs:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            type: object
+            required: [scriptHex, valueSats]
+            properties:
+              scriptHex: { type: string, pattern: '^([0-9a-f]{2}){1,520}$' }
+              valueSats: { type: integer, minimum: 0 }
+        confirmations: { type: integer, minimum: 0 }
+        rbfSignalled: { type: boolean }
+    SettleRequest:
+      type: object
+      additionalProperties: false
+      required: [authorizationId, outcome, txHash]
+      properties:
+        authorizationId: { type: string, minLength: 1 }
+        outcome: { enum: [CONFIRMED, REVERTED] }
+        txHash: { type: string, minLength: 1, maxLength: 256 }
+        ledger: { $ref: '#/components/schemas/LedgerObservation' }
+    AuthorizationView:
+      type: object
+      required: [id, orgId, agentName, chain, kind, asset, maxAmount, destination, status, decisionId, reservationId, issuedAt, expiresAt, spentAt, txHash]
+      properties:
+        id: { type: string }
+        orgId: { type: string }
+        agentName: { type: string }
+        chain: { $ref: '#/components/schemas/Chain' }
+        kind: { type: string }
+        asset: { type: string }
+        maxAmount: { $ref: '#/components/schemas/Amount' }
+        destination: { type: [string, 'null'] }
+        status: { enum: [ISSUED, SPENT, EXPIRED, REVOKED] }
+        decisionId: { type: string }
+        reservationId: { type: string }
+        issuedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        spentAt: { type: [string, 'null'], format: date-time }
+        txHash: { type: [string, 'null'] }
+    SettleResponse:
+      type: object
+      required: [authorization, reservation, anomaly]
+      properties:
+        authorization: { $ref: '#/components/schemas/AuthorizationView' }
+        reservation:
+          type: object
+          required: [id, status]
+          properties:
+            id: { type: string }
+            status: { enum: [RESERVED, COMMITTED, RELEASED] }
+        anomaly: { type: [string, 'null'], description: '`EXPIRED_BEFORE_SETTLE` when the chain confirmed after the authorization''s window.' }
+        replayed: { type: boolean }
+        ledger:
+          type: object
+          required: [recorded]
+          properties:
+            recorded: { type: boolean }
+            applied: { type: boolean }
+            reason: { type: string }
+            error: { type: string }
+    Decision:
+      type: object
+      required: [id, orgId, agentName, status, verdict, impact, reasons, record, createdAt]
+      properties:
+        id: { type: string }
+        orgId: { type: string }
+        agentName: { type: string }
+        status: { enum: [AUTO_APPROVED, PENDING, APPROVED, REJECTED, DENIED, EXPIRED] }
+        verdict: { enum: [ALLOW, ESCALATE, DENY] }
+        code: { $ref: '#/components/schemas/DenialCode' }
+        impact: { $ref: '#/components/schemas/Impact' }
+        reasons: { type: array, items: { type: string } }
+        record: { type: object }
+        reservationId: { type: string }
+        authorizationId: { type: string }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time }
+        resolvedBy: { type: string }
+    ResolveRequest:
+      type: object
+      additionalProperties: false
+      required: [resolution]
+      properties:
+        resolution: { enum: [APPROVED, REJECTED] }
+        note: { type: string, maxLength: 1000 }
+    ResolveResponse:
+      type: object
+      required: [decision]
+      properties:
+        decision: { $ref: '#/components/schemas/Decision' }
+        authorization: { $ref: '#/components/schemas/SpendAuthorization' }
+    AuditEntry:
+      type: object
+      description: FlashyOS `ProvenanceEntry` (Phase 20) with our kinds.
+      required: [seq, at, kind, id, data, prev, hash]
+      properties:
+        seq: { type: integer, minimum: 0 }
+        at: { type: string, format: date-time }
+        kind: { enum: [decision, authorization, settlement, resolution, envelope, expiry] }
+        id: { type: string }
+        data: { type: object }
+        prev: { type: string, pattern: '^[0-9a-f]{64}$' }
+        hash: { type: string, pattern: '^[0-9a-f]{64}$' }
+    AuditHead:
+      type: object
+      description: The newest entry, signed with the plane's active key over the canonical JSON of every member but `sig`.
+      required: [version, org, seq, hash, at, kid, sig]
+      properties:
+        version: { const: 1 }
+        org: { type: string }
+        seq: { type: integer, minimum: 0 }
+        hash: { type: string, pattern: '^[0-9a-f]{64}$' }
+        at: { type: string, format: date-time }
+        kid: { type: string, pattern: '^[0-9a-f]{64}$' }
+        sig: { type: string }
+    AuditLog:
+      type: object
+      required: [org, entries, head]
+      properties:
+        org: { type: string }
+        entries: { type: array, items: { $ref: '#/components/schemas/AuditEntry' } }
+        head: { oneOf: [{ $ref: '#/components/schemas/AuditHead' }, { type: 'null' }] }
+        next: { type: integer, description: 'Present when more entries follow: pass it as `since`.' }
+    PlaneKey:
+      type: object
+      required: [kid, publicKey, status]
+      properties:
+        kid: { type: string, pattern: '^[0-9a-f]{64}$' }
+        publicKey: { type: string, description: SPKI PEM. }
+        status: { enum: [active, retired] }
+    PlaneDocument:
+      type: object
+      description: FlashyOS `PlaneDocument` (interop.ts, Phase 23), built and validated by `@bsh/mesh`.
+      required: [version, plane, keys, chains, schemas, generatedAt]
+      properties:
+        version: { const: 1 }
+        plane:
+          type: object
+          required: [name, url]
+          properties:
+            name: { type: string, minLength: 1 }
+            url: { type: [string, 'null'] }
+        keys: { type: array, minItems: 1, items: { $ref: '#/components/schemas/PlaneKey' } }
+        chains: { type: array, items: { $ref: '#/components/schemas/Chain' } }
+        schemas: { type: array, items: { type: string, minLength: 1 } }
+        generatedAt: { type: string, format: date-time }

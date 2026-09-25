@@ -25,6 +25,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@bsh/plane": "workspace:*",
     "@noble/curves": "^2.4.0",
     "@scure/btc-signer": "^2.4.1",
     "@types/node": "^22",

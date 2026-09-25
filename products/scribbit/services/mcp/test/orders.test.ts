@@ -2,7 +2,23 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import * as btc from '@scure/btc-signer';
 import { secp256k1 } from '@noble/curves/secp256k1.js';
 import * as ins from '@bsh/inscription';
-import { createLedgerClient, quoteInscription, QUOTE_TTL_MS, TOOLS, type CreateOrderResult, type GetOrderResult, type GetReceiptResult, type ReportFundingResult, type ScribbitMcpPorts } from '../src/index.js';
+import {
+  createLedgerClient,
+  planeIdempotencyKey,
+  PlaneClientError,
+  quoteInscription,
+  QUOTE_TTL_MS,
+  TOOLS,
+  type CreateOrderResult,
+  type GetOrderResult,
+  type GetReceiptResult,
+  type PlaneAgent,
+  type PlaneClient,
+  type PlaneRecord,
+  type PlaneVerdict,
+  type ReportFundingResult,
+  type ScribbitMcpPorts,
+} from '../src/index.js';
 import { FakeLedger } from './fake-ledger.js';
 import { bytes, connect, expectSchemaError, fakeProvider, hex, PARENT_ID, PRIV, PUB, type ErrBody, type Harness } from './helpers.js';
 
@@ -35,6 +51,32 @@ const base = () => ({
     { kind: 'club', ref: 'the-club', address: CLUB, bps: 250 },
   ],
 });
+
+/** A plane test double: answers `propose` from a queue (or a function), and records every call. */
+function fakePlane(agents: Record<string, PlaneAgent>, answer: PlaneVerdict[] | ((record: PlaneRecord, callIndex: number) => PlaneVerdict)): PlaneClient & { calls: Array<{ agent: PlaneAgent; record: PlaneRecord; idempotencyKey: string | undefined }> } {
+  const calls: Array<{ agent: PlaneAgent; record: PlaneRecord; idempotencyKey: string | undefined }> = [];
+  return {
+    org: 'scribbit',
+    calls,
+    agentFor: (ownerId) => (ownerId !== undefined ? agents[ownerId] : undefined),
+    async propose(agent, record, idempotencyKey) {
+      calls.push({ agent, record, idempotencyKey });
+      const i = calls.length - 1;
+      return typeof answer === 'function' ? answer(record, i) : (answer[i] ?? answer.at(-1)!);
+    },
+  };
+}
+
+const allowVerdict = (id: string, maxAmount: string, destination: string): PlaneVerdict => ({
+  verdict: 'ALLOW',
+  decisionId: id,
+  reasons: ['destination permitted (exact address)', 'amount <= autoApproveMax: impact LOW'],
+  authorization: { id: `auth_${id}`, maxAmount, destination, expiresAt: '2026-09-25T12:05:00.000Z' },
+});
+const escalateVerdict = (id: string, ...reasons: string[]): PlaneVerdict => ({ verdict: 'ESCALATE', decisionId: id, impact: 'MEDIUM', reasons });
+const denyVerdict = (id: string, code: string, reason: string): PlaneVerdict => ({ verdict: 'DENY', decisionId: id, code, reason, reasons: [reason] });
+
+const AGENT: PlaneAgent = { agent: 'mint-bot', apiKey: 'bsh_live_agentkey' };
 
 describe('order tools over the ledger (in-memory fake, contract-validated)', () => {
   let fake: FakeLedger;
@@ -318,5 +360,138 @@ describe('order tools over the ledger (in-memory fake, contract-validated)', () 
     expect(byName.report_funding!.scopes).toEqual(['mcp:order', 'mcp:settle']);
     expect(byName.get_order!.scopes).toEqual(['mcp:quote', 'mcp:order', 'mcp:settle']);
     expect(byName.get_receipt!.annotations.readOnlyHint).toBe(true);
+  });
+});
+
+describe('the authorization plane (create_order, report_funding)', () => {
+  let fake: FakeLedger;
+  const basePorts = () => ({ fees: { regtest: fakeProvider(NET) } }) as ScribbitMcpPorts;
+
+  beforeEach(() => {
+    fake = new FakeLedger();
+  });
+
+  const connectWith = async (plane: PlaneClient | undefined, ownerId: string | undefined) => {
+    const ports: ScribbitMcpPorts = { ...basePorts(), ledger: createLedgerClient({ baseUrl: fake.baseUrl, apiKey: fake.apiKey, fetch: fake.fetch }), now: fake.now, ...(plane ? { plane } : {}), ...(ownerId !== undefined ? { ownerId } : {}) };
+    return { h: await connect(ports), ports };
+  };
+
+  it('a caller not mapped to a plane agent is not governed: no plane field, propose is never called', async () => {
+    const plane = fakePlane({ 'owner-x': AGENT }, [allowVerdict('dec_1', '10000', ARTIST.toLowerCase())]);
+    const { h } = await connectWith(plane, 'owner-unmapped');
+    const r = await h.call<CreateOrderResult>('create_order', base());
+    expect(r.isError, JSON.stringify(r.data)).toBe(false);
+    expect(r.data.plane).toBeUndefined();
+    expect(r.data.escalated).toBeUndefined();
+    expect(plane.calls).toHaveLength(0);
+    await h.close();
+  });
+
+  it('ALLOW: create_order proposes one record per payee share, in order, with the record the plane document specifies', async () => {
+    const plane = fakePlane({ owner1: AGENT }, [allowVerdict('dec_1', '10000', ARTIST.toLowerCase()), allowVerdict('dec_2', '2500', CLUB.toLowerCase())]);
+    const { h } = await connectWith(plane, 'owner1');
+    const r = await h.call<CreateOrderResult>('create_order', base());
+    expect(r.isError, JSON.stringify(r.data)).toBe(false);
+    expect(r.data.escalated).toBe(false);
+    expect(r.data.plane).toMatchObject({ org: 'scribbit', agent: 'mint-bot', escalated: false, reasons: [] });
+    expect(r.data.plane!.verdicts).toEqual([
+      { payee: { kind: 'artist', ref: 'artist-7' }, verdict: 'ALLOW', decisionId: 'dec_1', reasons: expect.any(Array), authorizationId: 'auth_dec_1', expiresAt: '2026-09-25T12:05:00.000Z' },
+      { payee: { kind: 'club', ref: 'the-club' }, verdict: 'ALLOW', decisionId: 'dec_2', reasons: expect.any(Array), authorizationId: 'auth_dec_2', expiresAt: '2026-09-25T12:05:00.000Z' },
+    ]);
+    expect(plane.calls).toHaveLength(2);
+    expect(plane.calls[0]!.agent).toEqual(AGENT);
+    expect(plane.calls[0]!.record).toEqual({ kind: 'transfer', chain: 'btc:regtest', asset: 'native', amount: '10000', destination: ARTIST.toLowerCase(), payee: { kind: 'artist', ref: 'artist-7' }, raw: { source: 'scribbit-mcp', contentSha256: SHA, commitAddress: COMMIT } });
+    expect(plane.calls[1]!.record).toMatchObject({ amount: '2500', destination: CLUB.toLowerCase(), payee: { kind: 'club', ref: 'the-club' } });
+    // the order reaches the ledger only after the plane authorizes every share
+    expect(fake.orders.size).toBe(1);
+    await h.close();
+  });
+
+  it('ESCALATE: the order is still created, escalated is true, and next names the decision the plane holds', async () => {
+    const plane = fakePlane({ owner1: AGENT }, [escalateVerdict('dec_esc', 'first payment to this destination: a person confirms'), allowVerdict('dec_2', '2500', CLUB.toLowerCase())]);
+    const { h } = await connectWith(plane, 'owner1');
+    const r = await h.call<CreateOrderResult>('create_order', base());
+    expect(r.isError, JSON.stringify(r.data)).toBe(false);
+    expect(r.data.escalated).toBe(true);
+    expect(r.data.plane!.escalated).toBe(true);
+    expect(r.data.plane!.reasons.join(' ')).toMatch(/dec_esc.*a person confirms/);
+    expect(r.data.next).toMatch(/^ESCALATED: a person must approve decision\(s\) dec_esc on the authorization plane \(scribbit\)/);
+    expect(fake.orders.size).toBe(1); // ESCALATE is reported, not refused
+    await h.close();
+  });
+
+  it('DENY: create_order fails closed with plane_denied and nothing reaches the ledger', async () => {
+    const plane = fakePlane({ owner1: AGENT }, [allowVerdict('dec_1', '10000', ARTIST.toLowerCase()), denyVerdict('dec_2', 'DESTINATION_NOT_PERMITTED', 'destination is on the denylist')]);
+    const { h } = await connectWith(plane, 'owner1');
+    const r = await h.call<ErrBody>('create_order', base());
+    expect(r.isError).toBe(true);
+    expect(r.data.error.code).toBe('plane_denied');
+    expect(r.data.error.message).toMatch(/denied paying 2500 sats to club:the-club: destination is on the denylist/);
+    expect(r.data.error.details).toMatchObject({ code: 'DESTINATION_NOT_PERMITTED', decisionId: 'dec_2', payee: { kind: 'club', ref: 'the-club' }, agent: 'mint-bot' });
+    expect(plane.calls).toHaveLength(2); // the first share was checked before the denying second stopped the loop
+    expect(fake.orders.size).toBe(0); // nothing was sent to the ledger
+    await h.close();
+  });
+
+  it('an unreachable plane fails closed as plane_denied too (never as a silent allow)', async () => {
+    const plane: PlaneClient & { calls: unknown[] } = {
+      org: 'scribbit',
+      calls: [],
+      agentFor: (ownerId) => (ownerId === 'owner1' ? AGENT : undefined),
+      propose: async () => {
+        throw new PlaneClientError(0, 'PLANE_UNAVAILABLE', 'authorization plane unreachable: fetch failed');
+      },
+    };
+    const { h } = await connectWith(plane, 'owner1');
+    const r = await h.call<ErrBody>('create_order', base());
+    expect(r.isError).toBe(true);
+    expect(r.data.error.code).toBe('plane_denied');
+    expect(r.data.error.message).toMatch(/PLANE_UNAVAILABLE/);
+    expect(fake.orders.size).toBe(0);
+    await h.close();
+  });
+
+  it('report_funding proposes the order line items to the plane, with the same Idempotency-Key create_order used', async () => {
+    const create = fakePlane({ owner1: AGENT }, [allowVerdict('dec_1', '10000', ARTIST.toLowerCase()), allowVerdict('dec_2', '2500', CLUB.toLowerCase())]);
+    const { h } = await connectWith(create, 'owner1');
+    const created = (await h.call<CreateOrderResult>('create_order', base())).data;
+    const outputs = [
+      { scriptHex: script(P2WPKH), valueSats: 250_000 },
+      ...created.expectedOutputs.map((o) => ({ scriptHex: o.scriptHex, valueSats: o.valueSats })),
+    ];
+
+    const report = fakePlane({ owner1: AGENT }, [allowVerdict('dec_3', '10000', ARTIST.toLowerCase()), allowVerdict('dec_4', '2500', CLUB.toLowerCase())]);
+    const { h: h2 } = await connectWith(report, 'owner1');
+    const r = await h2.call<ReportFundingResult>('report_funding', { orderId: created.orderId, txid: TXID, outputs, confirmations: 1 });
+    expect(r.isError, JSON.stringify(r.data)).toBe(false);
+    expect(r.data.escalated).toBe(false);
+    expect(r.data.plane!.verdicts.map((v) => v.payee)).toEqual([{ kind: 'artist', ref: 'artist-7' }, { kind: 'club', ref: 'the-club' }]);
+    // create_order and report_funding derive the same plane Idempotency-Key from the same order facts
+    expect(report.calls[0]!.idempotencyKey).toBe(create.calls[0]!.idempotencyKey);
+    expect(report.calls[1]!.idempotencyKey).toBe(create.calls[1]!.idempotencyKey);
+    expect(report.calls[0]!.idempotencyKey).toBe(planeIdempotencyKey(NET, { contentSha256: SHA, commitAddress: COMMIT }, { kind: 'artist', ref: 'artist-7', address: ARTIST, amountSats: 10_000 }));
+    await h.close();
+    await h2.close();
+  });
+
+  it('DENY on report_funding fails closed before the funding observation reaches the ledger', async () => {
+    const create = fakePlane({ owner1: AGENT }, [allowVerdict('dec_1', '10000', ARTIST.toLowerCase()), allowVerdict('dec_2', '2500', CLUB.toLowerCase())]);
+    const { h } = await connectWith(create, 'owner1');
+    const created = (await h.call<CreateOrderResult>('create_order', base())).data;
+    const outputs = [
+      { scriptHex: script(P2WPKH), valueSats: 250_000 },
+      ...created.expectedOutputs.map((o) => ({ scriptHex: o.scriptHex, valueSats: o.valueSats })),
+    ];
+
+    const report = fakePlane({ owner1: AGENT }, [denyVerdict('dec_deny', 'DAILY_CAP', "today's cap is spent")]);
+    const { h: h2 } = await connectWith(report, 'owner1');
+    const r = await h2.call<ErrBody>('report_funding', { orderId: created.orderId, txid: TXID, outputs, confirmations: 1 });
+    expect(r.isError).toBe(true);
+    expect(r.data.error.code).toBe('plane_denied');
+    expect(fake.requests.some((q) => q.path.includes('/observations'))).toBe(false); // the observation never reached the ledger
+    const order = await h.call<GetOrderResult>('get_order', { orderId: created.orderId });
+    expect(order.data.status).toEqual({ order: 'awaiting_payment', payment: 'created' }); // unaffected
+    await h.close();
+    await h2.close();
   });
 });

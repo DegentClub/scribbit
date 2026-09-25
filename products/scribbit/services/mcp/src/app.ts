@@ -214,7 +214,7 @@ export function createApp(opts: AppOptions): Hono {
   app.post('/mcp', async (c) => {
     const principal = c.get('apiKey');
     // A key restricts the caller to its scopes; an anonymous caller (MCP_REQUIRE_API_KEY=false, local dev) is unrestricted.
-    const server = createScribbitMcpServer(principal ? { ...basePorts, scopes: principal.scopes } : basePorts);
+    const server = createScribbitMcpServer(principal ? { ...basePorts, scopes: principal.scopes, ...(principal.ownerId !== undefined ? { ownerId: principal.ownerId } : {}) } : basePorts);
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // stateless: no Mcp-Session-Id, every request is self-contained
       enableJsonResponse: true, // tools answer synchronously; JSON bodies are simpler for clients and proxies

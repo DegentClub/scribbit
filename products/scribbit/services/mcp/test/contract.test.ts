@@ -130,7 +130,7 @@ describe('HTTP surface (contracts/openapi/scribbit-mcp.yaml)', () => {
   it('ToolError enum covers every code the tools emit', () => {
     const schema = validator('ToolError').schema as { properties: { error: { properties: { code: { enum: string[] } } } } };
     expect(schema.properties.error.properties.code.enum.sort()).toEqual(
-      ['invalid_input', 'content_too_large', 'content_hash_mismatch', 'too_large', 'invalid_psbt', 'fees_unavailable', 'fee_rate_required', 'unsupported_network', 'forbidden_scope', 'ledger_unavailable', 'ledger_rejected', 'order_not_found', 'internal'].sort(),
+      ['invalid_input', 'content_too_large', 'content_hash_mismatch', 'too_large', 'invalid_psbt', 'fees_unavailable', 'fee_rate_required', 'unsupported_network', 'forbidden_scope', 'ledger_unavailable', 'ledger_rejected', 'order_not_found', 'plane_denied', 'internal'].sort(),
     );
   });
 });

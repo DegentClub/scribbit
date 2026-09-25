@@ -13,6 +13,7 @@
 /contracts/asyncapi/ledger.yaml                   @DegentClub/team-platform
 /contracts/asyncapi/platform-events.yaml          @DegentClub/team-platform
 /contracts/openapi/ledger.yaml                    @DegentClub/team-platform
+/contracts/openapi/plane.yaml                     @DegentClub/team-platform
 /contracts/openapi/scribbit-fees.yaml             @DegentClub/team-scribbit
 /contracts/openapi/scribbit-mcp.yaml              @DegentClub/team-scribbit
 /contracts/openapi/scribbit-mint-api.yaml         @DegentClub/team-scribbit
@@ -24,6 +25,7 @@
 /platform/ledger/                                 @DegentClub/team-platform
 /platform/mesh/                                   @DegentClub/team-platform
 /platform/notify/                                 @DegentClub/team-platform
+/platform/plane/                                  @DegentClub/team-platform
 /platform/signer/                                 @DegentClub/team-platform
 /platform/wallet-kit/                             @DegentClub/team-platform
 /products/scribbit/apps/cli/                      @DegentClub/team-scribbit

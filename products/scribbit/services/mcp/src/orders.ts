@@ -5,10 +5,12 @@
  * agent saw on the network; `get_order` / `get_receipt` read. Nothing here builds, signs, holds or broadcasts
  * anything: the ledger records what the chain shows, and the server never sees a key or a PSBT.
  */
+import { createHash } from 'node:crypto';
 import { addressToScript, type Network } from '@bsh/inscription';
 import { parseNetwork, recipientScriptFor, scriptKind } from './content.js';
 import { invalid, ToolError } from './errors.js';
 import { LedgerClientError, type LedgerExpectedOutput, type LedgerLineItem, type LedgerOrder, type LedgerPayee, type LedgerPayeeKind, type LedgerPayment, type LedgerPayout, type LedgerReceipt } from './ledger-client.js';
+import { PlaneClientError, type PlaneRecord, type PlaneVerdict } from './plane-client.js';
 import { quoteInscription, type QuoteResult, type ScribbitMcpPorts } from './tools.js';
 
 export const PAYEE_KINDS: readonly LedgerPayeeKind[] = ['artist', 'club', 'platform', 'other'];
@@ -43,6 +45,92 @@ function ledgerError(e: unknown, what: string): ToolError {
 }
 
 const now = (ports: ScribbitMcpPorts) => ports.now?.() ?? new Date();
+
+// ------------------------------------------------------------------------------------------ the authorization plane
+
+/** One payee share an agent's funding transaction pays: what the plane is asked to authorize. */
+export interface PayeeSpend {
+  kind: string;
+  ref: string;
+  address: string;
+  amountSats: number;
+}
+
+export interface PlaneVerdictView {
+  payee: { kind: string; ref: string };
+  verdict: PlaneVerdict['verdict'];
+  decisionId: string;
+  impact?: string;
+  authorizationId?: string;
+  expiresAt?: string;
+  replayed?: boolean;
+  reasons: string[];
+}
+
+/** What the plane said about an order's payee shares (present only when the caller's key is governed by a plane). */
+export interface PlaneOutcome {
+  org: string;
+  agent: string;
+  escalated: boolean;
+  /** Why a person must decide (ESCALATE verdicts), one line per reason. */
+  reasons: string[];
+  verdicts: PlaneVerdictView[];
+}
+
+/**
+ * The plane's Idempotency-Key for one share of one order: create_order and report_funding derive the same key from
+ * the same facts, so report_funding re-reads the verdict create_order got (after a person approved it, say) instead
+ * of reserving the budget twice.
+ */
+export function planeIdempotencyKey(network: string, context: { contentSha256?: string | undefined; commitAddress?: string | undefined }, s: PayeeSpend): string {
+  const facts = [network, context.contentSha256 ?? '', context.commitAddress ?? '', s.kind, s.ref, s.address.toLowerCase(), String(s.amountSats)].join('\n');
+  return `scribbit-mcp:${createHash('sha256').update(facts).digest('hex')}`;
+}
+
+/**
+ * Asks the plane to authorize every payee share, in order. DENY (or a plane that cannot answer: fail closed) is a
+ * `plane_denied` error and nothing reaches the ledger; ESCALATE is reported, not refused. Undefined when no plane is
+ * configured or the caller's key is not mapped to a plane agent.
+ */
+export async function planeCheck(ports: ScribbitMcpPorts, network: Network, spends: readonly PayeeSpend[], context: { contentSha256?: string | undefined; commitAddress?: string | undefined }, tool: string): Promise<PlaneOutcome | undefined> {
+  const plane = ports.plane;
+  if (!plane || spends.length === 0) return undefined;
+  const agent = plane.agentFor(ports.ownerId);
+  if (!agent) return undefined;
+  const raw: Record<string, unknown> = { source: 'scribbit-mcp' };
+  if (context.contentSha256) raw.contentSha256 = context.contentSha256;
+  if (context.commitAddress) raw.commitAddress = context.commitAddress;
+  const verdicts: PlaneVerdictView[] = [];
+  const reasons: string[] = [];
+  for (const s of spends) {
+    const payee = { kind: s.kind, ref: s.ref };
+    const record: PlaneRecord = { kind: 'transfer', chain: `btc:${network}`, asset: 'native', amount: String(s.amountSats), destination: s.address.toLowerCase(), payee, raw };
+    let v: PlaneVerdict;
+    try {
+      v = await plane.propose(agent, record, planeIdempotencyKey(network, context, s));
+    } catch (e) {
+      if (e instanceof PlaneClientError)
+        throw new ToolError('plane_denied', `${tool}: the authorization plane did not authorize paying ${s.amountSats} sats to ${s.kind}:${s.ref} (${e.code}: ${e.message}); nothing was sent to the ledger`, { code: e.code, status: e.status, payee, agent: agent.agent });
+      throw e;
+    }
+    if (v.verdict === 'DENY')
+      throw new ToolError('plane_denied', `${tool}: the authorization plane denied paying ${s.amountSats} sats to ${s.kind}:${s.ref}: ${v.reason ?? v.code ?? 'denied'}; nothing was sent to the ledger`, { code: v.code, reasons: v.reasons, decisionId: v.decisionId, payee, agent: agent.agent });
+    verdicts.push({
+      payee,
+      verdict: v.verdict,
+      decisionId: v.decisionId,
+      reasons: v.reasons,
+      ...(v.impact !== undefined ? { impact: v.impact } : {}),
+      ...(v.authorization ? { authorizationId: v.authorization.id, expiresAt: v.authorization.expiresAt } : {}),
+      ...(v.replayed ? { replayed: true } : {}),
+    });
+    if (v.verdict === 'ESCALATE') for (const r of v.reasons) reasons.push(`${s.kind}:${s.ref} (${v.decisionId}): ${r}`);
+  }
+  return { org: plane.org, agent: agent.agent, escalated: verdicts.some((v) => v.verdict === 'ESCALATE'), reasons, verdicts };
+}
+
+const escalatedNext = (o: PlaneOutcome): string =>
+  `ESCALATED: a person must approve decision(s) ${o.verdicts.filter((v) => v.verdict === 'ESCALATE').map((v) => v.decisionId).join(', ')} on the authorization plane (${o.org}) before these payee shares may be paid. `;
 
 // ------------------------------------------------------------------------------------------ create_order
 
@@ -102,6 +190,9 @@ export interface CreateOrderResult extends Record<string, unknown> {
   expiresAt: string | null;
   warnings: string[];
   next: string;
+  /** Present when the caller's key is governed by the authorization plane. */
+  escalated?: boolean;
+  plane?: PlaneOutcome;
 }
 
 const outputView = (o: LedgerExpectedOutput): ExpectedOutputView => ({
@@ -169,6 +260,9 @@ export async function createOrder(input: CreateOrderInput, ports: ScribbitMcpPor
   );
   const commitValueSats = quote.fees.commitValue;
   const commitAddress = input.commitAddress.trim();
+  const contentSha256 = quote.contentSha256 ?? input.contentSha256.trim().toLowerCase();
+  // Before anything reaches the ledger: a governed agent's payee shares go through the plane's five checks.
+  const plane = await planeCheck(ports, network, payees.map((p) => ({ kind: p.kind, ref: p.ref, address: p.address, amountSats: p.shareSats })), { contentSha256, commitAddress }, 'create_order');
   const lineItems: LedgerLineItem[] = [
     {
       sku: NETWORK_COST_SKU,
@@ -188,7 +282,7 @@ export async function createOrder(input: CreateOrderInput, ports: ScribbitMcpPor
   const t = now(ports);
   const quoteExpiresAt = new Date(t.getTime() + QUOTE_TTL_MS).toISOString();
   const metadata: Record<string, string> = {
-    contentSha256: quote.contentSha256 ?? input.contentSha256.trim().toLowerCase(),
+    contentSha256,
     contentType: quote.contentType,
     contentLength: String(input.contentLength),
     network,
@@ -237,7 +331,8 @@ export async function createOrder(input: CreateOrderInput, ports: ScribbitMcpPor
     expiresAt: payment.expiresAt,
     // The order is size-only by design (the bytes were committed by commit_address); that quote warning does not apply.
     warnings: [...quote.warnings.filter((w) => !w.startsWith('size-only quote')), ...payeeWarnings],
-    next: `Build a funding PSBT in your own wallet that pays every expectedOutput exactly (scriptHex and valueSats; ${commitValueSats} sats to the commit address ${commitAddress}), sign and broadcast it yourself, then call report_funding with the txid and every output. Then build the half-signed reveal with @bsh/inscription and hand it to the scribb.it mint service. Nothing here has moved funds.`,
+    ...(plane ? { escalated: plane.escalated, plane } : {}),
+    next: `${plane?.escalated ? escalatedNext(plane) : ''}Build a funding PSBT in your own wallet that pays every expectedOutput exactly (scriptHex and valueSats; ${commitValueSats} sats to the commit address ${commitAddress}), sign and broadcast it yourself, then call report_funding with the txid and every output. Then build the half-signed reveal with @bsh/inscription and hand it to the scribb.it mint service. Nothing here has moved funds.`,
   };
 }
 
@@ -358,6 +453,9 @@ export interface ReportFundingResult extends Record<string, unknown> {
   settlements: unknown[] | null;
   payouts: PayoutView[];
   next: string;
+  /** Present when the caller's key is governed by the authorization plane. */
+  escalated?: boolean;
+  plane?: PlaneOutcome;
 }
 
 export function validateObservation(input: Pick<ReportFundingInput, 'txid' | 'outputs' | 'confirmations' | 'rbfSignalled'>): { txid: string; outputs: Array<{ scriptHex: string; valueSats: number }>; confirmations: number; rbfSignalled: boolean } {
@@ -414,6 +512,21 @@ export async function reportFunding(input: ReportFundingInput, ports: ScribbitMc
     throw ledgerError(e, `finding the payment of order ${orderId}`);
   }
   if (payment.method !== 'psbt') throw new ToolError('ledger_rejected', `payment ${payment.id} is a ${payment.method} payment; only psbt payments are settled by reporting a transaction`, { code: 'not_observable' });
+  // A governed agent reporting that it funded an order: the plane re-reads (same Idempotency-Key) or decides the
+  // payee shares; a DENY stops the report before it reaches the ledger.
+  let plane: PlaneOutcome | undefined;
+  if (ports.plane?.agentFor(ports.ownerId)) {
+    let order: LedgerOrder;
+    try {
+      order = await ledger.getOrder(orderId);
+    } catch (e) {
+      throw ledgerError(e, `reading order ${orderId}`);
+    }
+    const spends = order.lineItems
+      .filter((li) => li.sku.startsWith('share:') && li.payee?.address)
+      .map((li) => ({ kind: li.payee!.kind, ref: li.payee!.ref, address: li.payee!.address!, amountSats: li.unitSats * li.quantity }));
+    plane = await planeCheck(ports, parseNetwork(order.metadata.network), spends, { contentSha256: order.metadata.contentSha256, commitAddress: order.metadata.commitAddress }, 'report_funding');
+  }
   let res: Awaited<ReturnType<typeof ledger.observe>>;
   try {
     res = await ledger.observe(payment.id, obs);
@@ -435,7 +548,8 @@ export async function reportFunding(input: ReportFundingInput, ports: ScribbitMc
     expectedOutputs: (res.payment.checkout.outputs ?? []).map(outputView),
     settlements: Array.isArray(detail) ? detail : null,
     payouts: res.payouts.map(payoutView),
-    next: nextAfterFunding(res.payment.status, res.reason, shortDetail),
+    ...(plane ? { escalated: plane.escalated, plane } : {}),
+    next: `${plane?.escalated ? escalatedNext(plane) : ''}${nextAfterFunding(res.payment.status, res.reason, shortDetail)}`,
   };
 }
 

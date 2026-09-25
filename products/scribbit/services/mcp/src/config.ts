@@ -33,6 +33,8 @@ export interface ServerConfig {
   maxBodyBytes: number;
   /** The platform ledger (order tools). Undefined = orders disabled (`ledger_unavailable`). The key is a secret: never logged. */
   ledger: { url: string; apiKey: string } | undefined;
+  /** The authorization plane (optional). `agents` maps an MCP key's ownerId to the plane agent it acts as; the keys are secrets. */
+  plane: { url: string; org: string; agents: Record<string, { agent: string; apiKey: string }> } | undefined;
 }
 
 type Env = Record<string, string | undefined>;
@@ -164,6 +166,21 @@ export function loadServerConfig(env: Env = process.env, readFile: (p: string) =
     throw new ConfigError('MCP_LEDGER_API_KEY is set but MCP_LEDGER_URL is not');
   }
 
+  const planeUrl = env.MCP_PLANE_URL?.trim();
+  let plane: ServerConfig['plane'];
+  if (planeUrl) {
+    try {
+      if (!/^https?:$/.test(new URL(planeUrl).protocol)) throw new Error('scheme');
+    } catch {
+      throw new ConfigError(`MCP_PLANE_URL must be an http(s) URL ("${planeUrl}")`);
+    }
+    const org = env.MCP_PLANE_ORG?.trim() || 'scribbit';
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(org)) throw new ConfigError('MCP_PLANE_ORG must be an organisation slug');
+    plane = { url: planeUrl, org, agents: parsePlaneAgents(env.MCP_PLANE_AGENTS_JSON) };
+  } else if (env.MCP_PLANE_AGENTS_JSON) {
+    throw new ConfigError('MCP_PLANE_AGENTS_JSON is set but MCP_PLANE_URL is not');
+  }
+
   return {
     port: intEnv(env, 'PORT', 3050),
     host: env.HOST?.trim() || '0.0.0.0',
@@ -178,5 +195,26 @@ export function loadServerConfig(env: Env = process.env, readFile: (p: string) =
     rateLimit: { ipPerMinute: intEnv(env, 'MCP_RATE_LIMIT_IP_PER_MIN', 600), keyPerMinute: intEnv(env, 'MCP_RATE_LIMIT_KEY_PER_MIN', 120) },
     maxBodyBytes: intEnv(env, 'MCP_MAX_BODY_BYTES', DEFAULT_MAX_BODY_BYTES, 1024),
     ledger,
+    plane,
   };
+}
+
+/** `MCP_PLANE_AGENTS_JSON`: `{ "<MCP key ownerId>": { "agent": "<plane agent name>", "apiKey": "bsh_…" } }`. */
+export function parsePlaneAgents(json: string | undefined): Record<string, { agent: string; apiKey: string }> {
+  if (!json) throw new ConfigError('MCP_PLANE_AGENTS_JSON is required with MCP_PLANE_URL (secret path services/scribbit-mcp/plane-agent-keys)');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch (e) {
+    throw new ConfigError(`MCP_PLANE_AGENTS_JSON: invalid JSON (${(e as Error).message})`);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new ConfigError('MCP_PLANE_AGENTS_JSON: expected an object keyed by MCP key ownerId');
+  const out: Record<string, { agent: string; apiKey: string }> = {};
+  for (const [ownerId, v] of Object.entries(parsed as Record<string, unknown>)) {
+    const a = v as { agent?: unknown; apiKey?: unknown };
+    if (!a || typeof a.agent !== 'string' || !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(a.agent)) throw new ConfigError(`MCP_PLANE_AGENTS_JSON["${ownerId}"]: "agent" must be a plane agent name`);
+    if (typeof a.apiKey !== 'string' || !/^bsh_(live|test)_/.test(a.apiKey)) throw new ConfigError(`MCP_PLANE_AGENTS_JSON["${ownerId}"]: "apiKey" must be a plane API key (bsh_live_… / bsh_test_…)`);
+    out[ownerId] = { agent: a.agent, apiKey: a.apiKey };
+  }
+  return out;
 }

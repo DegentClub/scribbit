@@ -14,6 +14,7 @@ export type ToolErrorCode =
   | 'ledger_unavailable'
   | 'ledger_rejected'
   | 'order_not_found'
+  | 'plane_denied'
   | 'internal';
 
 export interface ToolErrorBody {

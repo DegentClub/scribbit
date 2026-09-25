@@ -13,6 +13,7 @@ Start from [`template.md`](template.md).
 | [0009](0009-ledger-payees-and-psbt-payments.md) | Ledger payees, the `psbt` payment method and payout records | Accepted |
 | [0010](0010-mesh-accountability-layer.md) | The mesh accountability layer: FlashyOS AAO formats implemented in the platform, published per organisation | Accepted |
 | [0011](0011-records-and-bitcoin-anchoring.md) | Shipped records from git, checkpoint heads, and a proposed Bitcoin anchor format | Accepted |
+| [0014](0014-open-authorization-plane.md) | An open, minimal authorization plane for our agents, wire-compatible with FlashyOS's | Accepted |
 
 Infrastructure decisions (fleet, networking, secrets, Fleet API) live in the `infra` repository's own ADR series
 and are cited as `infra ADR-NNN`.

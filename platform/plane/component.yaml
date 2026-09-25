@@ -1,0 +1,21 @@
+# Component manifest - validated against schemas/component.schema.json by `pnpm validate`.
+name: plane
+package: "@bsh/plane"
+kind: service
+product: platform
+owner: team-platform
+summary: Open, minimal spend-authorization plane for our agents - FlashyOS's five checks, verdicts and signed single-use SpendAuthorizations, independent of their plane.
+lifecycle: experimental
+depends_on: ["@bsh/edge", "@bsh/mesh"]
+provides: [contracts/openapi/plane.yaml]
+consumes: [contracts/openapi/ledger.yaml]
+stores: ["sqlite:plane", "memory:plane-api-keys", "memory:plane-rate-limits"]
+secrets:
+  - services/plane/authz-private-key
+  - services/plane/api-keys
+  - services/plane/ledger-api-key
+env_schema: ./env.schema.json
+runbook: ./RUNBOOK.md
+docs: ./README.md
+slo: { availability: "99.9", p95_ms: 150 }
+commands: { dev: dev, test: test, typecheck: typecheck }

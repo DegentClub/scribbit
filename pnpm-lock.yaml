@@ -187,6 +187,40 @@ importers:
         specifier: ^5.0.1
         version: 5.0.1(@types/node@22.20.4)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
+  platform/plane:
+    dependencies:
+      '@bsh/edge':
+        specifier: workspace:*
+        version: link:../edge
+      '@bsh/mesh':
+        specifier: workspace:*
+        version: link:../mesh
+      '@hono/node-server':
+        specifier: ^2.1.1
+        version: 2.1.1(hono@4.13.8)
+      hono:
+        specifier: ^4.13.8
+        version: 4.13.8
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.20.4
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.1
+        version: 5.0.1(@types/node@22.20.4)(jsdom@30.1.1(@noble/hashes@2.4.0))(vite@8.3.0(@types/node@22.20.4)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
+
   platform/signer:
     dependencies:
       '@bsh/edge':
@@ -439,6 +473,9 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@bsh/plane':
+        specifier: workspace:*
+        version: link:../../../../platform/plane
       '@noble/curves':
         specifier: ^2.4.0
         version: 2.4.0

@@ -41,7 +41,7 @@ export {
   scopeConflict,
   type McpScope,
 } from './scopes.js';
-export { ConfigError, keyStoreFrom, loadServerConfig, parseKeyRecord, parseKeyRecords, type ServerConfig } from './config.js';
+export { ConfigError, keyStoreFrom, loadServerConfig, parseKeyRecord, parseKeyRecords, parsePlaneAgents, type ServerConfig } from './config.js';
 export { feeProviderFor, feeProviders, type FeeProviderChoice } from './fees.js';
 export { ToolError, type ToolErrorBody, type ToolErrorCode } from './errors.js';
 export {
@@ -65,6 +65,11 @@ export {
 export {
   createOrder,
   currentPayment,
+  planeCheck,
+  planeIdempotencyKey,
+  type PayeeSpend,
+  type PlaneOutcome,
+  type PlaneVerdictView,
   getOrder,
   getReceipt,
   reportFunding,
@@ -105,3 +110,4 @@ export {
 } from './ledger-client.js';
 export { extractSecuritySection, FALLBACK_SECURITY_MODEL, securityModelDoc } from './docs.js';
 export { DEFAULT_MAX_BODY_BYTES, MAX_CONTENT_BYTES, MAX_METADATA_BYTES } from './limits.js';
+export { createPlaneClient, PlaneClientError, type PlaneAgent, type PlaneClient, type PlaneClientOptions, type PlaneRecord, type PlaneVerdict } from './plane-client.js';

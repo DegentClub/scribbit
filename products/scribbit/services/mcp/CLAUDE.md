@@ -3,7 +3,11 @@
 Read the root `CLAUDE.md` first. Local rules:
 
 - Kind: **service**. Manifest: `component.yaml` (the catalog entry in `catalog/catalog.json` is generated from it).
-- Import only `@bsh/inscription`, `@bsh/scribbit-fee-oracle`, `@bsh/edge` (see `depends_on`); `pnpm lint:boundaries` fails otherwise.
+- Import only `@bsh/inscription`, `@bsh/scribbit-fee-oracle`, `@bsh/edge`, `@bsh/plane` (see `depends_on`); `pnpm lint:boundaries` fails otherwise.
+- The authorization plane (`src/plane-client.ts`, ADR-0014) is optional: with `MCP_PLANE_URL` set, `create_order`
+  (with payees) and `report_funding` propose every payee share for governed agent keys before the ledger sees them.
+  A DENY (or an unreachable plane) is the tool error `plane_denied`; an ESCALATE returns `escalated: true` with the
+  plane's reasons rather than refusing the call. Never call the ledger before the plane check when both apply.
 - The HTTP surface is fixed by `contracts/openapi/scribbit-mcp.yaml`; change the contract first, then `src/app.ts`,
   then `test/contract.test.ts`. MCP message shapes belong to the MCP spec / SDK, not to the contract.
 - Tools are pure functions in `src/tools.ts` (calculators) and `src/orders.ts` (ledger client tools); `src/mcp.ts`

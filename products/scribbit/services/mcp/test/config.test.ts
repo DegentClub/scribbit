@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateApiKey, hashApiKey } from '@bsh/edge';
-import { ConfigError, feeProviderFor, keyStoreFrom, loadServerConfig, parseKeyRecords } from '../src/index.js';
+import { ConfigError, feeProviderFor, keyStoreFrom, loadServerConfig, parseKeyRecords, parsePlaneAgents } from '../src/index.js';
 import { mintKey } from '../src/mint-key.js';
 
 const rec = (over: Record<string, unknown> = {}) => ({ id: 'k1', hash: generateApiKey('live').hash, env: 'live', scopes: ['mcp'], ...over });
@@ -53,6 +53,31 @@ describe('loadServerConfig', () => {
     expect((await store.findByHash(hashApiKey(a.key)))?.quota).toEqual({ limit: 5, windowMs: 60_000 });
     expect(await store.findByHash(hashApiKey('bsh_test_nope'))).toBeUndefined();
     expect(() => loadServerConfig({ MCP_API_KEYS_FILE: '/missing' }, () => { throw new Error('ENOENT'); })).toThrow(/cannot read/);
+  });
+
+  it('plane: URL, org and agents together, http(s) only, agents required with the URL', () => {
+    const env = { MCP_REQUIRE_API_KEY: 'false' };
+    const agentsJson = JSON.stringify({ o1: { agent: 'mint-bot', apiKey: 'bsh_live_abc' } });
+    expect(loadServerConfig({ ...env, MCP_PLANE_URL: 'http://plane.internal:3070', MCP_PLANE_AGENTS_JSON: agentsJson }).plane).toEqual({
+      url: 'http://plane.internal:3070',
+      org: 'scribbit',
+      agents: { o1: { agent: 'mint-bot', apiKey: 'bsh_live_abc' } },
+    });
+    expect(loadServerConfig({ ...env, MCP_PLANE_URL: 'http://plane.internal:3070', MCP_PLANE_ORG: 'other-org', MCP_PLANE_AGENTS_JSON: agentsJson }).plane?.org).toBe('other-org');
+    expect(() => loadServerConfig({ ...env, MCP_PLANE_URL: 'http://plane.internal' })).toThrow(/MCP_PLANE_AGENTS_JSON is required/);
+    expect(() => loadServerConfig({ ...env, MCP_PLANE_AGENTS_JSON: agentsJson })).toThrow(/MCP_PLANE_URL is not/);
+    expect(() => loadServerConfig({ ...env, MCP_PLANE_URL: 'not a url', MCP_PLANE_AGENTS_JSON: agentsJson })).toThrow(/MCP_PLANE_URL/);
+    expect(() => loadServerConfig({ ...env, MCP_PLANE_URL: 'ftp://x', MCP_PLANE_AGENTS_JSON: agentsJson })).toThrow(/http\(s\)/);
+    expect(() => loadServerConfig({ ...env, MCP_PLANE_URL: 'http://plane.internal', MCP_PLANE_ORG: 'Not-A-Slug', MCP_PLANE_AGENTS_JSON: agentsJson })).toThrow(/MCP_PLANE_ORG/);
+  });
+
+  it('parsePlaneAgents: shape, plane agent names and key prefixes', () => {
+    expect(parsePlaneAgents(JSON.stringify({ o1: { agent: 'mint-bot', apiKey: 'bsh_test_x' } }))).toEqual({ o1: { agent: 'mint-bot', apiKey: 'bsh_test_x' } });
+    expect(() => parsePlaneAgents(undefined)).toThrow(/MCP_PLANE_AGENTS_JSON is required/);
+    expect(() => parsePlaneAgents('not json')).toThrow(/invalid JSON/);
+    expect(() => parsePlaneAgents('[]')).toThrow(/expected an object/);
+    expect(() => parsePlaneAgents(JSON.stringify({ o1: { agent: 'Bad Name', apiKey: 'bsh_live_x' } }))).toThrow(/"agent" must be a plane agent name/);
+    expect(() => parsePlaneAgents(JSON.stringify({ o1: { agent: 'mint-bot', apiKey: 'not-a-plane-key' } }))).toThrow(/"apiKey" must be a plane API key/);
   });
 
   it('parses networks, fee URLs, proxies, limits', () => {

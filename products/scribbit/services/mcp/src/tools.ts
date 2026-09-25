@@ -35,6 +35,7 @@ import {
 } from './content.js';
 import { invalid, ToolError } from './errors.js';
 import type { LedgerClient } from './ledger-client.js';
+import type { PlaneClient } from './plane-client.js';
 import { MAX_CONTENT_BYTES } from './limits.js';
 
 /** Injected ports. Everything is optional: without a fee provider the tools are fully offline, without a ledger the order tools fail with `ledger_unavailable`. */
@@ -45,6 +46,10 @@ export interface ScribbitMcpPorts {
   ledger?: LedgerClient;
   /** Scopes of the caller (the API key's). Undefined = unrestricted local caller (stdio, or anonymous local dev). */
   scopes?: readonly string[];
+  /** The caller's API key ownerId: which plane agent it acts as (`MCP_PLANE_AGENTS_JSON`). */
+  ownerId?: string;
+  /** The authorization plane (contracts/openapi/plane.yaml). Missing => no plane check; payee shares are not governed. */
+  plane?: PlaneClient;
   /** Clock (quote expiry stamps). Default `new Date()`. */
   now?: () => Date;
   /** Called for unexpected (non-ToolError) failures, with the tool name; nothing else is logged. */

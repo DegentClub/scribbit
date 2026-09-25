@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-09-24T01:52:02.616Z",
+  "generatedAt": "2026-09-25T21:14:39.436Z",
   "schema": "schemas/component.schema.json",
   "components": [
     {
@@ -61,6 +61,7 @@
       },
       "dependents": [
         "ledger",
+        "plane",
         "scribbit-mcp",
         "scribbit-mint-api",
         "signer"
@@ -234,6 +235,7 @@
         "docs": "platform/mesh/README.md"
       },
       "dependents": [
+        "plane",
         "scribbit-cli"
       ]
     },
@@ -263,6 +265,63 @@
         "docs": "platform/notify/README.md"
       },
       "dependents": []
+    },
+    {
+      "name": "plane",
+      "package": "@bsh/plane",
+      "kind": "service",
+      "product": "platform",
+      "owner": "team-platform",
+      "summary": "Open, minimal spend-authorization plane for our agents - FlashyOS's five checks, verdicts and signed single-use SpendAuthorizations, independent of their plane.",
+      "lifecycle": "experimental",
+      "depends_on": [
+        "@bsh/edge",
+        "@bsh/mesh"
+      ],
+      "provides": [
+        "contracts/openapi/plane.yaml"
+      ],
+      "consumes": [
+        "contracts/openapi/ledger.yaml"
+      ],
+      "stores": [
+        "sqlite:plane",
+        "memory:plane-api-keys",
+        "memory:plane-rate-limits"
+      ],
+      "secrets": [
+        "services/plane/authz-private-key",
+        "services/plane/api-keys",
+        "services/plane/ledger-api-key"
+      ],
+      "env_schema": "./env.schema.json",
+      "slo": {
+        "availability": "99.9",
+        "p95_ms": 150
+      },
+      "runbook": "./RUNBOOK.md",
+      "docs": "./README.md",
+      "commands": {
+        "dev": "dev",
+        "test": "test",
+        "typecheck": "typecheck"
+      },
+      "path": "platform/plane",
+      "version": "0.1.0",
+      "scripts": {
+        "dev": "tsx watch src/main.ts",
+        "start": "tsx src/main.ts",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit -p ."
+      },
+      "files": {
+        "env_schema": "platform/plane/env.schema.json",
+        "runbook": "platform/plane/RUNBOOK.md",
+        "docs": "platform/plane/README.md"
+      },
+      "dependents": [
+        "scribbit-mcp"
+      ]
     },
     {
       "name": "scribbit-cli",
@@ -385,14 +444,16 @@
       "depends_on": [
         "@bsh/inscription",
         "@bsh/scribbit-fee-oracle",
-        "@bsh/edge"
+        "@bsh/edge",
+        "@bsh/plane"
       ],
       "provides": [
         "contracts/openapi/scribbit-mcp.yaml"
       ],
       "consumes": [
         "contracts/openapi/scribbit-fees.yaml",
-        "contracts/openapi/ledger.yaml"
+        "contracts/openapi/ledger.yaml",
+        "contracts/openapi/plane.yaml"
       ],
       "stores": [
         "memory:api_keys",
@@ -400,7 +461,8 @@
       ],
       "secrets": [
         "services/scribbit-mcp/api-key-hashes",
-        "services/scribbit-mcp/ledger-api-key"
+        "services/scribbit-mcp/ledger-api-key",
+        "services/scribbit-mcp/plane-agent-keys"
       ],
       "env_schema": "./env.schema.json",
       "slo": {
@@ -620,6 +682,7 @@
         "ledger",
         "mesh",
         "notify",
+        "plane",
         "signer",
         "wallet-kit"
       ],
@@ -628,7 +691,7 @@
       ],
       "kinds": {
         "library": 7,
-        "service": 2
+        "service": 3
       }
     },
     "scribbit": {
@@ -691,6 +754,18 @@
         "ledger"
       ],
       "consumers": [
+        "plane",
+        "scribbit-mcp"
+      ]
+    },
+    {
+      "path": "contracts/openapi/plane.yaml",
+      "kind": "openapi",
+      "exists": true,
+      "providers": [
+        "plane"
+      ],
+      "consumers": [
         "scribbit-mcp"
       ]
     },
@@ -739,6 +814,11 @@
   ],
   "edges": [
     {
+      "from": "plane",
+      "to": "contracts/openapi/ledger.yaml",
+      "type": "consumes"
+    },
+    {
       "from": "scribbit-cli",
       "to": "contracts/openapi/scribbit-fees.yaml",
       "type": "consumes"
@@ -746,6 +826,11 @@
     {
       "from": "scribbit-mcp",
       "to": "contracts/openapi/ledger.yaml",
+      "type": "consumes"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "contracts/openapi/plane.yaml",
       "type": "consumes"
     },
     {
@@ -779,6 +864,16 @@
       "type": "depends_on"
     },
     {
+      "from": "plane",
+      "to": "edge",
+      "type": "depends_on"
+    },
+    {
+      "from": "plane",
+      "to": "mesh",
+      "type": "depends_on"
+    },
+    {
       "from": "scribbit-cli",
       "to": "inscription",
       "type": "depends_on"
@@ -801,6 +896,11 @@
     {
       "from": "scribbit-mcp",
       "to": "inscription",
+      "type": "depends_on"
+    },
+    {
+      "from": "scribbit-mcp",
+      "to": "plane",
       "type": "depends_on"
     },
     {
@@ -851,6 +951,11 @@
     {
       "from": "ledger",
       "to": "contracts/openapi/ledger.yaml",
+      "type": "provides"
+    },
+    {
+      "from": "plane",
+      "to": "contracts/openapi/plane.yaml",
       "type": "provides"
     },
     {

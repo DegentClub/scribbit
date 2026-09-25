@@ -1,0 +1,15 @@
+The JSON Schemas in this directory are copied unmodified from the public FlashyLabs
+repository github.com/FlashyLabs/flashyos-wdk, docs/wallet/schema/ at commit
+f32ea5fe0440b95d6fa0934c0a26759872294777 (Apache License 2.0, Copyright Flashy Labs):
+operation-record.json, spend-authorization.json, spend-envelope-input.json, verdict.json.
+
+They are conformance fixtures (test/conformance.test.ts):
+- every SpendAuthorization @bsh/plane signs validates under spend-authorization.json;
+- every OperationRecord their schema accepts is accepted by our parser, unless it is on a
+  `btc:` chain and its destination is not a segwit address for that network (our
+  extension), and every record their schema refuses is refused, unless the only
+  difference is the optional `payee` member we add;
+- every SpendEnvelopeInput their schema accepts is accepted by ours, unless it asks for
+  delegation (`delegable: true`, which this plane does not implement and refuses);
+- the bodies of our verdicts, minus the members we add (`reasons`, `decisionId` on DENY,
+  `impact` on ALLOW, `replayed`), validate under verdict.json.

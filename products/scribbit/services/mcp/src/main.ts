@@ -4,6 +4,7 @@ import { createApp } from './app.js';
 import { ConfigError, keyStoreFrom, loadServerConfig } from './config.js';
 import { feeProviders } from './fees.js';
 import { createLedgerClient } from './ledger-client.js';
+import { createPlaneClient } from './plane-client.js';
 
 function main(): void {
   let cfg;
@@ -14,8 +15,9 @@ function main(): void {
     process.exit(2);
   }
   const ledger = cfg.ledger ? createLedgerClient({ baseUrl: cfg.ledger.url, apiKey: cfg.ledger.apiKey }) : undefined;
+  const plane = cfg.plane ? createPlaneClient({ baseUrl: cfg.plane.url, org: cfg.plane.org, agents: cfg.plane.agents }) : undefined;
   const app = createApp({
-    ports: { fees: feeProviders(cfg.networks, cfg.feeUrls), ...(ledger ? { ledger } : {}) },
+    ports: { fees: feeProviders(cfg.networks, cfg.feeUrls), ...(ledger ? { ledger } : {}), ...(plane ? { plane } : {}) },
     keys: keyStoreFrom(cfg.keys),
     keyEnv: cfg.keyEnv,
     requireApiKey: cfg.requireApiKey,
@@ -38,6 +40,7 @@ function main(): void {
         requireApiKey: cfg.requireApiKey,
         keys: cfg.keys.length,
         ledger: cfg.ledger ? cfg.ledger.url : null,
+        plane: cfg.plane ? { url: cfg.plane.url, org: cfg.plane.org, agents: Object.keys(cfg.plane.agents).length } : null,
       }),
     );
   });
