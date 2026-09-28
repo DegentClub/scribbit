@@ -17,9 +17,9 @@
     "check": "pnpm validate && pnpm lint:boundaries && pnpm readiness && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "typescript": "^7",
     "vitest": "^5.0.1",
-    "@types/node": "^22.0.0"
+    "@types/node": "^26.6.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
