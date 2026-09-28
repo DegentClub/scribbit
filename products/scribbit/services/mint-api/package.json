@@ -14,7 +14,7 @@
     "@bsh/edge": "workspace:*",
     "@bsh/scribbit-fee-oracle": "workspace:*",
     "@hono/node-server": "^2.1.1",
-    "hono": "^4.13.8",
+    "hono": "^4.13.9",
     "tsx": "^4.23.15"
   },
   "devDependencies": {

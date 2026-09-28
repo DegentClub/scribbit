@@ -11,7 +11,7 @@
   "dependencies": {
     "@noble/hashes": "^2.4.0",
     "@scure/base": "^2.4.0",
-    "hono": "^4.13.8"
+    "hono": "^4.13.9"
   },
   "devDependencies": {
     "typescript": "^5",

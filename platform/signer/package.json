@@ -17,7 +17,7 @@
     "@noble/hashes": "^2.4.0",
     "@scure/base": "^2.4.0",
     "@scure/btc-signer": "^2.4.1",
-    "hono": "^4.13.8",
+    "hono": "^4.13.9",
     "tsx": "^4.23.15"
   },
   "devDependencies": {

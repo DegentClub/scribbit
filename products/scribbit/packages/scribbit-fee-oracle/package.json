@@ -11,7 +11,7 @@
     "start": "tsx src/main.ts"
   },
   "dependencies": {
-    "hono": "^4.13.8",
+    "hono": "^4.13.9",
     "@hono/node-server": "^2.1.1"
   },
   "devDependencies": {
