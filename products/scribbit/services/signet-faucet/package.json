@@ -13,10 +13,10 @@
   "dependencies": {
     "@bsh/edge": "workspace:*",
     "@bsh/scribbit-playground-kit": "workspace:*",
-    "@hono/node-server": "^2.1.1",
+    "@hono/node-server": "^2.1.3",
     "@noble/hashes": "^2.4.0",
     "@scure/btc-signer": "^2.4.1",
-    "hono": "^4.13.8",
+    "hono": "^4.13.12",
     "tsx": "^4.23.15"
   },
   "devDependencies": {
@@ -24,7 +24,7 @@
     "@types/node": "^22",
     "ajv": "^8.20.0",
     "typescript": "^5",
-    "vitest": "^5.0.1",
+    "vitest": "^5.0.3",
     "yaml": "^2.9.1"
   },
   "main": "./src/index.ts",
