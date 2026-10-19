@@ -13,15 +13,15 @@
   "dependencies": {
     "@bsh/edge": "workspace:*",
     "@bsh/scribbit-fee-oracle": "workspace:*",
-    "@hono/node-server": "^2.1.1",
-    "hono": "^4.13.8",
+    "@hono/node-server": "^2.1.5",
+    "hono": "^4.13.13",
     "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/node": "^22",
     "ajv": "^8.20.0",
     "typescript": "^5",
-    "vitest": "^5.0.1",
+    "vitest": "^5.0.5",
     "yaml": "^2.9.1"
   },
   "main": "./src/index.ts",
